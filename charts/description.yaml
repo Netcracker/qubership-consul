@@ -1,0 +1,125 @@
+build:
+  env:
+    type: application-integration
+    version: openshift-dd-2
+  networkRules: integration
+  integration:
+    multi_image_descriptor: true
+    dmp_descriptor:
+      version: '1.12'
+
+publication:
+  application-manifest:
+    am-mf: application.mf
+    am-zip: application.zip
+deployment:
+  availability_check: true
+  availability:
+    resource: Job
+    conditions: Successful
+    interval: 30
+    max_tries: 20
+    delay: 30
+  mode: reinstall
+  values:
+    global:
+      extraLabels:
+        glabl: glabl
+      enabled: true
+      enablePodSecurityPolicies: true
+      tls:
+        enabled: true
+    server:
+      extraLabels:
+        sclabl: sclabl
+      enabled: true
+      replicas: 3
+      resources:
+        requests:
+          memory: "128Mi"
+          cpu: "50m"
+        limits:
+          memory: "1024Mi"
+          cpu: "400m"
+      storage: 1Gi
+      storageClass: local-path
+    ui:
+      enabled: true
+      ingress:
+        enabled: true
+        hosts:
+          - host: consul-consul-service.ci-master.openshift.sdntest.netcracker.com
+    backupDaemon:
+      enabled: true
+      storage: 1Gi
+      storageClass: "local-path"
+      username: "admin"
+      password: "admin"
+
+cloud:
+  type: helm
+  url: https://ci-master.openshift.sdntest.netcracker.com:6443
+  project: consul-service
+
+integration:
+  - type: find-latest-deployment-descriptor
+    repo: PROD.Platform.Streaming/consul-service
+    location: master
+    docker-image-id: timestamp
+    deploy-param: consulIntegrationTests
+  - type: find-latest-deployment-descriptor
+    repo: PROD.Platform.Streaming/consul-service
+    location: master
+    docker-image-id: timestamp
+    deploy-param: consulDisasterRecovery
+    prefix: disaster-recovery
+  - type: find-latest-deployment-descriptor
+    repo: PROD.Platform.Streaming/consul-backup-daemon
+    location: master
+    docker-image-id: timestamp
+    deploy-param: consulBackupDaemon
+  - type: find-latest-deployment-descriptor
+    repo: PROD.Platform.Streaming/consul-acl-configurator
+    location: master
+    docker-image-id: timestamp
+    deploy-param: consulAclConfiguratorOperator
+    prefix: consul-acl-configurator-operator
+    service-name: consul-acl-configurator-operator
+  - type: find-latest-deployment-descriptor
+    repo: PROD.Platform.Streaming/consul-acl-configurator
+    location: master
+    docker-image-id: timestamp
+    deploy-param: consulAclConfiguratorRestServer
+    prefix: rest-acl-configurator
+    service-name: rest-acl-configurator
+  - type: find-latest-deployment-descriptor
+    repo: PROD.Platform.Streaming/deployment-status-provisioner
+    location: master
+    docker-image-id: timestamp
+    deploy-param: deploymentStatusProvisioner
+  - type: image
+    docker-image: artifactorycn.netcracker.com:17114/hashicorp/consul:1.20.0
+    deploy-param: consul
+  - type: image
+    docker-image: artifactorycn.netcracker.com:17114/hashicorp/consul-k8s-control-plane:1.6.0
+    deploy-param: consulK8s
+  - type: image
+    docker-image: artifactorycn.netcracker.com:17114/hashicorp/consul-dataplane:1.6.0
+    deploy-param: consulDataplane
+  - type: image
+    docker-image: artifactorycn.netcracker.com:17014/product/prod.platform.streaming_docker-kubectl:0.0.3_20240802-015529
+    deploy-param: kubectl
+  - type: scripts
+    repo: PROD.Platform.ElasticStack/deployment-utils
+    location: master
+    alias: timestamp
+    zip-name: devops-scripts.zip
+    name: crd-upgrade
+    pre-deploy-entry-point: crd-upgrade.sh
+  - type: scripts
+    repo: PROD.Platform.ElasticStack/deployment-utils
+    location: master
+    alias: latest
+    zip-name: devops-scripts.zip
+    name: privileged-pss
+    pre-deploy-entry-point: privileged-pss.sh

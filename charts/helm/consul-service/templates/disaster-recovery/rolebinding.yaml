@@ -1,0 +1,16 @@
+{{- if eq (include "consul.enableDisasterRecovery" .) "true" }}
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: {{ template "consul.fullname" . }}-disaster-recovery
+  labels:
+    {{- include "consul-service.defaultLabels" . | nindent 4 }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ template "consul.fullname" . }}-disaster-recovery
+    namespace: {{ .Release.Namespace }}
+roleRef:
+  kind: Role
+  name: {{ template "consul.fullname" . }}-disaster-recovery
+  apiGroup: rbac.authorization.k8s.io
+{{- end }}

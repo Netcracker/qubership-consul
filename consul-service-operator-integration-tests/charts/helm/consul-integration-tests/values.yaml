@@ -1,0 +1,76 @@
+service:
+  name: consul-integration-tests-runner
+
+secret:
+  aclToken: ""
+  backupDaemon:
+    username: ""
+    password: ""
+  s3:
+    keyId: ""
+    keySecret: ""
+  prometheus:
+    user: ""
+    password: ""
+
+tls:
+  certManagerEnabled: false
+  consul:
+    secretName: ""
+  backupDaemon:
+    secretName: ""
+
+serviceAccount:
+  create: true
+  name: "consul-integration-tests"
+
+integrationTests:
+  image: "artifactorycn.netcracker.com:17008/product/prod.platform.streaming_consul-service:master_latest"
+  tags: "crud"
+  aclEnabled: false
+  consulFullName: "consul"
+  consulNamespace: ""
+  consulHost: "consul-server"
+  consulPort: 8500
+  consulScheme: http
+  statusWritingEnabled: "true"
+  isShortStatusMessage: "true"
+  consulBackupDaemonHost: ""
+  datacenterName: "dc1"
+  prometheusUrl: ""
+  securityContext: {}
+  s3:
+    enabled: false
+    url: ""
+    bucket: ""
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 50m
+    limits:
+      memory: 256Mi
+      cpu: 400m
+#  affinity: {
+#    "podAffinity": {
+#      "preferredDuringSchedulingIgnoredDuringExecution": [
+#      {
+#        "podAffinityTerm": {
+#          "labelSelector": {
+#            "matchExpressions": [
+#            {
+#              "key": "component",
+#              "operator": "In",
+#              "values": [
+#                "consul-server"
+#              ]
+#            }
+#            ]
+#          },
+#          "topologyKey": "kubernetes.io/hostname"
+#        },
+#        "weight": 100
+#      }
+#      ]
+#    }
+#  }
+

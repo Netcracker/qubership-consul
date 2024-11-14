@@ -1,0 +1,16 @@
+build:
+  networkRules: sandbox
+  env:
+    type: microservice
+    version: glide-0.12.3_golang-1.12_goproxy-sandbox
+publication:
+  docker:
+    - latest
+    - timestamp
+  files:
+    INFRASTRUCTURE1.0:
+      - target/*.zip
+deploy:
+  dmp:
+    service: consul-service
+    version: 1.12

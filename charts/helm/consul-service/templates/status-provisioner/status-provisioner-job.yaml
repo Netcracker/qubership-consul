@@ -1,0 +1,77 @@
+{{- if .Values.statusProvisioner.enabled }}
+# status-provisioner job provides status about cluster state
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ template "consul.fullname" . }}-status-provisioner
+  labels:
+    name: {{ template "consul.fullname" . }}-status-provisioner
+    {{- include "consul-service.defaultLabels" . | nindent 4 }}
+    app.kubernetes.io/name: {{ template "consul.fullname" . }}-status-provisioner
+    app.kubernetes.io/instance: {{ cat (printf "%s-status-provisioner"  (include "consul.fullname" .)) .Values.DELIMITER .Release.Namespace | nospace | trunc 63 }}
+    app.kubernetes.io/technology: python
+  annotations:
+    "argocd.argoproj.io/hook": PostSync
+    "argocd.argoproj.io/sync-wave": "1"
+    "argocd.argoproj.io/hook-delete-policy": HookSucceeded,BeforeHookCreation
+spec:
+  {{- if or (gt .Capabilities.KubeVersion.Major "1") (ge .Capabilities.KubeVersion.Minor "12") }}
+  ttlSecondsAfterFinished: {{ .Values.statusProvisioner.lifetimeAfterCompletion | default 600 }}
+  {{- end }}
+  template:
+    metadata:
+      name: {{ template "consul.fullname" . }}-status-provisioner
+      labels:
+        app: {{ template "consul.name" . }}
+        chart: {{ template "consul.chart" . }}
+        release: {{ .Release.Name }}
+        component: status-provisioner
+        app.kubernetes.io/name: {{ template "consul.fullname" . }}-status-provisioner
+        name: {{ template "consul.fullname" . }}-status-provisioner
+    spec:
+      {{- if not (eq (include "openshift.enabled" .) "true") }}
+      securityContext:
+        {{- include "consul.globalPodSecurityContext" . | nindent 8 }}
+        {{- with .Values.statusProvisioner.securityContext }}
+        {{- toYaml . | nindent 8 -}}
+        {{- end }}
+      {{- end }}
+      restartPolicy: Never
+      serviceAccountName: {{ template "consul.fullname" . }}-status-provisioner
+      containers:
+        - name: status-provisioner
+          image: {{ template "deployment-status-provisioner.image" . }}
+          imagePullPolicy: "Always"
+          env:
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: MONITORED_RESOURCES
+              value: "{{ include "consul.monitoredResources" . | trim | trimSuffix "," }}"
+            - name: RESOURCE_TO_SET_STATUS
+              value: {{ printf "batch v1 jobs %s-status-provisioner" (include "consul.fullname" .) }}
+            - name: CONDITION_REASON
+              value: "ConsulServiceReadinessStatus"
+            - name: POD_READINESS_TIMEOUT
+              value: "{{ .Values.statusProvisioner.podReadinessTimeout | default 300 }}"
+          {{- if and .Values.integrationTests.enabled .Values.integrationTests.statusWritingEnabled (eq (include "consul.replicasForSingleService" .) "1") }}
+            - name: INTEGRATION_TESTS_RESOURCE
+              value: {{ printf "apps v1 deployments %s" (include "consul-integration-tests.name" .) }}
+            - name: INTEGRATION_TESTS_CONDITION_REASON
+              value: "IntegrationTestsExecutionStatus"
+            - name: INTEGRATION_TESTS_SUCCESSFUL_CONDITION_TYPE
+              value: "Ready"
+            - name: INTEGRATION_TESTS_TIMEOUT
+              value: "{{ .Values.statusProvisioner.integrationTestsTimeout | default 300 }}"
+          {{- end }}
+          resources:
+            requests:
+              cpu: {{ default "50m" .Values.statusProvisioner.resources.requests.cpu }}
+              memory: {{ default "50Mi" .Values.statusProvisioner.resources.requests.memory }}
+            limits:
+              cpu: {{ default "100m" .Values.statusProvisioner.resources.limits.cpu }}
+              memory: {{ default "100Mi" .Values.statusProvisioner.resources.limits.memory }}
+          securityContext:
+            {{- include "consul.globalContainerSecurityContext" . | nindent 12 }}
+{{- end }}

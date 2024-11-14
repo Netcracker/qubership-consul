@@ -1,0 +1,68 @@
+build:
+  env:
+    type: application-integration
+    version: openshift-dd-2
+  networkRules: integration
+  integration:
+    multi_image_descriptor: true
+    dmp_descriptor:
+      version: '1.12'
+
+publication:
+  application-manifest:
+    am-mf: application.mf
+    am-zip: application.zip
+
+deployment:
+  availability_check: true
+  availability:
+    resource: Job
+    conditions: Successful
+    interval: 30
+    max_tries: 20
+    delay: 30
+
+integration:
+  - type: find-latest-deployment-descriptor
+    repo: PROD.Platform.Streaming/consul-backup-daemon
+    location: 0.1.18
+    docker-image-id: timestamp
+    deploy-param: consulBackupDaemon
+  - type: find-latest-deployment-descriptor
+    repo: PROD.Platform.Streaming/consul-acl-configurator
+    location: 0.0.24
+    docker-image-id: timestamp
+    deploy-param: consulAclConfiguratorOperator
+    prefix: consul-acl-configurator-operator
+    service-name: consul-acl-configurator-operator
+  - type: find-latest-deployment-descriptor
+    repo: PROD.Platform.Streaming/consul-acl-configurator
+    location: 0.0.24
+    docker-image-id: timestamp
+    deploy-param: consulAclConfiguratorRestServer
+    prefix: rest-acl-configurator
+    service-name: rest-acl-configurator
+  - type: find-latest-deployment-descriptor
+    repo: PROD.Platform.Streaming/deployment-status-provisioner
+    location: 0.0.22
+    docker-image-id: timestamp
+    deploy-param: deploymentStatusProvisioner
+  - type: image
+    docker-image: artifactorycn.netcracker.com:17114/hashicorp/consul:1.20.0
+    deploy-param: consul
+  - type: image
+    docker-image: artifactorycn.netcracker.com:17114/hashicorp/consul-k8s-control-plane:1.6.0
+    deploy-param: consulK8s
+  - type: image
+    docker-image: artifactorycn.netcracker.com:17114/hashicorp/consul-dataplane:1.6.0
+    deploy-param: consulDataplane
+  - type: image
+    docker-image: artifactorycn.netcracker.com:17014/product/prod.platform.streaming_docker-kubectl:0.0.3_20240802-015529
+    deploy-param: kubectl
+  - type: scripts
+    repo: PROD.Platform.ElasticStack/deployment-utils
+    location: 0.1.11
+    alias: timestamp
+    zip-name: devops-scripts.zip
+    name: privileged-pss
+    pre-deploy-entry-point: privileged-pss.sh

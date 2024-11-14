@@ -1,0 +1,53 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ template "consul.fullname" . }}-update-resources
+  annotations:
+    "helm.sh/hook": pre-upgrade
+    "helm.sh/hook-weight": "1"
+    "helm.sh/hook-delete-policy": hook-succeeded,hook-failed
+spec:
+  template:
+    metadata:
+      name: {{ template "consul.fullname" . }}-update-resources
+      labels:
+        app: {{ template "consul.name" . }}
+        chart: {{ template "consul.chart" . }}
+        release: {{ .Release.Name }}
+        component: update-resources
+    spec:
+      {{- if not (eq (include "openshift.enabled" .) "true") }}
+      securityContext:
+        {{- include "consul.globalPodSecurityContext" . | nindent 8 }}
+        {{- with .Values.updateResourcesJob.securityContext }}
+        {{- toYaml . | nindent 8 -}}
+        {{- end }}
+      {{- end }}
+      restartPolicy: Never
+      serviceAccountName: {{ template "consul.fullname" . }}-update-resources
+      containers:
+        - name: upgrade-preparation
+          image: {{ template "deployment-status-provisioner.image" . }}
+          command:
+            - "/bin/bash"
+            - "-c"
+            - |
+              clusterIP=$(kubectl get service {{ template "consul.fullname" . }}-server -o json | grep clusterIP)
+              if [[ "$clusterIP" == *"None"* ]]; then
+                serviceConfig=$(kubectl get service {{ template "consul.fullname" . }}-server -o json | sed -z 's/"clusterIPs\?":[^,]*,//g')
+                kubectl delete service {{ template "consul.fullname" . }}-server --ignore-not-found=true
+                echo $serviceConfig | kubectl apply -f -
+              fi
+              statefulsetServiceName=$(kubectl get statefulset {{ template "consul.fullname" . }}-server -o json | grep serviceName)
+              if [[ "$statefulsetServiceName" == *"{{ template "consul.fullname" . }}-server"* ]]; then
+                kubectl delete statefulset {{ template "consul.fullname" . }}-server --ignore-not-found=true --cascade=orphan
+              fi
+          resources:
+            requests:
+              cpu: {{ default "75m" .Values.updateResourcesJob.resources.requests.cpu }}
+              memory: {{ default "75Mi" .Values.updateResourcesJob.resources.requests.memory }}
+            limits:
+              cpu: {{ default "150m" .Values.updateResourcesJob.resources.limits.cpu }}
+              memory: {{ default "150Mi" .Values.updateResourcesJob.resources.limits.memory }}
+          securityContext:
+            {{- include "consul.globalContainerSecurityContext" . | nindent 12 }}    

@@ -1,0 +1,193 @@
+{{- if .Values.integrationTests.enabled }}
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: {{ template "consul-integration-tests.name" . }}
+  labels:
+    {{- include "consul-service.defaultLabels" . | nindent 4 }}
+    app.kubernetes.io/name: {{ template "consul-integration-tests.name" . }}
+    name: {{ template "consul-integration-tests.name" . }}
+    app.kubernetes.io/instance: {{ cat (printf "%s"  (include "consul-integration-tests.name" .)) .Values.DELIMITER .Release.Namespace | nospace | trunc 63 }}
+    app.kubernetes.io/technology: python
+spec:
+  selector:
+    matchLabels:
+      name: {{ template "consul-integration-tests.name" . }}
+  strategy:
+    type: Recreate
+  replicas: {{ template "consul.replicasForSingleService" . }}
+  template:
+    metadata:
+      labels:
+        {{- with .Values.global.extraLabels }}
+          {{- toYaml . | nindent 8 -}}
+        {{- end }}
+        {{- with .Values.integrationTests.extraLabels }}
+          {{- toYaml . | nindent 8 -}}
+        {{- end }}
+        app.kubernetes.io/name: {{ template "consul-integration-tests.name" . }}
+        name: {{ template "consul-integration-tests.name" . }}
+    spec:
+      serviceAccountName: {{ template "consul.fullname" . }}-integration-tests
+      {{- if .Values.integrationTests.affinity }}
+      affinity:
+        {{ .Values.integrationTests.affinity | toJson }}
+      {{- end }}
+      {{- if not (eq (include "openshift.enabled" .) "true") }}
+      securityContext:
+        {{- include "consul.globalPodSecurityContext" . | nindent 8 }}
+        {{- with .Values.integrationTests.securityContext }}
+        {{- toYaml . | nindent 8 -}}
+        {{- end }}
+      {{- end }}
+      containers:
+        - name: {{ template "consul-integration-tests.name" . }}
+          image: {{ template "consul-integration-tests.image" . }}
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+          env:
+            - name: TAGS
+              value: {{ .Values.integrationTests.tags }}
+            {{- if .Values.deployDescriptor -}}
+            {{- if index .Values.deployDescriptor "consul-service" }}
+            - name: MONITORED_IMAGES
+              value: {{ include "consul.monitoredImages" . }}
+            {{- end }}
+            {{- end }}
+            {{- if .Values.global.acls.manageSystemACLs }}
+            - name: CONSUL_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  {{- if .Values.integrationTests.secret.aclToken }}
+                  name: {{ template "consul-integration-tests.name" . }}-secret
+                  key: acl-token
+                  {{- else }}
+                  name: "{{ template "consul.fullname" . }}-bootstrap-acl-token"
+                  key: "token"
+                  {{- end }}
+            {{- end }}
+            - name: CONSUL_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            {{- if .Values.integrationTests.statusWritingEnabled }}
+            - name: STATUS_CUSTOM_RESOURCE_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: STATUS_CUSTOM_RESOURCE_NAME
+              value: "{{ template "consul.fullname" . }}-integration-tests-runner"
+            - name: STATUS_WRITING_ENABLED
+              value: "{{ .Values.integrationTests.statusWritingEnabled }}"
+            - name: ONLY_INTEGRATION_TESTS
+              value: "false"
+            - name: IS_SHORT_STATUS_MESSAGE
+              value: "{{ .Values.integrationTests.isShortStatusMessage }}"
+            {{- end }}
+            - name: CONSUL_HOST
+              value: {{ template "consul.fullname" . }}-server
+            - name: CONSUL_PORT
+              value: "{{ coalesce .Values.integrationTests.consulPort (include "consul.port" .) }}"
+            - name: CONSUL_SCHEME
+              value: "{{ template "consul.scheme" . }}"
+            {{- if .Values.backupDaemon.enabled }}
+            - name: CONSUL_BACKUP_DAEMON_HOST
+              value: {{ template "consul.fullname" . }}-backup-daemon
+            - name: CONSUL_BACKUP_DAEMON_PORT
+              value: {{ include "backupDaemon.port" . | quote }}
+            - name: CONSUL_BACKUP_DAEMON_PROTOCOL
+              value:  {{ template "backupDaemon.protocol" . }}
+            - name: CONSUL_BACKUP_DAEMON_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ template "consul.fullname" . }}-backup-daemon-secret
+                  key: username
+            - name: CONSUL_BACKUP_DAEMON_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ template "consul.fullname" . }}-backup-daemon-secret
+                  key: password
+            {{- end }}
+            - name: S3_ENABLED
+              value: {{ .Values.backupDaemon.s3.enabled | quote }}
+            - name: S3_URL
+              value: {{ .Values.backupDaemon.s3.url | quote }}
+            - name: S3_BUCKET
+              value: {{ .Values.backupDaemon.s3.bucket | quote }}
+            - name: S3_KEY_ID
+            {{- if .Values.backupDaemon.s3.enabled }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ template "consul.fullname" . }}-s3-secret
+                  key: s3-key-id
+            {{- end }}
+            - name: S3_KEY_SECRET
+            {{- if .Values.backupDaemon.s3.enabled }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ template "consul.fullname" . }}-s3-secret
+                  key: s3-key-secret
+            {{- end }}
+            - name: DATACENTER_NAME
+              value: {{ .Values.global.datacenter }}
+            - name: RANDOM_RUN_TRIGGER
+              value: {{ randAlphaNum 10 | quote }}
+            {{- if .Values.monitoring.enabled }}
+            - name: PROMETHEUS_URL
+              value: {{ .Values.integrationTests.prometheusUrl }}
+            - name: PROMETHEUS_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ template "consul-integration-tests.name" . }}-monitoring-secret
+                  key: prometheus-user
+            - name: PROMETHEUS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ template "consul-integration-tests.name" . }}-monitoring-secret
+                  key: prometheus-password
+            {{- end }}
+          resources:
+            requests:
+              memory: {{ default "256Mi" .Values.integrationTests.resources.requests.memory }}
+              cpu: {{ default "200m" .Values.integrationTests.resources.requests.cpu }}
+            limits:
+              memory: {{ default "256Mi" .Values.integrationTests.resources.limits.memory }}
+              cpu: {{ default "400m" .Values.integrationTests.resources.limits.cpu }}
+          securityContext:
+            {{- include "consul.globalContainerSecurityContext" . | nindent 12 }}
+          volumeMounts:
+          {{- if and .Values.backupDaemon.enabled .Values.global.tls.enabled .Values.backupDaemon.tls.enabled (include "backupDaemon.tlsSecretName" .) }}
+            - name: backup-tls-certs
+              mountPath: /consul/tls/backup/
+          {{- end }}
+            - name: output
+              mountPath: /opt/robot/output
+            {{- if .Values.global.tls.enabled }}
+            - name: consul-ca-cert
+              mountPath: /consul/tls/ca/
+              readOnly: true
+            {{- end }}
+          terminationMessagePath: /dev/termination-log
+          imagePullPolicy: Always
+      volumes:
+      {{- if and .Values.backupDaemon.enabled .Values.global.tls.enabled .Values.backupDaemon.tls.enabled (include "backupDaemon.tlsSecretName" .) }}
+        - name: backup-tls-certs
+          secret:
+            secretName: {{ template "backupDaemon.tlsSecretName" . }}
+      {{- end }}
+        - name: output
+          emptyDir: {}
+        {{- if .Values.global.tls.enabled }}
+        - name: consul-ca-cert
+          secret:
+            secretName: {{ template "consul.caCertSecretName" . }}
+            items:
+              {{- if .Values.global.tls.certManager.enabled }}
+              - key: "ca.crt"
+              {{- else }}
+              - key: {{ default "tls.crt" .Values.global.tls.caCert.secretKey }}
+              {{- end }}
+                path: tls.crt
+        {{- end }}
+{{- end }}

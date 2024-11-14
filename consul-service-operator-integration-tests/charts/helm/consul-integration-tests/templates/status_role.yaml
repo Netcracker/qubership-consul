@@ -1,0 +1,17 @@
+{{- if (and .Values.serviceAccount.create (eq "true" .Values.integrationTests.statusWritingEnabled)) }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  creationTimestamp: null
+  name: {{ .Values.serviceAccount.name }}-status
+rules:
+  - apiGroups:
+      - apps
+    resources:
+      - deployments/status
+    verbs:
+      - get
+      - list
+      - update
+      - patch
+{{- end }}

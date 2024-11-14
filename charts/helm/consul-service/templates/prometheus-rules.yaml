@@ -1,0 +1,71 @@
+{{- if (or (and (ne (.Values.server.enabled | toString) "-") .Values.server.enabled) (and (eq (.Values.server.enabled | toString) "-") .Values.global.enabled)) }}
+{{- if (or (eq (include "monitoring.enabled" .) "true") (and (eq (.Values.monitoring.enabled | toString) "-") .Values.global.enabled)) }}
+{{- if .Values.monitoring.installDashboard }}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  creationTimestamp: null
+  labels:
+    {{- include "consul-service.coreLabels" . | nindent 4 }}
+    app.kubernetes.io/component: monitoring
+    prometheus: {{ template "consul.fullname" . }}-rules
+    role: alert-rules
+  name: prometheus-{{ template "consul.fullname" . }}-rules
+spec:
+  groups:
+    - name: {{ .Release.Namespace }}-{{ .Release.Name }}
+      rules:
+        - alert: ConsulDoesNotExistAlarm
+          annotations:
+            description: 'Consul server pods do not exist'
+            summary: There are no Consul server pods in namespace
+          expr: >-
+            absent(kube_pod_status_ready{exported_namespace="{{ .Release.Namespace }}",exported_pod=~"{{ template "consul.fullname" . }}-server-[0-9]+"}) > 0
+          for: 3m
+          labels:
+            service: {{ .Release.Name }}
+            namespace: {{ .Release.Namespace }}
+            severity: high
+        - alert: ConsulIsDegradedAlarm
+          annotations:
+            description: 'Consul is Degraded.'
+            summary: Some of Consul server pods are down
+          expr: sum(kube_pod_status_ready{exported_namespace="{{ .Release.Namespace }}",exported_pod=~"{{ template "consul.fullname" . }}-server-[0-9]+",condition="false"}) / sum(kube_pod_status_ready{exported_namespace="{{ .Release.Namespace }}",exported_pod=~"{{ template "consul.fullname" . }}-server-[0-9]+"}) > 0
+          for: 3m
+          labels:
+            service: {{ .Release.Name }}
+            namespace: {{ .Release.Namespace }}
+            severity: high
+        - alert: ConsulIsDownAlarm
+          annotations:
+            description: 'Consul is Down.'
+            summary: All of Consul server pods are down
+          expr: sum(kube_pod_status_ready{exported_namespace="{{ .Release.Namespace }}",exported_pod=~"{{ template "consul.fullname" . }}-server-[0-9]+",condition="false"}) / sum(kube_pod_status_ready{exported_namespace="{{ .Release.Namespace }}",exported_pod=~"{{ template "consul.fullname" . }}-server-[0-9]+"}) == 1
+          for: 3m
+          labels:
+            service: {{ .Release.Name }}
+            namespace: {{ .Release.Namespace }}
+            severity: critical
+        - alert: ConsulCPULoadAlarm
+          annotations:
+            description: 'Consul CPU load is higher than 95 percents'
+            summary: Some of Consul server pods load CPU higher than 95 percents
+          expr: max(rate(container_cpu_usage_seconds_total{namespace="{{ .Release.Namespace }}",pod=~"{{ template "consul.fullname" . }}-server-[0-9]+",container="consul"}[1m])) / max(kube_pod_container_resource_limits_cpu_cores{exported_namespace="{{ .Release.Namespace }}",exported_pod=~"{{ template "consul.fullname" . }}-server-[0-9]+",container="consul"}) > 0.95
+          for: 3m
+          labels:
+            service: {{ .Release.Name }}
+            namespace: {{ .Release.Namespace }}
+            severity: high
+        - alert: ConsulMemoryUsageAlarm
+          annotations:
+            description: 'Consul memory usage is higher than 95 percents'
+            summary: Some of Consul server pods use memory higher than 95 percents
+          expr: max(container_memory_working_set_bytes{namespace="{{ .Release.Namespace }}",pod=~"{{ template "consul.fullname" . }}-server-[0-9]+",container="consul"}) / max(kube_pod_container_resource_limits_memory_bytes{exported_namespace="{{ .Release.Namespace }}",exported_pod=~"{{ template "consul.fullname" . }}-server-[0-9]+",container="consul"}) > 0.95
+          for: 3m
+          labels:
+            service: {{ .Release.Name }}
+            namespace: {{ .Release.Namespace }}
+            severity: high
+{{- end }}
+{{- end }}
+{{- end }}

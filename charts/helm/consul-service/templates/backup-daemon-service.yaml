@@ -1,0 +1,31 @@
+# Headless service for Consul server DNS entries. This service should only
+# point to Consul servers. For access to an agent, one should assume that
+# the agent is installed locally on the node and the NODE_IP should be used.
+# If the node can't run a Consul agent, then this service can be used to
+# communicate directly to a server agent.
+{{- if (or (and (ne (.Values.backupDaemon.enabled | toString) "-") .Values.backupDaemon.enabled) (and (eq (.Values.backupDaemon.enabled | toString) "-") .Values.global.enabled)) }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ template "consul.fullname" . }}-backup-daemon
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ template "consul.name" . }}
+    chart: {{ template "consul.chart" . }}
+    heritage: {{ .Release.Service }}
+    release: {{ .Release.Name }}
+    component: backup-daemon
+    {{- include "consul-service.defaultLabels" . | nindent 4 }}
+    app.kubernetes.io/name: {{ template "consul.fullname" . }}-backup-daemon
+    name: {{ template "consul.fullname" . }}-backup-daemon
+spec:
+  clusterIP: None
+  ports:
+    - name: http
+      port: {{ template "backupDaemon.port" . }}
+      targetPort: {{ template "backupDaemon.port" . }}
+  selector:
+    app: {{ template "consul.name" . }}
+    release: "{{ .Release.Name }}"
+    component: backup-daemon
+{{- end }}

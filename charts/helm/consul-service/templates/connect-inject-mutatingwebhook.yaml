@@ -1,0 +1,42 @@
+{{- if (or (and (ne (.Values.connectInject.enabled | toString) "-") .Values.connectInject.enabled) (and (eq (.Values.connectInject.enabled | toString) "-") .Values.global.enabled)) }}
+# The MutatingWebhookConfiguration to enable the Connect injector.
+{{- if .Capabilities.APIVersions.Has "admissionregistration.k8s.io/v1" }}
+apiVersion: admissionregistration.k8s.io/v1
+{{- else }}
+apiVersion: admissionregistration.k8s.io/v1beta1
+{{- end }}
+kind: MutatingWebhookConfiguration
+metadata:
+  name: {{ template "consul.fullname" . }}-connect-injector
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ template "consul.name" . }}
+    chart: {{ template "consul.chart" . }}
+    heritage: {{ .Release.Service }}
+    release: {{ .Release.Name }}
+    {{- include "consul-service.defaultLabels" . | nindent 4 }}
+webhooks:
+  - name: {{ template "consul.fullname" . }}-connect-injector.consul.hashicorp.com
+    failurePolicy: Ignore
+    {{- if or ( gt .Capabilities.KubeVersion.Major "1" ) ( ge .Capabilities.KubeVersion.Minor "12" ) }}
+    sideEffects: None
+    admissionReviewVersions:
+      - "v1beta1"
+      - "v1"
+    {{- end }}
+    clientConfig:
+      service:
+        name: {{ template "consul.fullname" . }}-connect-injector
+        namespace: {{ .Release.Namespace }}
+        path: "/mutate"
+      caBundle: {{ .Values.connectInject.certs.caBundle | quote }}
+    rules:
+      - operations: [ "CREATE" ]
+        apiGroups: [""]
+        apiVersions: ["v1"]
+        resources: ["pods"]
+{{- if .Values.connectInject.namespaceSelector }}
+    namespaceSelector:
+{{ .Values.connectInject.namespaceSelector | toYaml | indent 6 | trim }}
+{{- end }}
+{{- end }}

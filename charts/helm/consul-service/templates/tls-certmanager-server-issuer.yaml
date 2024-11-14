@@ -1,0 +1,14 @@
+{{- if (or (and (ne (.Values.server.enabled | toString) "-") .Values.server.enabled) (and (eq (.Values.server.enabled | toString) "-") .Values.global.enabled)) }}
+{{- if and .Values.global.tls.enabled .Values.global.tls.certManager.enabled }}
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: {{ template "consul.fullname" . }}-tls-server-issuer
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "consul-service.defaultLabels" . | nindent 4 }}
+spec:
+  ca:
+    secretName: {{ template "consul.caCertSecretName" . }}
+{{- end }}
+{{- end }}

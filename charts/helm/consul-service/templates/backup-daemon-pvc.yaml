@@ -1,0 +1,23 @@
+{{- if and .Values.backupDaemon.enabled (or .Values.backupDaemon.persistentVolume (include "backupDaemon.storageClass" .))  }}
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: data-{{ template "consul.fullname" . }}-backup-daemon
+  labels:
+    {{- include "consul-service.defaultLabels" . | nindent 4 }}
+  annotations:
+    "helm.sh/resource-policy": keep
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ default "1Gi" .Values.backupDaemon.storage }}
+  {{- if .Values.backupDaemon.persistentVolume }}
+  volumeName: {{ .Values.backupDaemon.persistentVolume }}
+  {{- end }}
+  {{- if (include "backupDaemon.storageClass" .) }}
+  storageClassName: "{{ include "backupDaemon.storageClass" . }}"
+  {{- end }}
+---
+{{- end }}

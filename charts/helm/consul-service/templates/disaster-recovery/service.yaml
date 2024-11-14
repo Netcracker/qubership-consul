@@ -1,0 +1,19 @@
+{{- if eq (include "consul.enableDisasterRecovery" .) "true" }}
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    name: {{ template "consul.fullname" . }}-disaster-recovery
+    component: disaster-recovery
+    {{- include "consul-service.defaultLabels" . | nindent 4 }}
+    app.kubernetes.io/name: {{ template "consul.fullname" . }}-disaster-recovery
+  name: {{ template "consul.fullname" . }}-disaster-recovery
+spec:
+  ports:
+    - name: disaster-recovery
+      port: {{ template "disaster-recovery.port" . }}
+      protocol: TCP
+  selector:
+    name: {{ template "consul.fullname" . }}-disaster-recovery
+    component: disaster-recovery
+{{- end }}

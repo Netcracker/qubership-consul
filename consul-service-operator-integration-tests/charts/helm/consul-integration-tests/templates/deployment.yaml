@@ -1,0 +1,172 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: {{ .Values.service.name }}
+  labels:
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  selector:
+    matchLabels:
+      name: {{ .Values.service.name }}
+  strategy:
+    type: Recreate
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        name: {{ .Values.service.name }}
+    spec:
+      securityContext:
+        {{- include "consul.globalPodSecurityContext" . | nindent 8 }}
+        {{- with .Values.integrationTests.securityContext }}
+        {{- toYaml . | nindent 8 -}}
+        {{- end }}
+      serviceAccountName: {{ .Values.serviceAccount.name }}
+      {{- if .Values.integrationTests.affinity }}
+      affinity:
+        {{ .Values.integrationTests.affinity | toJson }}
+      {{- end }}
+      containers:
+        - name: {{ .Values.service.name }}
+          image: {{ template "consul-integration-tests.image" . }}
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+          env:
+            - name: TAGS
+              value: {{ .Values.integrationTests.tags }}
+            - name: CONSUL_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  {{- if (and (empty .Values.secret.aclToken) .Values.integrationTests.aclEnabled) }}
+                  name: {{ .Values.integrationTests.consulFullName }}-bootstrap-acl-token
+                  key: token
+                  {{- else }}
+                  name: {{ .Values.service.name }}-secret
+                  key: acl-token
+                  {{- end }}
+            - name: CONSUL_NAMESPACE
+              value: {{ .Values.integrationTests.consulNamespace }}
+            {{- if (eq "true" .Values.integrationTests.statusWritingEnabled) }}
+            - name: STATUS_CUSTOM_RESOURCE_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: STATUS_WRITING_ENABLED
+              value: {{ .Values.integrationTests.statusWritingEnabled | quote }}
+            - name: ONLY_INTEGRATION_TESTS
+              value: "true"
+            - name: IS_SHORT_STATUS_MESSAGE
+              value: {{ .Values.integrationTests.isShortStatusMessage | quote }}
+            {{- end }}
+            - name: PROMETHEUS_URL
+              value: {{ .Values.integrationTests.prometheusUrl }}
+            - name: PROMETHEUS_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.service.name }}-secret
+                  key: prometheus-user
+            - name: PROMETHEUS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.service.name }}-secret
+                  key: prometheus-password
+            - name: CONSUL_HOST
+              value: {{ .Values.integrationTests.consulHost }}
+            - name: CONSUL_PORT
+              value: {{ .Values.integrationTests.consulPort | quote }}
+            - name: CONSUL_SCHEME
+              value: {{ .Values.integrationTests.consulScheme | default "http" }}
+            - name: CONSUL_BACKUP_DAEMON_PROTOCOL
+            {{- if .Values.tls.backupDaemon.secretName }}
+              value: "https"
+            {{ else }}
+              value: "http"
+            {{- end }}
+            - name: CONSUL_BACKUP_DAEMON_HOST
+              value: {{ .Values.integrationTests.consulBackupDaemonHost }}
+            - name: CONSUL_BACKUP_DAEMON_PORT
+              {{- if .Values.tls.backupDaemon.secretName }}
+              value: "8443"
+              {{- else }}
+              value: "8080"
+              {{- end }}
+            {{- if .Values.secret.backupDaemon }}
+            - name: CONSUL_BACKUP_DAEMON_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.service.name }}-secret
+                  key: backup-daemon-username
+            - name: CONSUL_BACKUP_DAEMON_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.service.name }}-secret
+                  key: backup-daemon-password
+            {{- end }}
+            - name: DATACENTER_NAME
+              value: {{ .Values.integrationTests.datacenterName }}
+            - name: RANDOM_RUN_TRIGGER
+              value: {{ randAlphaNum 10 | quote }}
+            - name: S3_ENABLED
+              value: {{ .Values.integrationTests.s3.enabled | quote }}
+            - name: S3_URL
+              value: {{ .Values.integrationTests.s3.url | quote }}
+            - name: S3_BUCKET
+              value: {{ .Values.integrationTests.s3.bucket | quote }}
+            - name: S3_KEY_ID
+            {{- if .Values.integrationTests.s3.enabled }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.service.name }}-secret
+                  key: s3-key-id
+            {{- end }}
+            - name: S3_KEY_SECRET
+            {{- if .Values.integrationTests.s3.enabled }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.service.name }}-secret
+                  key: s3-key-secret
+            {{- end }}
+          resources:
+            requests:
+              memory: {{ default "256Mi" .Values.integrationTests.resources.requests.memory }}
+              cpu: {{ default "200m" .Values.integrationTests.resources.requests.cpu }}
+            limits:
+              memory: {{ default "256Mi" .Values.integrationTests.resources.limits.memory }}
+              cpu: {{ default "400m" .Values.integrationTests.resources.limits.cpu }}
+          securityContext:
+            {{- include "consul.globalContainerSecurityContext" . | nindent 12 }}
+          volumeMounts:
+            - name: output
+              mountPath: /opt/robot/output
+          {{- if .Values.tls.backupDaemon.secretName }}
+            - name: backup-tls-certs
+              mountPath: /consul/tls/backup/
+          {{- end }}
+            {{- if eq .Values.integrationTests.consulScheme "https" }}
+            - name: consul-ca-cert
+              mountPath: /consul/tls/ca/
+              readOnly: true
+            {{- end }}
+          terminationMessagePath: /dev/termination-log
+          imagePullPolicy: Always
+      volumes:
+        - name: output
+          emptyDir: {}
+      {{- if .Values.tls.backupDaemon.secretName }}
+        - name: backup-tls-certs
+          secret:
+            secretName: {{ .Values.tls.backupDaemon.secretName }}
+      {{- end }}
+        {{- if eq .Values.integrationTests.consulScheme "https" }}
+        - name: consul-ca-cert
+          secret:
+            secretName: {{ .Values.tls.consul.secretName | default (printf "%s-ca-cert" .Values.integrationTests.consulFullName) }}
+            items:
+              {{- if .Values.tls.certManagerEnabled }}
+              - key: "ca.crt"
+              {{- else }}
+              - key: "tls.crt"
+              {{- end }}
+                path: tls.crt
+        {{- end }}

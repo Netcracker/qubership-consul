@@ -1,0 +1,38 @@
+{{- if eq (.Values.client.enabled | toString) "true" }}
+{{- if (or (eq (include "monitoring.enabled" .) "true") (and (eq (.Values.monitoring.enabled | toString) "-") .Values.global.enabled)) }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ template "consul.fullname" . }}-client-monitoring
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ template "consul.name" . }}
+    chart: {{ template "consul.chart" . }}
+    heritage: {{ .Release.Service }}
+    release: {{ .Release.Name }}
+    component: client
+    {{- include "consul-service.defaultLabels" . | nindent 4 }}
+    name: {{ template "consul.fullname" . }}-client-monitoring
+    app.kubernetes.io/name: {{ template "consul.fullname" . }}-client-monitoring
+spec:
+  clusterIP: None
+  # We want the servers to become available even if they're not ready
+  # since this DNS is also used for join operations.
+  publishNotReadyAddresses: true
+  ports:
+    {{- if (or (not .Values.global.tls.enabled) (not .Values.global.tls.httpsOnly)) }}
+    - name: http
+      port: 8500
+      targetPort: 8500
+    {{- end }}
+    {{- if .Values.global.tls.enabled }}
+    - name: https
+      port: 8501
+      targetPort: 8501
+    {{- end }}
+  selector:
+    app: {{ template "consul.name" . }}
+    release: "{{ .Release.Name }}"
+    component: client
+{{- end }}
+{{- end }}

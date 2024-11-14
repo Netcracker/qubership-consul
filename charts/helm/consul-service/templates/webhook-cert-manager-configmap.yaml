@@ -1,0 +1,31 @@
+{{- if .Values.connectInject.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ template "consul.fullname" . }}-webhook-cert-manager-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ template "consul.name" . }}
+    chart: {{ template "consul.chart" . }}
+    heritage: {{ .Release.Service }}
+    release: {{ .Release.Name }}
+    component: webhook-cert-manager
+    {{- include "consul-service.defaultLabels" . | nindent 4 }}
+data:
+  webhook-config.json: |-
+    [
+    {{- if .Values.connectInject.enabled }}
+      {
+        "name": "{{ template "consul.fullname" . }}-connect-injector",
+        "tlsAutoHosts": [
+          "{{ template "consul.fullname" . }}-connect-injector",
+          "{{ template "consul.fullname" . }}-connect-injector.{{ .Release.Namespace }}",
+          "{{ template "consul.fullname" . }}-connect-injector.{{ .Release.Namespace }}.svc",
+          "{{ template "consul.fullname" . }}-connect-injector.{{ .Release.Namespace }}.svc.cluster.local"
+        ],
+        "secretName": "{{ template "consul.fullname" . }}-connect-inject-webhook-cert",
+        "secretNamespace": "{{ .Release.Namespace }}"
+      }
+    {{- end }}
+    ]
+  {{- end }}
