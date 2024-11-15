@@ -1,4 +1,4 @@
-FROM product/prod.platform.streaming_docker-integration-tests:0.1.14_20240802-014533
+FROM ghcr.io/netcracker/docker-integration-tests:main
 
 ENV ROBOT_OUTPUT=/opt/robot/output \
     SERVICE_CHECKER_SCRIPT=${ROBOT_HOME}/consul_pods_checker.py
