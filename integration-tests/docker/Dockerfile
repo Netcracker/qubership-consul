@@ -10,7 +10,6 @@ ENV STATUS_CUSTOM_RESOURCE_NAME=consul-integration-tests-runner
 
 RUN mkdir -p ${ROBOT_OUTPUT}
 
-COPY integration-tests/docker/pip.conf /etc/pip.conf
 COPY integration-tests/docker/requirements.txt ${ROBOT_HOME}/requirements.txt
 COPY integration-tests/docker/consul_pods_checker.py ${ROBOT_HOME}/consul_pods_checker.py
 COPY integration-tests/robot ${ROBOT_HOME}
