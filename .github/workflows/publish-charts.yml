@@ -1,0 +1,27 @@
+name: Build Artifacts
+on:
+  release:
+    types: [created]
+  push:
+    branches:
+      - 'main'
+env:
+  TAG_NAME: ${{ github.event.release.tag_name || (github.ref == 'refs/heads/main' && 'main') }}
+
+jobs:
+  multiplatform_build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create ZIP archive
+        run: |
+          zip -r consul-service-charts.zip charts
+          echo "ZIP archive created: consul-service-charts.zip"
+
+      - name: Upload ZIP as artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: consul-service-charts
+          path: consul-service-charts.zip

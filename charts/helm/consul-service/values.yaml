@@ -355,7 +355,7 @@ global:
   logJSON: false
 
   disasterRecovery:
-    image: product/prod.platform.streaming_consul-service:master_latest_disaster-recovery
+    image: docker pull ghcr.io/netcracker/consul-disaster-recovery:main
     tls:
       enabled: true
       certificates:
@@ -2071,7 +2071,7 @@ monitoring:
 backupDaemon:
   # Enable Consul Backup Daemon installation.
   enabled: false
-  image: "product/prod.platform.streaming_consul-backup-daemon:master_latest"
+  image: "docker pull ghcr.io/netcracker/consul-backup-daemon:main"
 
   tls:
     enabled: true
@@ -2188,9 +2188,9 @@ consulAclConfigurator:
   enabled: true
 
   # The image of Consul ACL Configurator Kubernetes operator which implements collecting processing Consul ACL configuration custom resources.
-  operatorImage: "product/prod.platform.streaming_consul-acl-configurator:master_latest_consul-acl-configurator-operator"
+  operatorImage: "ghcr.io/netcracker/consul-acl-configurator:main"
   # The image of Consul ACL Configurator HTTP server which allows execute common reconcile for Consul ACL configuration custom resources by HTTP request from any Kubernetes service account.
-  restServerImage: "product/prod.platform.streaming_consul-acl-configurator:master_latest_rest-acl-configurator"
+  restServerImage: "ghcr.io/netcracker/rest-acl-configurator:main"
   resources:
     requests:
       memory: 128Mi
@@ -2235,7 +2235,7 @@ consulAclConfigurator:
 
 statusProvisioner:
   enabled: true
-  dockerImage: product/prod.platform.streaming_deployment-status-provisioner:master_latest
+  dockerImage: docker pull ghcr.io/netcracker/deployment-status-provisioner:main
   lifetimeAfterCompletion: 600
   podReadinessTimeout: 300
   integrationTestsTimeout: 300
@@ -2266,7 +2266,7 @@ tests:
 
 integrationTests:
   enabled: false
-  image: product/prod.platform.streaming_consul-service:master_latest
+  image: ghcr.io/netcracker/consul-integration-tests:main
   secret:
     aclToken: ""
     prometheus:
