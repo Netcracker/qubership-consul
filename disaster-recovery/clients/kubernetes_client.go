@@ -2,7 +2,7 @@ package clients
 
 import (
 	"context"
-	"git.netcracker.com/PROD.Platform.Streaming/disaster-recovery-daemon/client"
+	"github.com/Netcracker/disaster-recovery-daemon/client"
 	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"

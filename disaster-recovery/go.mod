@@ -3,7 +3,7 @@ module disaster-recovery
 go 1.22
 
 require (
-	git.netcracker.com/PROD.Platform.Streaming/disaster-recovery-daemon v0.4.0
+	github.com/Netcracker/disaster-recovery-daemon v0.4.0
 	github.com/sirupsen/logrus v1.4.1
 	k8s.io/api v0.27.13
 	k8s.io/apimachinery v0.27.13

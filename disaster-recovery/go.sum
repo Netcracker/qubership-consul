@@ -1,6 +1,6 @@
 cloud.google.com/go v0.26.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMTw=
-git.netcracker.com/PROD.Platform.Streaming/disaster-recovery-daemon v0.4.0 h1:a0zOn3Usr5Rbcn7wKJES0JizkhRji6nthqLGopDde1s=
-git.netcracker.com/PROD.Platform.Streaming/disaster-recovery-daemon v0.4.0/go.mod h1:fX19+9ascdoAl7mE/PMg0JvEOYcKH6rcsPvCrk5L1SA=
+github.com/Netcracker/disaster-recovery-daemon v0.4.0 h1:a0zOn3Usr5Rbcn7wKJES0JizkhRji6nthqLGopDde1s=
+github.com/Netcracker/disaster-recovery-daemon v0.4.0/go.mod h1:fX19+9ascdoAl7mE/PMg0JvEOYcKH6rcsPvCrk5L1SA=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/avast/retry-go/v4 v4.6.0 h1:K9xNA+KeB8HHc2aWFuLb25Offp+0iVRXEvFx8IinRJA=
 github.com/avast/retry-go/v4 v4.6.0/go.mod h1:gvWlPhBVsvBbLkVGDg/KwvBv0bEkCOLRRSHKIr2PyOE=
