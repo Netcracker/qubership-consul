@@ -56,6 +56,8 @@ global:
   # @type: array<map>
   imagePullSecrets: []
 
+  overrideRegistry: ""
+
   # The name (and tag) of the consul-k8s (https://github.com/hashicorp/consul-k8s)
   # Docker image that is used for functionality such the catalog sync.
   # This can be overridden per component.
