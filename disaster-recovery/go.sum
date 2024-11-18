@@ -1,7 +1,7 @@
 cloud.google.com/go v0.26.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMTw=
-github.com/Netcracker/disaster-recovery-daemon v0.4.0 h1:a0zOn3Usr5Rbcn7wKJES0JizkhRji6nthqLGopDde1s=
-github.com/Netcracker/disaster-recovery-daemon v0.4.0/go.mod h1:fX19+9ascdoAl7mE/PMg0JvEOYcKH6rcsPvCrk5L1SA=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
+github.com/Netcracker/disaster-recovery-daemon v0.4.0 h1:rr466q1pbbE1Rgi6wvr3ez1gRAibybQDnMpLxwDhz1M=
+github.com/Netcracker/disaster-recovery-daemon v0.4.0/go.mod h1:lyqb+BsPPsB3WJRL/f5Z47Egs3cI/zj/5s2BlJGQ3rc=
 github.com/avast/retry-go/v4 v4.6.0 h1:K9xNA+KeB8HHc2aWFuLb25Offp+0iVRXEvFx8IinRJA=
 github.com/avast/retry-go/v4 v4.6.0/go.mod h1:gvWlPhBVsvBbLkVGDg/KwvBv0bEkCOLRRSHKIr2PyOE=
 github.com/census-instrumentation/opencensus-proto v0.2.1/go.mod h1:f6KPmirojxKA12rnyqOA5BBL4O983OfeGPqjHWSTneU=

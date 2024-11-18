@@ -4,7 +4,7 @@ on:
     types: [created]
   push:
     branches:
-      - 'main'
+      - '**'
 env:
   TAG_NAME: ${{ github.event.release.tag_name || (github.ref == 'refs/heads/main' && 'main') }}
 
@@ -16,7 +16,10 @@ jobs:
         component:
           - name: consul-integration-tests
             file: integration-tests/docker/Dockerfile
-            context: integration-tests
+            context: ""
+          - name: disaster-recovery
+            file: disaster-recovery/docker/Dockerfile
+            context: disaster-recovery
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -35,9 +38,11 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           no-cache: true
-          context: ${{ matrix.component.dir }}
+          context: ${{ matrix.component.context }}
           file: ${{ matrix.component.file }}
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ghcr.io/netcracker/${{ matrix.component.name }}:${{ env.TAG_NAME }}
           provenance: false
+          build-args: |
+            GH_ACCESS_TOKEN=${{ secrets.GH_ACCESS_TOKEN }}

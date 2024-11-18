@@ -1,15 +1,22 @@
 # Build the manager binary
 FROM golang:1.22.4-alpine3.20 as builder
 
-ENV GOSUMDB=off
+ARG GH_ACCESS_TOKEN
+
+ENV GOSUMDB=off GOPRIVATE=github.com/Netcracker
 
 WORKDIR /workspace
+
+RUN apk add --no-cache git
 
 # Copy the Go Modules manifests
 COPY go.mod go.mod
 COPY go.sum go.sum
 # cache deps before building and copying source so that we don't need to re-download as much
 # and so that source changes don't invalidate our downloaded layer
+
+RUN git config --global url."https://${GH_ACCESS_TOKEN}@github.com/".insteadOf "https://github.com/"
+
 RUN go mod download
 
 # Copy the go source
@@ -28,7 +35,6 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o manager 
 FROM alpine:3.20.2
 
 WORKDIR /
-COPY docker/config/alpine-repositories /etc/apk/repositories
 COPY --from=builder --chown=${USER_UID} /workspace/manager .
 
 # Install misc tools
