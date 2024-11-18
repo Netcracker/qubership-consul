@@ -355,7 +355,7 @@ global:
   logJSON: false
 
   disasterRecovery:
-    image: docker pull ghcr.io/netcracker/consul-disaster-recovery:main
+    image: ghcr.io/netcracker/consul-disaster-recovery:main
     tls:
       enabled: true
       certificates:
@@ -2071,7 +2071,7 @@ monitoring:
 backupDaemon:
   # Enable Consul Backup Daemon installation.
   enabled: false
-  image: "docker pull ghcr.io/netcracker/consul-backup-daemon:main"
+  image: "ghcr.io/netcracker/consul-backup-daemon:main"
 
   tls:
     enabled: true
@@ -2184,7 +2184,7 @@ backupDaemon:
 
 # Consul ACL Configurator is a service to manage Consul ACLs.
 consulAclConfigurator:
-  # Enable Consul ACL Configurator installation
+  # Enable Consul ACL Configurator installation.
   enabled: true
 
   # The image of Consul ACL Configurator Kubernetes operator which implements collecting processing Consul ACL configuration custom resources.
@@ -2235,7 +2235,7 @@ consulAclConfigurator:
 
 statusProvisioner:
   enabled: true
-  dockerImage: docker pull ghcr.io/netcracker/deployment-status-provisioner:main
+  dockerImage: ghcr.io/netcracker/deployment-status-provisioner:main
   lifetimeAfterCompletion: 600
   podReadinessTimeout: 300
   integrationTestsTimeout: 300
