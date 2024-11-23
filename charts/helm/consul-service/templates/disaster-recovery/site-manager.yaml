@@ -1,0 +1,31 @@
+{{- if and (eq (include "consul.enableDisasterRecovery" .) "true") .Values.global.disasterRecovery.siteManagerEnabled }}
+apiVersion: {{ .Values.global.disasterRecovery.siteManagerApiGroup }}/v3
+kind: SiteManager
+metadata:
+  name: consul-{{ .Release.Namespace }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ template "consul.name" . }}
+    chart: {{ template "consul.chart" . }}
+    release: {{ .Release.Name }}
+    name: {{ template "consul.fullname" . }}-disaster-recovery
+    component: disaster-recovery
+    {{- include "consul-service.defaultLabels" . | nindent 4 }}
+spec:
+  sitemanager:
+    module: "stateful"
+    {{- with .Values.global.disasterRecovery.afterServices }}
+    after:
+      {{- range . }}
+      - {{ . }}
+      {{- end }}
+    {{- else }}
+    after: []
+    {{- end }}
+    before: []
+    sequence: ["standby", "active"]
+    timeout: {{ .Values.global.disasterRecovery.timeout }}
+    parameters:
+      serviceEndpoint: "{{ template "disaster-recovery.protocol" . }}://{{ template "consul.fullname" . }}-disaster-recovery.{{ .Release.Namespace }}.svc.cluster.local:{{ template "disaster-recovery.port" . }}/sitemanager"
+      healthzEndpoint: "{{ template "disaster-recovery.protocol" . }}://{{ template "consul.fullname" . }}-disaster-recovery.{{ .Release.Namespace }}.svc.cluster.local:{{ template "disaster-recovery.port" . }}/healthz"
+{{- end }}

@@ -1,0 +1,57 @@
+{{- if and (eq (include "openshift.enabled" .) "true") (eq (.Values.client.enabled | toString) "true") }}
+{{- if (ne (include "consul.restrictedEnvironment" .) "true") }}
+apiVersion: security.openshift.io/v1
+kind: SecurityContextConstraints
+metadata:
+  name: {{ template "consul.fullname" . }}-client
+  labels:
+    app: {{ template "consul.name" . }}
+    chart: {{ template "consul.chart" . }}
+    heritage: {{ .Release.Service }}
+    release: {{ .Release.Name }}
+    {{- include "consul-service.defaultLabels" . | nindent 4 }}
+  annotations:
+    kubernetes.io/description: {{ template "consul.fullname" . }}-client are the security context constraints required
+      to run the consul client.
+{{- if .Values.client.dataDirectoryHostPath }}
+allowHostDirVolumePlugin: true
+{{- else }}
+allowHostDirVolumePlugin: false
+{{- end }}
+allowHostIPC: false
+allowHostNetwork: {{ .Values.client.hostNetwork }}
+allowHostPID: false
+allowHostPorts: true
+allowPrivilegeEscalation: true
+allowPrivilegedContainer: false
+allowedCapabilities: []
+defaultAddCapabilities: []
+fsGroup:
+  type: MustRunAs
+groups: []
+priority: 0
+readOnlyRootFilesystem: false
+requiredDropCapabilities:
+- KILL
+- MKNOD
+- SETUID
+- SETGID
+runAsUser:
+  type: MustRunAsRange
+seLinuxContext:
+  type: MustRunAs
+supplementalGroups:
+  type: MustRunAs
+users: []
+volumes:
+- configMap
+- downwardAPI
+- emptyDir
+- persistentVolumeClaim
+- projected
+- secret
+{{- if .Values.client.dataDirectoryHostPath }}
+- hostPath
+{{- end }}
+{{- end }}
+{{- end }}

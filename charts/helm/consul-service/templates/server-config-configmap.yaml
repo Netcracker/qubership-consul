@@ -1,0 +1,95 @@
+{{- if (or (and (ne (.Values.server.enabled | toString) "-") .Values.server.enabled) (and (eq (.Values.server.enabled | toString) "-") .Values.global.enabled)) }}
+# StatefulSet to run the actual Consul server cluster.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ template "consul.fullname" . }}-server-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ template "consul.name" . }}
+    chart: {{ template "consul.chart" . }}
+    heritage: {{ .Release.Service }}
+    release: {{ .Release.Name }}
+    component: server
+    {{- include "consul-service.defaultLabels" . | nindent 4 }}
+data:
+  server.json: |
+    {
+      "bind_addr": "0.0.0.0",
+      "bootstrap_expect": {{ if .Values.server.bootstrapExpect }}{{ .Values.server.bootstrapExpect }}{{ else }}{{ include "server.replicas" . }}{{ end }},
+      "client_addr": "0.0.0.0",
+      "connect": {
+        "enabled": {{ .Values.server.connect }}
+      },
+      "datacenter": "{{ .Values.global.datacenter }}",
+      "data_dir": "/consul/data",
+      {{- if .Values.server.logLevel }}
+      "log_level": "{{ .Values.server.logLevel | upper }}",
+      {{- end }}
+      "enable_debug": {{ .Values.server.enableAgentDebug }},
+      "domain": "{{ .Values.global.domain }}",
+      "limits": {
+        "request_limits": {
+          "mode": "{{ .Values.server.limits.requestLimits.mode }}",
+          "read_rate": {{ .Values.server.limits.requestLimits.readRate }},
+          "write_rate": {{ .Values.server.limits.requestLimits.writeRate }}
+        }
+      },
+      "ports": {
+        {{- if not .Values.global.tls.enabled }}
+        "grpc": 8502,
+        "grpc_tls": -1,
+        {{- end }}
+        {{- if .Values.global.tls.enabled }}
+        "grpc": -1,
+        "grpc_tls": 8502,
+        {{- end }}
+        "serf_lan": {{ .Values.server.ports.serflan.port }}
+      },
+      "retry_join": [
+        "{{template "consul.fullname" . }}-server-internal.{{ .Release.Namespace }}.svc:{{ .Values.server.ports.serflan.port }}"
+      ],
+      "server": true,
+      "server_rejoin_age_max": "8760h"
+    }
+  {{- if .Values.global.acls.manageSystemACLs }}
+  acl-config.json: |-
+    {
+      "acl": {
+        "enabled": true,
+        "default_policy": "deny",
+        "down_policy": "extend-cache",
+        {{- if (and .Values.global.acls.replicationToken.secretName .Values.global.acls.replicationToken.secretKey) }}
+        "enable_token_replication": true,
+        {{- end }}
+        "enable_token_persistence": true
+      }
+    }
+  {{- end }}
+  {{- if (and .Values.ui.enabled (or .Values.ui.metrics.enabled (and .Values.global.metrics.enabled (eq (.Values.ui.metrics.enabled | toString) "-")))) }}
+  ui-config.json: |-
+    {
+      "ui_config": {
+        "enabled": true,
+        "metrics_provider": "{{ .Values.ui.metrics.provider }}",
+        "metrics_proxy": {
+          "base_url": "{{ .Values.ui.metrics.baseURL }}"
+        }
+      }
+    }
+  {{- end }}
+  central-config.json: |-
+    {
+      "enable_central_service_config": true
+    }
+  {{- if .Values.global.federation.enabled }}
+  federation-config.json: |-
+    {
+      "primary_datacenter": "{{ .Values.global.federation.primaryDatacenter }}",
+      "primary_gateways": {{ .Values.global.federation.primaryGateways | toJson }},
+      "connect": {
+        "enable_mesh_gateway_wan_federation": true
+      }
+    }
+  {{- end }}
+{{- end }}

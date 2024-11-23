@@ -1,0 +1,2 @@
+python-consul2==0.1.5
+robotframework-requests==0.5.0

@@ -1,0 +1,17 @@
+{{- if .Values.consulAclConfigurator.enabled }}
+kind: Service
+apiVersion: v1
+metadata:
+  name: {{ .Values.consulAclConfigurator.serviceName }}
+  labels:
+    {{- include "consul-service.defaultLabels" . | nindent 4 }}
+    app.kubernetes.io/name: {{ .Values.consulAclConfigurator.serviceName }}
+    name: {{ .Values.consulAclConfigurator.serviceName }}
+spec:
+  ports:
+    - name: http
+      port: 8088
+      protocol: TCP
+  selector:
+    name: {{ template "consul-acl-configurator.name" . }}-operator
+{{- end }}

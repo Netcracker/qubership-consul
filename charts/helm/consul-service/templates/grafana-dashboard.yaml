@@ -1,0 +1,17 @@
+{{- if (or (and (ne (.Values.server.enabled | toString) "-") .Values.server.enabled) (and (eq (.Values.server.enabled | toString) "-") .Values.global.enabled)) }}
+{{- if (or (eq (include "monitoring.enabled" .) "true") (and (eq (.Values.monitoring.enabled | toString) "-") .Values.global.enabled)) }}
+{{- if .Values.monitoring.installDashboard }}
+apiVersion: integreatly.org/v1alpha1
+kind: GrafanaDashboard
+metadata:
+  name: {{ template "consul.fullname" . }}-grafana-dashboard
+  labels:
+    app: grafana
+    {{- include "consul-service.defaultLabels" . | nindent 4 }}
+spec:
+  name: consul-dashboard.json
+  json: >
+{{ .Files.Get "monitoring/consul-dashboard.json" | indent 4 }}
+{{- end }}
+{{- end }}
+{{- end }}

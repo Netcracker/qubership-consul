@@ -1,0 +1,24 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ template "consul.fullname" . }}-update-resources
+  annotations:
+    "helm.sh/hook": pre-upgrade
+    "helm.sh/hook-delete-policy": before-hook-creation
+rules:
+  - apiGroups:      
+      - ''
+    resources:
+      - services
+    verbs:
+      - delete
+      - get
+      - create
+  - apiGroups:
+      - apps
+    resources:
+      - statefulsets
+    verbs:
+      - delete
+      - get
+      - list

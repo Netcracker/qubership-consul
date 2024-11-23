@@ -1,0 +1,422 @@
+{{- if (or (and (ne (.Values.server.enabled | toString) "-") .Values.server.enabled) (and (eq (.Values.server.enabled | toString) "-") .Values.global.enabled)) }}
+{{- if and .Values.global.federation.enabled (not .Values.global.tls.enabled) }}{{ fail "If global.federation.enabled is true, global.tls.enabled must be true because federation is only supported with TLS enabled" }}{{ end }}
+{{- if and .Values.global.federation.enabled (not .Values.meshGateway.enabled) }}{{ fail "If global.federation.enabled is true, meshGateway.enabled must be true because mesh gateways are required for federation" }}{{ end }}
+{{- if .Values.server.disableFsGroupSecurityContext }}{{ fail "server.disableFsGroupSecurityContext has been removed. Please use global.openshift.enabled instead." }}{{ end }}
+{{- if .Values.server.bootstrapExpect }}{{ if lt (int .Values.server.bootstrapExpect) (int (include "server.replicas" .)) }}{{ fail "server.bootstrapExpect cannot be less than server.replicas" }}{{ end }}{{ end }}
+{{- if .Values.server.telemetry }}{{ fail "server.telemetry has been removed. Please use global.metrics instead." }}{{ end -}}
+{{ $volumesSpecified := (or .Values.server.persistentVolumes (include "server.storageClass" .)) }}
+# StatefulSet to run the actual Consul server cluster.
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ template "consul.fullname" . }}-server
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ template "consul.name" . }}
+    chart: {{ template "consul.chart" . }}
+    heritage: {{ .Release.Service }}
+    release: {{ .Release.Name }}
+    component: server
+    name: {{ template "consul.fullname" . }}-server
+    {{- include "consul-service.defaultLabels" . | nindent 4 }}
+    app.kubernetes.io/name: {{ template "consul.fullname" . }}-server
+    app.kubernetes.io/instance: {{ cat (printf "%s-server"  (include "consul.fullname" .)) .Values.DELIMITER .Release.Namespace | nospace | trunc 63 }}
+    app.kubernetes.io/technology: go
+    {{- if .Values.global.extraLabels }}
+      {{- toYaml .Values.global.extraLabels | nindent 4 }}
+    {{- end }}
+spec:
+  serviceName: {{ template "consul.fullname" . }}-server-internal
+  podManagementPolicy: Parallel
+  replicas: {{ include "server.replicas" . }}
+  {{- if (gt (int .Values.server.updatePartition) 0) }}
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      partition: {{ .Values.server.updatePartition }}
+  {{- end }}
+  selector:
+    matchLabels:
+      app: {{ template "consul.name" . }}
+      chart: {{ template "consul.chart" . }}
+      release: {{ .Release.Name }}
+      component: server
+      hasDNS: "true"
+  template:
+    metadata:
+      labels:
+        {{- with .Values.global.extraLabels }}
+          {{- toYaml . | nindent 8 -}}
+        {{- end }}
+        {{- if .Values.server.extraLabels }}
+          {{- toYaml .Values.server.extraLabels | nindent 8 }}
+        {{- end }}
+        {{- if .Values.global.extraLabels }}
+          {{- toYaml .Values.global.extraLabels | nindent 8 }}
+        {{- end }}
+        app: {{ template "consul.name" . }}
+        chart: {{ template "consul.chart" . }}
+        name: {{ template "consul.fullname" . }}-server
+        release: {{ .Release.Name }}
+        component: server
+        hasDNS: "true"
+        serviceName: {{ template "consul.fullname" . }}-server-internal
+        {{- include "consul-service.defaultLabels" . | nindent 8 }}
+        app.kubernetes.io/name: {{ template "consul.fullname" . }}-server
+        app.kubernetes.io/instance: {{ cat (printf "%s-server"  (include "consul.fullname" .)) .Values.DELIMITER .Release.Namespace | nospace | trunc 63 }}
+        app.kubernetes.io/technology: go
+      annotations:
+        "consul.hashicorp.com/connect-inject": "false"
+        "consul.hashicorp.com/config-checksum": {{ include (print $.Template.BasePath "/server-config-configmap.yaml") . | sha256sum }}
+        {{- if .Values.server.annotations }}
+        {{ .Values.server.annotations | toYaml | indent 8 | trim }}
+        {{- end }}
+        {{- if (and .Values.global.metrics.enabled .Values.global.metrics.enableAgentMetrics) }}
+        "prometheus.io/scrape": "true"
+        "prometheus.io/path": "/v1/agent/metrics"
+        "prometheus.io/port": "8500"
+        {{- end }}
+    spec:
+    {{- if (eq (include "pod-scheduler.enabled" .) "true") }}
+      schedulerName: {{ template "consul.fullname" . }}-pod-scheduler
+    {{- end }}
+    {{- if .Values.server.affinity }}
+      affinity:
+        {{ tpl (.Values.server.affinity | toYaml) . | nindent 8 | trim }}
+    {{- end }}
+    {{- if .Values.server.tolerations }}
+      tolerations:
+        {{ .Values.server.tolerations | toYaml | indent 8 | trim }}
+    {{- end }}
+    {{- if .Values.server.topologySpreadConstraints }}
+    {{- if and (ge .Capabilities.KubeVersion.Major "1") (ge .Capabilities.KubeVersion.Minor "18") }}
+      topologySpreadConstraints:
+        {{ tpl .Values.server.topologySpreadConstraints . | nindent 8 | trim }}
+    {{- else }}
+    {{- fail "`topologySpreadConstraints` requires Kubernetes 1.18 and above." }}
+    {{- end }}
+    {{- end }}
+      terminationGracePeriodSeconds: 30
+      serviceAccountName: {{ template "consul.fullname" . }}-server
+      {{- if not (eq (include "openshift.enabled" .) "true") }}
+      securityContext:
+        {{- include "server.securityContext" . | nindent 8 }}
+      {{- end }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ template "consul.fullname" . }}-server-config
+        - name: extra-config
+          emptyDir: {}
+        - name: tmp-extra-config
+          configMap:
+            name: {{ template "consul.fullname" . }}-server-tmp-extra-config
+        {{- if not $volumesSpecified }}
+        - name: data-{{ .Release.Namespace | trunc 58 | trimSuffix "-" }}
+          emptyDir: {}
+        {{- end }}
+        {{- if .Values.global.tls.enabled }}
+        - name: consul-ca-cert
+          secret:
+            secretName: {{ template "consul.caCertSecretName" . }}
+            items:
+            - key: {{ default "tls.crt" .Values.global.tls.caCert.secretKey }}
+              path: tls.crt
+        - name: consul-server-cert
+          secret:
+            secretName: {{ template "server.tlsSecretName" . }}
+        {{- end }}
+        {{- if (and .Values.server.enterpriseLicense.secretName .Values.server.enterpriseLicense.secretKey .Values.server.enterpriseLicense.enableLicenseAutoload) }}
+        - name: consul-license
+          secret:
+            secretName: {{ .Values.server.enterpriseLicense.secretName }}
+        {{- end }}
+        {{- range .Values.server.extraVolumes }}
+        - name: userconfig-{{ .name }}
+          {{ .type }}:
+            {{- if (eq .type "configMap") }}
+            name: {{ .name }}
+            {{- else if (eq .type "secret") }}
+            secretName: {{ .name }}
+            {{- end }}
+            {{- with .items }}
+            items:
+            {{- range . }}
+            - key: {{.key}}
+              path: {{.path}}
+            {{- end }}
+            {{- end }}
+        {{- end }}
+      {{- if .Values.server.priorityClassName }}
+      priorityClassName: {{ .Values.server.priorityClassName | quote }}
+      {{- end }}
+      {{- if .Values.server.serverLocalityEnabled }}
+      initContainers:
+        - name: locality-init
+          image: {{ .Values.global.imageK8S }}
+          env:
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+          command:
+            - "/bin/sh"
+            - "-ec"
+            - |
+              consul-k8s-control-plane fetch-server-region -node-name "$NODE_NAME" -output-file /consul/extra-config/locality.json
+          volumeMounts:
+            - name: extra-config
+              mountPath: /consul/extra-config
+          securityContext:
+            {{- include "consul.globalContainerSecurityContext" . | nindent 12 }}
+      {{- end }}
+      containers:
+        - name: consul
+          image: {{ template "consul.image" . }}
+          env:
+            - name: ADVERTISE_IP
+              valueFrom:
+                fieldRef:
+                  {{- if .Values.server.exposeGossipAndRPCPorts }}
+                  {{- /* Server gossip and RPC ports will be exposed as a hostPort
+                  on the hostIP, so they need to advertise their host ip
+                  instead of their pod ip. This is to support external client
+                  agents. */}}
+                  fieldPath: status.hostIP
+                  {{- else }}
+                  fieldPath: status.podIP
+                  {{- end }}
+            - name: HOST_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: CONSUL_DISABLE_PERM_MGMT
+              value: "true"
+            {{- if (and .Values.global.gossipEncryption.secretName .Values.global.gossipEncryption.secretKey) }}
+            - name: GOSSIP_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.global.gossipEncryption.secretName }}
+                  key: {{ .Values.global.gossipEncryption.secretKey }}
+            {{- end }}
+            {{- if .Values.global.tls.enabled }}
+            - name: CONSUL_HTTP_ADDR
+              value: https://localhost:8501
+            - name: CONSUL_CACERT
+              value: /consul/tls/ca/tls.crt
+            {{- end }}
+            {{- if (and .Values.server.enterpriseLicense.secretName .Values.server.enterpriseLicense.secretKey .Values.server.enterpriseLicense.enableLicenseAutoload) }}
+            - name: CONSUL_LICENSE_PATH
+              value: /consul/license/{{ .Values.server.enterpriseLicense.secretKey }}
+            {{- end }}
+            {{- if and .Values.global.acls.bootstrapToken.secretName .Values.global.acls.bootstrapToken.secretKey }}
+            - name: ACL_BOOTSTRAP_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.global.acls.bootstrapToken.secretName | quote }}
+                  key: {{ .Values.global.acls.bootstrapToken.secretKey | quote }}
+                    {{- end }}
+            {{- if (and .Values.global.acls.replicationToken.secretName .Values.global.acls.replicationToken.secretKey) }}
+            - name: ACL_REPLICATION_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.global.acls.replicationToken.secretName | quote }}
+                  key: {{ .Values.global.acls.replicationToken.secretKey | quote }}
+            {{- end }}
+            {{- include "consul.extraEnvironmentVars" .Values.server | nindent 12 }}
+          command:
+            - "/bin/sh"
+            - "-ec"
+            - |
+              CONSUL_FULLNAME="{{template "consul.fullname" . }}"
+
+              {{ template "consul.extraconfig" }}
+
+              exec /usr/local/bin/docker-entrypoint.sh consul agent \
+                -advertise="${ADVERTISE_IP}" \
+                {{- if .Values.global.tls.enabled }}
+                -hcl='ca_file = "/consul/tls/ca/tls.crt"' \
+                -hcl='cert_file = "/consul/tls/server/tls.crt"' \
+                -hcl='key_file = "/consul/tls/server/tls.key"' \
+                {{- if .Values.global.tls.enableAutoEncrypt }}
+                -hcl='auto_encrypt = {allow_tls = true}' \
+                {{- end }}
+                {{- if .Values.global.tls.verify }}
+                -hcl='verify_incoming_rpc = true' \
+                -hcl='verify_outgoing = true' \
+                -hcl='verify_server_hostname = true' \
+                {{- end }}
+                -hcl='ports { https = 8501 }' \
+                {{- if .Values.global.tls.httpsOnly }}
+                -hcl='ports { http = -1 }' \
+                {{- end }}
+                {{- end }}
+                -client=0.0.0.0 \
+                -config-dir=/consul/config \
+                {{- /* Always include the extraVolumes at the end so that users can
+                      override other Consul settings. The last -config-dir takes
+                      precedence. */}}
+                {{- range .Values.server.extraVolumes }}
+                {{- if .load }}
+                -config-dir=/consul/userconfig/{{ .name }} \
+                {{- end }}
+                {{- end }}
+                -datacenter={{ .Values.global.datacenter }} \
+                -data-dir=/consul/data \
+                -domain={{ .Values.global.domain }} \
+                {{- if (and .Values.global.gossipEncryption.secretName .Values.global.gossipEncryption.secretKey) }}
+                -encrypt="${GOSSIP_KEY}" \
+                {{- end }}
+                -hcl='telemetry { {{ template "consul-telemetry.configuration" . }} }' \
+                {{- if .Values.global.federation.enabled }}
+                -hcl="connect { enable_mesh_gateway_wan_federation = true }" \
+                {{- end }}
+                {{- if (and .Values.global.acls.replicationToken.secretName .Values.global.acls.replicationToken.secretKey) }}
+                -hcl="acl { tokens { agent = \"${ACL_REPLICATION_TOKEN}\", replication = \"${ACL_REPLICATION_TOKEN}\" } }" \
+                {{- end }}
+                {{- if and .Values.global.acls.bootstrapToken.secretName .Values.global.acls.bootstrapToken.secretKey }}
+                -hcl="acl { tokens { initial_management = \"${ACL_BOOTSTRAP_TOKEN}\" } }" \
+                {{- end }}
+                {{- if .Values.ui.enabled }}
+                -ui \
+                {{- end }}
+                -config-file=/consul/extra-config/extra-from-values.json
+                {{- $serverSerfLANPort  := .Values.server.ports.serflan.port -}}
+                {{- range $index := until ((include "server.replicas" .) | int) }}
+                {{- end }}
+                {{- range $value := .Values.global.recursors }}
+                -recursor={{ quote $value }} \
+                {{- end }}
+          volumeMounts:
+            - name: data-{{ .Release.Namespace | trunc 58 | trimSuffix "-" }}
+              mountPath: /consul/data
+            - name: config
+              mountPath: /consul/config
+            - name: extra-config
+              mountPath: /consul/extra-config
+            - name: tmp-extra-config
+              mountPath: /consul/tmp/extra-config
+            {{- if .Values.global.tls.enabled }}
+            - name: consul-ca-cert
+              mountPath: /consul/tls/ca/
+              readOnly: true
+            - name: consul-server-cert
+              mountPath: /consul/tls/server
+              readOnly: true
+            {{- end }}
+            {{- if (and .Values.server.enterpriseLicense.secretName .Values.server.enterpriseLicense.secretKey .Values.server.enterpriseLicense.enableLicenseAutoload) }}
+            - name: consul-license
+              mountPath: /consul/license
+              readOnly: true
+            {{- end }}
+            {{- range .Values.server.extraVolumes }}
+            - name: userconfig-{{ .name }}
+              readOnly: true
+              mountPath: /consul/userconfig/{{ .name }}
+            {{- end }}
+          ports:
+            {{- if (or (not .Values.global.tls.enabled) (not .Values.global.tls.httpsOnly)) }}
+            - name: http
+              containerPort: 8500
+            {{- end }}
+            {{- if .Values.global.tls.enabled }}
+            - name: https
+              containerPort: 8501
+            {{- end }}
+            - name: serflan-tcp
+              containerPort: {{ .Values.server.ports.serflan.port }}
+              {{- if .Values.server.exposeGossipAndRPCPorts }}
+              hostPort: {{ .Values.server.ports.serflan.port }}
+              {{- end }}
+              protocol: "TCP"
+            - name: serflan-udp
+              containerPort: {{ .Values.server.ports.serflan.port }}
+              {{- if .Values.server.exposeGossipAndRPCPorts }}
+              hostPort: {{ .Values.server.ports.serflan.port }}
+              {{- end }}
+              protocol: "UDP"
+            - name: serfwan-tcp
+              containerPort: 8302
+              {{- if .Values.server.exposeGossipAndRPCPorts }}
+              hostPort: 8302
+              {{- end }}
+              protocol: "TCP"
+            - name: serfwan-udp
+              containerPort: 8302
+              {{- if .Values.server.exposeGossipAndRPCPorts }}
+              hostPort: 8302
+              {{- end }}
+              protocol: "UDP"
+            - name: server
+              containerPort: 8300
+              {{- if .Values.server.exposeGossipAndRPCPorts }}
+              hostPort: 8300
+              {{- end }}
+            - name: dns-tcp
+              containerPort: 8600
+              protocol: "TCP"
+            - name: dns-udp
+              containerPort: 8600
+              protocol: "UDP"
+            - name: grpc
+              containerPort: 8502
+              {{- if .Values.server.exposeGossipAndRPCPorts }}
+              hostPort: 8502
+              {{- end }}
+              protocol: "TCP"
+          readinessProbe:
+            # NOTE(mitchellh): when our HTTP status endpoints support the
+            # proper status codes, we should switch to that. This is temporary.
+            exec:
+              command:
+                - "/bin/sh"
+                - "-ec"
+                - |
+                  {{- if .Values.global.tls.enabled }}
+                  curl -k \
+                    https://127.0.0.1:8501/v1/status/leader \
+                  {{- else }}
+                  curl http://127.0.0.1:8500/v1/status/leader \
+                  {{- end }}
+                  2>/dev/null | grep -E '".+"'
+            failureThreshold: 2
+            initialDelaySeconds: 5
+            periodSeconds: 3
+            successThreshold: 1
+            timeoutSeconds: 5
+          resources:
+            requests:
+              cpu: {{ default "50m" .Values.server.resources.requests.cpu }}
+              memory: {{ default "128Mi" .Values.server.resources.requests.memory }}
+            limits:
+              cpu: {{ default "400m" .Values.server.resources.limits.cpu }}
+              memory: {{ default "1024Mi" .Values.server.resources.limits.memory }}
+          securityContext:
+            {{- include "consul.globalContainerSecurityContext" . | nindent 12 }}
+      {{- if .Values.server.nodeSelector }}
+      nodeSelector:
+        {{ .Values.server.nodeSelector | toYaml | indent 8 | trim }}
+      {{- end }}
+  {{- if $volumesSpecified }}
+  volumeClaimTemplates:
+    - metadata:
+        name: data-{{ .Release.Namespace | trunc 58 | trimSuffix "-" }}
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: {{ .Values.server.storage }}
+        {{- if (include "server.storageClass" .) }}
+        storageClassName: {{ (include "server.storageClass" .) }}
+        {{- end }}
+  {{- end }}
+{{- end }}

@@ -1,0 +1,81 @@
+{{- if (eq (include "pod-scheduler.enabled" .) "true") }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    component: consul-pod-scheduler
+    {{- include "consul-service.defaultLabels" . | nindent 4 }}
+    app.kubernetes.io/name: {{ template "consul.fullname" . }}-pod-scheduler
+    name: {{ template "consul.fullname" . }}-pod-scheduler
+    app.kubernetes.io/instance: {{ cat (printf "%s-pod-scheduler"  (include "consul.fullname" .)) .Values.DELIMITER .Release.Namespace | nospace | trunc 63 }}
+    app.kubernetes.io/technology: python
+  name: {{ template "consul.fullname" . }}-pod-scheduler
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      component: consul-pod-scheduler
+      name: {{ template "consul.fullname" . }}-pod-scheduler
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+{{- with .Values.global.extraLabels }}
+  {{- toYaml . | nindent 8 -}}
+{{- end }}
+{{- with .Values.podScheduler.customLabels }}
+  {{- toYaml . | nindent 8 -}}
+{{- end }}
+        component: consul-pod-scheduler
+        {{- include "consul-service.defaultLabels" . | nindent 8 }}
+        app.kubernetes.io/name: {{ template "consul.fullname" . }}-pod-scheduler
+        name: {{ template "consul.fullname" . }}-pod-scheduler
+    spec:
+      {{- if not (eq (include "openshift.enabled" .) "true") }}
+      securityContext:
+        {{- include "consul.globalPodSecurityContext" . | nindent 8 }}
+        {{- with .Values.podScheduler.securityContext }}
+        {{ toYaml . | nindent 8  -}}
+        {{- end }}
+      {{- end }}
+      containers:
+        - name: pod-scheduler
+          image: {{ template "kubectl.image" . }}
+          command:
+            - "/bin/bash"
+            - "-c"
+            - |
+              kube_url=$(echo "https://${KUBERNETES_SERVICE_HOST}:${KUBERNETES_SERVICE_PORT}")
+              while true; do
+                {{- if .Values.server.enabled }}
+                {{- if not (eq ((include "server.replicas" .) | int) (len .Values.server.nodes) ) }}
+                {{ fail (printf "Number of nodes ('.Values.server.nodes') must be equal to replicas ('server.replicas'). %d != %d" ((include "server.replicas" .) | int) (len .Values.server.nodes) ) }}
+                {{- end }}
+                for podname in $(kubectl get pods -o json -l 'app={{ template "consul.name" . }},component=server' -n {{ .Release.Namespace }} | jq '.items[] | select(.spec.schedulerName == "{{ template "consul.fullname" . }}-pod-scheduler") | select(.spec.nodeName == null) | .metadata.name' | tr -d '"'); do
+                  nodes=({{- range .Values.server.nodes }}{{ printf "%s " . }}{{- end }})
+                  podnumber=$(echo $podname | rev | cut -d '-' -f 1 | rev)
+                  nodename=${nodes[$podnumber]}
+                  curl -k --header "Content-Type:application/json" --header "Authorization:Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" --request POST --data '{"apiVersion":"v1", "kind": "Binding", "metadata": {"name": "'$podname'"}, "target": {"apiVersion": "v1", "kind": "Node", "name": "'$nodename'"}}' $kube_url/api/v1/namespaces/{{ .Release.Namespace }}/pods/$podname/binding/
+                  echo "Assigned $podname to $nodename"
+                done
+                {{- end }}
+                sleep 10
+              done
+          {{- with .Values.podScheduler.resources }}
+          resources:
+            {{ . | toYaml | indent 12 | trim }}
+          {{- end }}
+          securityContext:
+          {{- include "consul.globalContainerSecurityContext" . | nindent 12 }}
+      serviceAccountName: {{ template "consul.fullname" . }}-pod-scheduler
+      {{- with .Values.podScheduler.affinity }}
+      affinity:
+        {{ toYaml . | indent 8 | trim }}
+      {{- end }}
+      {{- with .Values.podScheduler.nodeSelector }}
+      nodeSelector:
+        {{ toYaml . | indent 8 | trim }}
+      {{- end }} 
+  {{- end }}

@@ -1,0 +1,28 @@
+{{- if eq (.Values.client.enabled | toString) "true" }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ template "consul.fullname" . }}-client
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ template "consul.name" . }}
+    chart: {{ template "consul.chart" . }}
+    heritage: {{ .Release.Service }}
+    release: {{ .Release.Name }}
+    {{- include "consul-service.defaultLabels" . | nindent 4 }}
+{{- if .Values.global.acls.manageSystemACLs }}
+rules:
+# PSP and SCC binding moved to client-clusterrole.yaml
+{{- if .Values.global.acls.manageSystemACLs }}
+  - apiGroups: [""]
+    resources:
+      - secrets
+    resourceNames:
+      - {{ template "consul.fullname" . }}-client-acl-token
+    verbs:
+      - get
+{{- end }}
+{{- else }}
+rules: []
+{{- end }}
+{{- end }}

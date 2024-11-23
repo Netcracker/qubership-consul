@@ -1,0 +1,241 @@
+# The deployment for running the backup-daemon pod
+{{- if (or (and (ne (.Values.backupDaemon.enabled | toString) "-") .Values.backupDaemon.enabled) (and (eq (.Values.backupDaemon.enabled | toString) "-") .Values.global.enabled)) }}
+{{- if and (include "backupDaemon.storageClass" .) (eq .Values.backupDaemon.s3.enabled true) }}
+{{ fail "'.Values.backupDaemon.storageClass' is specified and '.Values.backupDaemon.s3.enabled' is true therefore, it is a conflict configuration. please choose one of the options. " }}
+{{- end }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ template "consul.fullname" . }}-backup-daemon
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ template "consul.name" . }}
+    chart: {{ template "consul.chart" . }}
+    heritage: {{ .Release.Service }}
+    release: {{ .Release.Name }}
+    component: backup-daemon
+    name: {{ template "consul.fullname" . }}-backup-daemon
+    {{- include "consul-service.defaultLabels" . | nindent 4 }}
+    app.kubernetes.io/name: {{ template "consul.fullname" . }}-backup-daemon
+    app.kubernetes.io/instance: {{ cat (printf "%s-backup-daemon"  (include "consul.fullname" .)) .Values.DELIMITER .Release.Namespace | nospace | trunc 63 }}
+    app.kubernetes.io/technology: python
+spec:
+  replicas: {{ template "consul.replicasForSingleService" . }}
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: {{ template "consul.name" . }}
+      chart: {{ template "consul.chart" . }}
+      release: {{ .Release.Name }}
+      component: backup-daemon
+  template:
+    metadata:
+      labels:
+        {{- with .Values.global.extraLabels }}
+          {{- toYaml . | nindent 8 -}}
+        {{- end }}
+        {{- with .Values.backupDaemon.extraLabels }}
+          {{- toYaml . | nindent 8 -}}
+        {{- end }}
+        app: {{ template "consul.name" . }}
+        chart: {{ template "consul.chart" . }}
+        release: {{ .Release.Name }}
+        name: {{ template "consul.fullname" . }}-backup-daemon
+        app.kubernetes.io/name: {{ template "consul.fullname" . }}-backup-daemon
+        component: backup-daemon
+      annotations:
+        "consul.hashicorp.com/connect-inject": "false"
+        {{- if .Values.global.velero.postHookRestoreEnabled }}
+        "post.hook.restore.velero.io/command": '["/bin/sh", "-c", "python3 scripts/velero_utils.py post_restore"]'
+        "post.hook.restore.velero.io/exec-timeout": "150s"
+        {{- end }}
+    spec:
+      serviceAccountName: {{ template "consul.fullname" . }}-snapshot-agent
+      {{- if .Values.backupDaemon.affinity }}
+      affinity:
+        {{ tpl (.Values.backupDaemon.affinity | toYaml) . | nindent 8 | trim }}
+      {{- end }}
+      {{- if .Values.backupDaemon.tolerations }}
+      tolerations:
+        {{ .Values.backupDaemon.tolerations | toYaml | indent 8 | trim }}
+      {{- end }}
+      {{- if not (eq (include "openshift.enabled" .) "true") }}
+      securityContext:
+        {{- include "consul.globalPodSecurityContext" . | nindent 8 }}
+        {{- with .Values.backupDaemon.securityContext }}
+        {{- toYaml . | nindent 8 -}}
+        {{- end }}
+        {{- if and (ne (.Values.INFRA_CONSUL_FS_GROUP | toString) "<nil>") .Values.global.cloudIntegrationEnabled }}
+        fsGroup: {{ .Values.INFRA_CONSUL_FS_GROUP }}
+        {{- end }}
+      {{- end }}
+      {{- if .Values.backupDaemon.priorityClassName }}
+      priorityClassName: {{ .Values.backupDaemon.priorityClassName | quote }}
+      {{- end }}
+      volumes:
+        {{ if and .Values.global.tls.enabled .Values.backupDaemon.tls.enabled }}
+        - name: backup-daemon-tls-certs
+          secret:
+            secretName: {{ template "backupDaemon.tlsSecretName" . }}
+        {{ end }}
+        {{ if and (include "backupDaemon.s3.tlsSecretName" .) .Values.backupDaemon.s3.sslVerify .Values.backupDaemon.s3.enabled }}
+        - name: s3-ssl-certs
+          secret:
+            secretName: {{ template "backupDaemon.s3.tlsSecretName" . }}
+        {{ end }}
+        - name: backup-storage
+          {{- if eq .Values.backupDaemon.s3.enabled true }}
+          emptyDir: {}
+          {{- else if or .Values.backupDaemon.persistentVolume (include "backupDaemon.storageClass" .)  }}
+          persistentVolumeClaim:
+            claimName: data-{{ template "consul.fullname" . }}-backup-daemon
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        {{- if .Values.global.tls.enabled }}
+        - name: consul-ca-cert
+          secret:
+            secretName: {{ template "consul.caCertSecretName" . }}
+            items:
+              {{- if .Values.global.tls.certManager.enabled }}
+              - key: "ca.crt"
+                path: ca.crt
+              {{- end }}
+              - key: {{ default "tls.crt" .Values.global.tls.caCert.secretKey }}
+                path: tls.crt
+        {{- end }}
+      containers:
+        - name: consul-backup-daemon
+          image: {{ template "consul-backup-daemon.image" . }}
+          imagePullPolicy: Always
+          resources:
+            requests:
+              cpu: {{ default "25m" .Values.backupDaemon.resources.requests.cpu }}
+              memory: {{ default "64Mi" .Values.backupDaemon.resources.requests.memory }}
+            limits:
+              cpu: {{ default "200m" .Values.backupDaemon.resources.limits.cpu }}
+              memory: {{ default "256Mi" .Values.backupDaemon.resources.limits.memory }}
+          securityContext:
+            {{- include "consul.globalContainerSecurityContext" . | nindent 12 }}
+          volumeMounts:
+        {{- if and .Values.global.tls.enabled .Values.backupDaemon.tls.enabled }}
+          - name: backup-daemon-tls-certs
+            mountPath: /consul/tls/backup
+        {{- end }}
+          {{- if and (include "backupDaemon.s3.tlsSecretName" .) .Values.backupDaemon.s3.sslVerify .Values.backupDaemon.s3.enabled }}
+          - name: s3-ssl-certs
+            mountPath: /s3Certs
+          {{- end }}
+          - name: backup-storage
+            mountPath: /opt/consul/backup-storage
+          {{- if .Values.global.tls.enabled }}
+          - name: consul-ca-cert
+            mountPath: /consul/tls/ca/
+            readOnly: true
+          {{- end }}
+          env:
+            - name: CONSUL_FULLNAME
+              value: {{ template "consul.fullname" . }}
+            - name: CONSUL_HOST
+              value: "{{ template "consul.fullname" . }}-server"
+            - name: CONSUL_PORT
+              value: "{{ template "consul.port" . }}"
+            - name: CONSUL_SCHEME
+              value: "{{ template "consul.scheme" . }}"
+            - name: CONSUL_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            {{- if .Values.backupDaemon.s3.enabled }}
+            - name: S3_ENABLED
+              value: "{{ .Values.backupDaemon.s3.enabled }}"
+            - name: S3_URL
+              value: {{ .Values.backupDaemon.s3.url }}
+            - name: S3_BUCKET
+              value: {{ .Values.backupDaemon.s3.bucket }}
+            - name: S3_SSL_VERIFY
+              value: {{ .Values.backupDaemon.s3.sslVerify | quote }}
+            - name: S3_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  key: "s3-key-id"
+                  name: "{{ template "consul.fullname" . }}-s3-secret"
+            - name: S3_KEY_SECRET
+              valueFrom:
+                secretKeyRef:
+                  key: "s3-key-secret"
+                  name: "{{ template "consul.fullname" . }}-s3-secret"
+            {{- end }}
+            {{- if and (include "backupDaemon.s3.tlsSecretName" .) .Values.backupDaemon.s3.sslVerify .Values.backupDaemon.s3.enabled }}
+            - name: S3_CERTS_PATH
+              value: /s3Certs
+            {{- end }}
+            {{- if and .Values.global.tls.enabled .Values.backupDaemon.tls.enabled }}
+            - name: TLS_ENABLED
+              value: "true"
+            - name: CERTS_PATH
+              value: "/consul/tls/backup"
+            {{- end }}
+            - name: BACKUP_DAEMON_API_CREDENTIALS_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: "{{ template "consul.fullname" . }}-backup-daemon-secret"
+                  key: "username"
+            - name: BACKUP_DAEMON_API_CREDENTIALS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: "{{ template "consul.fullname" . }}-backup-daemon-secret"
+                  key: "password"
+            - name: BACKUP_SCHEDULE
+              value: "{{ default "0 0 * * *" .Values.backupDaemon.backupSchedule }}"
+            - name: EVICTION_POLICY
+              value: "{{ default "0/1d,7d/delete" .Values.backupDaemon.evictionPolicy }}"
+            - name: BROADCAST_ADDRESS
+              value: {{- if .Values.global.ipv6 }} "::" {{- else }} "0.0.0.0" {{- end }}
+            {{- if .Values.global.acls.manageSystemACLs }}
+            - name: CONSUL_HTTP_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  {{- if (and .Values.global.acls.bootstrapToken.secretName .Values.global.acls.bootstrapToken.secretKey) }}
+                  name: "{{ .Values.global.acls.bootstrapToken.secretName }}"
+                  key: "{{ .Values.global.acls.bootstrapToken.secretKey }}"
+                  {{- else if (and .Values.global.acls.replicationToken.secretName .Values.global.acls.replicationToken.secretKey) }}
+                  name: "{{ .Values.global.acls.replicationToken.secretName }}"
+                  key: "{{ .Values.global.acls.replicationToken.secretKey }}"
+                  {{- else }}
+                  name: "{{ template "consul.fullname" . }}-bootstrap-acl-token"
+                  key: "token"
+                  {{- end }}
+            {{- end }}
+            {{- if and (eq (include "consul.enableDisasterRecovery" .) "true") .Values.global.disasterRecovery.region }}
+            - name: REGION
+              value: {{ .Values.global.disasterRecovery.region }}
+            {{- end }}
+          livenessProbe:
+            tcpSocket:
+              port: {{ template "backupDaemon.port" . }}
+            failureThreshold: 3
+            initialDelaySeconds: 30
+            periodSeconds: 5
+            successThreshold: 1
+            timeoutSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: {{ template "backupDaemon.port" . }}
+              {{- if and .Values.global.tls.enabled .Values.backupDaemon.tls.enabled }}
+              scheme: HTTPS
+              {{ else }}
+              scheme: HTTP
+              {{- end }}
+            failureThreshold: 5
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            successThreshold: 1
+            timeoutSeconds: 5
+      {{- if .Values.backupDaemon.nodeSelector }}
+      nodeSelector:
+        {{ .Values.backupDaemon.nodeSelector | toYaml | indent 8 | trim }}
+      {{- end }}
+{{- end }}

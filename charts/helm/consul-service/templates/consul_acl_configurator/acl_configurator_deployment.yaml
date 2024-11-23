@@ -1,0 +1,133 @@
+{{- if .Values.consulAclConfigurator.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ template "consul-acl-configurator.name" . }}-operator
+  labels:
+    name: {{ template "consul-acl-configurator.name" . }}-operator
+    {{- include "consul-service.defaultLabels" . | nindent 4 }}
+    app.kubernetes.io/name: {{ template "consul-acl-configurator.name" . }}-operator
+    app.kubernetes.io/instance: {{ cat (printf "%s-operator"  (include "consul.fullname" .)) .Values.DELIMITER .Release.Namespace | nospace | trunc 63 }}
+    app.kubernetes.io/technology: go
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: {{ template "consul-acl-configurator.name" . }}-operator
+  template:
+    metadata:
+      labels:
+        {{- with .Values.global.extraLabels }}
+          {{- toYaml . | nindent 8 -}}
+        {{- end }}
+        {{- with .Values.consulAclConfigurator.extraLabels }}
+          {{- toYaml . | nindent 8 -}}
+        {{- end }}
+        name: {{ template "consul-acl-configurator.name" . }}-operator
+        app.kubernetes.io/name: {{ template "consul-acl-configurator.name" . }}-operator
+        restore-policy: restart
+      annotations:
+        'consul.hashicorp.com/connect-inject': 'false'
+    spec:
+      serviceAccountName: {{ template "consul-acl-configurator.name" . }}-operator
+      {{- if .Values.consulAclConfigurator.priorityClassName }}
+      priorityClassName: {{ .Values.consulAclConfigurator.priorityClassName | quote }}
+      {{- end }}
+      {{- if .Values.global.tls.enabled }}
+      volumes:
+        - name: consul-ca-cert
+          secret:
+            secretName: {{ template "consul.caCertSecretName" . }}
+            items:
+              - key: {{ default "tls.crt" .Values.global.tls.caCert.secretKey }}
+                path: tls.crt
+      {{- end }}
+      {{- if not (eq (include "openshift.enabled" .) "true") }}
+      securityContext:
+        {{- include "consul.globalPodSecurityContext" . | nindent 8 }}
+        {{- with .Values.consulAclConfigurator.securityContext }}
+        {{- toYaml . | nindent 8 -}}
+        {{- end }}
+      {{- end }}
+      containers:
+        - name: consul-acl-configurator-rest-server
+          image: {{ template "consul-acl-configurator-rest-server.image" . }}
+          ports:
+            - containerPort: 8088
+              protocol: TCP
+          env:
+            - name: ALLOWED_NAMESPACES
+              value: {{ default "" .Values.consulAclConfigurator.allowedNamespaces }}
+            - name: API_GROUP
+              value: {{ .Values.consulAclConfigurator.apiGroup }}
+          resources:
+            requests:
+              memory: {{ default "128Mi" .Values.consulAclConfigurator.resources.requests.memory }}
+              cpu: {{ default "25m" .Values.consulAclConfigurator.resources.requests.cpu }}
+            limits:
+              memory: {{ default "128Mi" .Values.consulAclConfigurator.resources.limits.memory }}
+              cpu: {{ default "100m" .Values.consulAclConfigurator.resources.limits.cpu }}
+          securityContext:
+            {{- include "consul.globalContainerSecurityContext" . | nindent 12 }}
+          imagePullPolicy: Always
+        - name: consul-acl-configurator-operator
+          image: {{ template "consul-acl-configurator-operator.image" . }}
+          imagePullPolicy: Always
+          {{- if .Values.global.tls.enabled }}
+          volumeMounts:
+            - name: consul-ca-cert
+              mountPath: /consul/tls/ca/
+              readOnly: true
+          {{- end }}
+          env:
+            - name: WATCH_NAMESPACE
+              value: {{ default "" .Values.consulAclConfigurator.namespaces }}
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: OPERATOR_NAME
+              value: {{ template "consul-acl-configurator.name" . }}-operator
+            - name: CONSUL_HOST
+              value: {{ template "consul.fullname" . }}-server
+            - name: CONSUL_PORT
+              value: "{{ coalesce .Values.consulAclConfigurator.consul.port (include "consul.port" .) }}"
+            - name: CONSUL_SCHEME
+              value: "{{ template "consul.scheme" . }}"
+            - name: CONSUL_AUTH_METHOD_NAME
+              value: {{ template "consul.fullname" . }}-k8s-auth-method
+            - name: CONSUL_ACL_BOOTSTRAP_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  {{- if (and .Values.global.acls.bootstrapToken.secretName .Values.global.acls.bootstrapToken.secretKey) }}
+                  name: "{{ .Values.global.acls.bootstrapToken.secretName }}"
+                  key: "{{ .Values.global.acls.bootstrapToken.secretKey }}"
+                  {{- else if (and .Values.global.acls.replicationToken.secretName .Values.global.acls.replicationToken.secretKey) }}
+                  name: "{{ .Values.global.acls.replicationToken.secretName }}"
+                  key: "{{ .Values.global.acls.replicationToken.secretKey }}"
+                  {{- else }}
+                  name: {{ template "consul.fullname" . }}-bootstrap-acl-token
+                  key: token
+                  {{- end }}
+            - name: RECONCILE_PERIOD_SECONDS
+              value: {{ default "100" .Values.consulAclConfigurator.reconcilePeriod | quote }}
+            - name: API_GROUP
+              value: {{ .Values.consulAclConfigurator.apiGroup }}
+          resources:
+            requests:
+              memory: {{ default "128Mi" .Values.consulAclConfigurator.resources.requests.memory }}
+              cpu: {{ default "25m" .Values.consulAclConfigurator.resources.requests.cpu }}
+            limits:
+              memory: {{ default "128Mi" .Values.consulAclConfigurator.resources.limits.memory }}
+              cpu: {{ default "100m" .Values.consulAclConfigurator.resources.limits.cpu }}
+          securityContext:
+            {{- include "consul.globalContainerSecurityContext" . | nindent 12 }}
+      {{- if .Values.consulAclConfigurator.tolerations }}
+      tolerations:
+        {{ .Values.consulAclConfigurator.tolerations | toJson }}
+      {{- end }}
+{{- end }}

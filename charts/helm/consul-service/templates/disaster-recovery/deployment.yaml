@@ -1,0 +1,160 @@
+{{- if eq (include "consul.enableDisasterRecovery" .) "true" }}
+{{- if not .Values.backupDaemon.enabled }}
+  {{- fail "To enable Disaster Recovery mode set `backupDaemon.enabled` parameter to `true`." }}
+{{- end }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ template "consul.fullname" . }}-disaster-recovery
+  labels:
+    app: {{ template "consul.name" . }}
+    chart: {{ template "consul.chart" . }}
+    heritage: {{ .Release.Service }}
+    release: {{ .Release.Name }}
+    {{- include "consul-service.defaultLabels" . | nindent 4 }}
+    app.kubernetes.io/name: {{ template "consul.fullname" . }}-disaster-recovery
+    name: {{ template "consul.fullname" . }}-disaster-recovery
+    app.kubernetes.io/instance: {{ cat (printf "%s-disaster-recovery"  (include "consul.fullname" .)) .Values.DELIMITER .Release.Namespace | nospace | trunc 63 }}
+    app.kubernetes.io/technology: go
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ template "consul.name" . }}
+      chart: {{ template "consul.chart" . }}
+      release: {{ .Release.Name }}
+      name: {{ template "consul.fullname" . }}-disaster-recovery
+      component: disaster-recovery
+  template:
+    metadata:
+      labels:
+        {{- with .Values.global.extraLabels }}
+{{- toYaml . | indent 8 -}}
+        {{- end }}
+        {{- with .Values.global.disasterRecovery.extraLabels }}
+{{- toYaml . | indent 8 -}}
+        {{- end }}
+        app: {{ template "consul.name" . }}
+        chart: {{ template "consul.chart" . }}
+        release: {{ .Release.Name }}
+        app.kubernetes.io/name: {{ template "consul.fullname" . }}-disaster-recovery
+        name: {{ template "consul.fullname" . }}-disaster-recovery
+        component: disaster-recovery
+    spec:
+      {{- if not (eq (include "openshift.enabled" .) "true") }}
+      securityContext:
+        {{- include "consul.globalPodSecurityContext" . | nindent 8 }}
+        {{- with .Values.global.disasterRecovery.securityContext }}
+        {{- toYaml . | nindent 8 -}}
+        {{- end }}
+      {{- end }}
+      serviceAccountName: {{ template "consul.fullname" . }}-disaster-recovery
+      containers:
+        - name: consul-disaster-recovery
+          image: {{ template "disaster-recovery.image" . }}
+          imagePullPolicy: Always
+          {{- if or (eq (include "disaster-recovery.tlsEnabled" .) "true") (eq (include "backup-daemon.tlsEnabled" .) "true") }}
+          volumeMounts:
+            {{- if eq (include "disaster-recovery.tlsEnabled" .) "true" }}
+            - name: certs
+              mountPath: /tls/own
+            {{- end }}
+            {{- if eq (include "backup-daemon.tlsEnabled" .) "true" }}
+            - name: backup-certs
+              mountPath: /tls/backup
+            {{- end }}
+          {{- end }}
+          ports:
+            - containerPort: {{ template "disaster-recovery.port" . }}
+              protocol: TCP
+              name: dr
+          env:
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: CONSUL_FULLNAME
+              value: "{{ template "consul.fullname" . }}"
+            - name: RESOURCE_FOR_DR
+              value: " v1 configmaps {{ template "consul.fullname" . }}-drd-config"
+            - name: TREAT_STATUS_AS_FIELD
+              value: "true"
+            - name: USE_DEFAULT_PATHS
+              value: "false"
+            - name: REGION
+              value: "{{ .Values.global.disasterRecovery.region }}"
+            - name: DISASTER_RECOVERY_MODE_PATH
+              value: "data.mode"
+            - name: DISASTER_RECOVERY_NOWAIT_PATH
+              value: "data.no-wait"
+            - name: DISASTER_RECOVERY_STATUS_COMMENT_PATH
+              value: "data.status-comment"
+            - name: DISASTER_RECOVERY_STATUS_MODE_PATH
+              value: "data.status-mode"
+            - name: DISASTER_RECOVERY_STATUS_STATUS_PATH
+              value: "data.status-status"
+            - name: DISASTER_RECOVERY_BACKUP_TIMEOUT
+              value: "{{ .Values.global.disasterRecovery.backupTimeout }}"
+            - name: DISASTER_RECOVERY_RESTORE_TIMEOUT
+              value: "{{ .Values.global.disasterRecovery.restoreTimeout }}"
+            - name: DISASTER_RECOVERY_NOWAIT_AS_STRING
+              value: "true"
+            - name: HEALTH_MAIN_SERVICES_ACTIVE
+              value: "StatefulSet {{ template "consul.fullname" . }}-server"
+            - name: HEALTH_ADDITIONAL_SERVICES_ACTIVE
+              value: "deployment {{ template "consul.fullname" . }}-backup-daemon"
+            - name: HEALTH_MAIN_SERVICES_STANDBY
+              value: "StatefulSet {{ template "consul.fullname" . }}-server"
+            - name: HEALTH_MAIN_SERVICES_DISABLED
+              value: "StatefulSet {{ template "consul.fullname" . }}-server"
+            {{- if eq (include "disaster-recovery.tlsEnabled" .) "true" }}
+            - name: TLS_ENABLED
+              value: "true"
+            - name: CERTS_PATH
+              value: "/tls/own"
+            - name: CIPHER_SUITES
+              value: "{{ include "disaster-recovery.cipherSuites" . }}"
+            {{- end }}
+            {{- if .Values.global.disasterRecovery.httpAuth.enabled }}
+            - name: SITE_MANAGER_NAMESPACE
+              value: "{{ .Values.global.disasterRecovery.httpAuth.smNamespace }}"
+            - name: SITE_MANAGER_SERVICE_ACCOUNT_NAME
+              value: {{ include "disasterRecovery.siteManagerServiceAccount" . }}
+            {{- if .Values.global.disasterRecovery.httpAuth.smSecureAuth }}
+            - name: SITE_MANAGER_CUSTOM_AUDIENCE
+              value: {{ .Values.global.disasterRecovery.httpAuth.customAudience }}
+            {{- end }}
+            {{- end }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              scheme: {{ ternary "HTTPS" "HTTP" (eq (include "disaster-recovery.tlsEnabled" .) "true") }}
+              port: {{ template "disaster-recovery.port" . }}
+            initialDelaySeconds: 10
+            timeoutSeconds: 30
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 5
+          resources:
+            limits:
+              cpu: {{ default "100m" .Values.global.disasterRecovery.resources.limits.cpu  }}
+              memory: {{ default "128Mi" .Values.global.disasterRecovery.resources.limits.memory }}
+            requests:
+              cpu: {{ default "25m" .Values.global.disasterRecovery.resources.requests.cpu }}
+              memory: {{ default "32Mi" .Values.global.disasterRecovery.resources.requests.memory }}
+          securityContext:
+            {{- include "consul.globalContainerSecurityContext" . | nindent 12 }}
+      {{- if or (eq (include "disaster-recovery.tlsEnabled" .) "true") (eq (include "backup-daemon.tlsEnabled" .) "true") }}
+      volumes:
+        {{- if eq (include "disaster-recovery.tlsEnabled" .) "true" }}
+        - name: certs
+          secret:
+            secretName: {{ template "disaster-recovery.certSecretName" . }}
+        {{- end }}
+        {{- if eq (include "backup-daemon.tlsEnabled" .) "true" }}
+        - name: backup-certs
+          secret:
+            secretName: {{ template "backupDaemon.tlsSecretName" . }}
+        {{- end }}
+      {{- end }}
+{{- end }}

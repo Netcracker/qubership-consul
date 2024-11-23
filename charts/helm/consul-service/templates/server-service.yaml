@@ -1,0 +1,84 @@
+{{- if (or (and (ne (.Values.server.enabled | toString) "-") .Values.server.enabled) (and (eq (.Values.server.enabled | toString) "-") .Values.global.enabled)) }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ template "consul.fullname" . }}-server
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ template "consul.name" . }}
+    chart: {{ template "consul.chart" . }}
+    heritage: {{ .Release.Service }}
+    name: {{ template "consul.fullname" . }}-server
+    release: {{ .Release.Name }}
+    component: server
+    {{- include "consul-service.defaultLabels" . | nindent 4 }}
+    app.kubernetes.io/name: {{ template "consul.fullname" . }}-server
+  annotations:
+    {{- if .Values.server.service.annotations }}
+    {{ .Values.server.service.annotations | toYaml | indent 4 | trim }}
+    {{- end }}
+spec:
+  ports:
+    {{- if (or (not .Values.global.tls.enabled) (not .Values.global.tls.httpsOnly)) }}
+    - name: http
+      port: 8500
+      targetPort: 8500
+    {{- end }}
+    {{- if .Values.global.tls.enabled }}
+    - name: https
+      port: 8501
+      targetPort: 8501
+    {{- end }}
+    {{- if and (ne (.Values.server.ports.http | toString) "8500") (or .Values.server.ports.http .Values.global.ports.http) }}
+    - name: http-ext
+      port: {{ include "consul.port.http" . }}
+      targetPort: 8500
+    {{- end }}
+    {{- if and (ne (.Values.server.ports.https | toString) "8501") (or .Values.server.ports.https .Values.global.ports.https) }}
+    - name: https-ext
+      port: {{ include "consul.port.https" . }}
+      targetPort: 8501
+    {{- end }}
+    - name: serflan-tcp
+      protocol: "TCP"
+      port: 8301
+      targetPort: 8301
+    - name: serflan-udp
+      protocol: "UDP"
+      port: 8301
+      targetPort: 8301
+    - name: serfwan-tcp
+      protocol: "TCP"
+      port: 8302
+      targetPort: 8302
+    - name: serfwan-udp
+      protocol: "UDP"
+      port: 8302
+      targetPort: 8302
+    - name: server
+      port: 8300
+      targetPort: 8300
+    - name: dns-tcp
+      protocol: "TCP"
+      port: 8600
+      targetPort: dns-tcp
+    - name: dns-udp
+      protocol: "UDP"
+      port: 8600
+      targetPort: dns-udp
+    - name: prometheus-cli
+      protocol: "TCP"
+      port: 8096
+    - name: grpc
+      port: 8502
+      targetPort: 8502
+    {{- if and (ne (.Values.server.ports.grpc | toString) "8502") (or .Values.server.ports.grpc .Values.global.ports.grpc) }}
+    - name: grpc-ext
+      port: {{ include "consul.port.grpc" . }}
+      targetPort: 8502
+    {{- end }}
+  selector:
+    app: {{ template "consul.name" . }}
+    release: "{{ .Release.Name }}"
+    component: server
+{{- end }}

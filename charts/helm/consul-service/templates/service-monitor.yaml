@@ -1,0 +1,57 @@
+{{- if (or (and (ne (.Values.server.enabled | toString) "-") .Values.server.enabled) (and (eq (.Values.server.enabled | toString) "-") .Values.global.enabled)) }}
+{{- if (or (eq (include "monitoring.enabled" .) "true") (and (eq (.Values.monitoring.enabled | toString) "-") .Values.global.enabled)) }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ template "consul.fullname" . }}-server-service-monitor
+  labels:
+    {{- include "consul-service.coreLabels" . | nindent 4 }}
+    app.kubernetes.io/name: {{ template "consul.fullname" . }}-server-service-monitor
+    app.kubernetes.io/component: monitoring
+spec:
+  endpoints:
+    - interval: 30s
+      params:
+        format:
+          - prometheus
+      path: /v1/agent/metrics
+      scheme: {{ include "consul.scheme" . }}
+      {{- if .Values.global.tls.enabled }}
+      tlsConfig:
+        serverName: {{ template "consul.fullname" . }}-server
+        ca:
+          secret:
+            key: tls.crt
+            name: {{ template "consul.caCertSecretName" . }}
+      {{- end }}
+      port: {{ include "consul.scheme" . }}
+      relabelings:
+        - action: replace
+          replacement: 'Server'
+          targetLabel: role
+        - action: replace
+          replacement: '{{ .Values.global.datacenter }}'
+          targetLabel: datacenter
+    {{- if .Values.global.acls.manageSystemACLs }}
+      bearerTokenSecret:
+        {{- if (and .Values.global.acls.bootstrapToken.secretName .Values.global.acls.bootstrapToken.secretKey) }}
+        name: "{{ .Values.global.acls.bootstrapToken.secretName }}"
+        key: "{{ .Values.global.acls.bootstrapToken.secretKey }}"
+        {{- else if (and .Values.global.acls.replicationToken.secretName .Values.global.acls.replicationToken.secretKey) }}
+        name: "{{ .Values.global.acls.replicationToken.secretName }}"
+        key: "{{ .Values.global.acls.replicationToken.secretKey }}"
+        {{- else }}
+        name: "{{ template "consul.fullname" . }}-bootstrap-acl-token"
+        key: "token"
+        {{- end }}
+    {{- end }}
+  jobLabel: k8s-app
+  namespaceSelector:
+    matchNames:
+      - {{ .Release.Namespace }}
+  selector:
+    matchLabels:
+      component: server
+      name: {{ template "consul.fullname" . }}-server
+{{- end }}
+{{- end }}

@@ -1,0 +1,19 @@
+{{- if eq (include "consul.enableDisasterRecovery" .) "true" }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ template "consul.fullname" . }}-drd-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ template "consul.name" . }}
+    chart: {{ template "consul.chart" . }}
+    heritage: {{ .Release.Service }}
+    release: {{ .Release.Name }}
+    {{- include "consul-service.defaultLabels" . | nindent 4 }}
+data:
+  mode: "{{ .Values.global.disasterRecovery.mode }}"
+  no-wait: "true"
+  status-comment: ""
+  status-mode: ""
+  status-status: ""
+{{- end }}

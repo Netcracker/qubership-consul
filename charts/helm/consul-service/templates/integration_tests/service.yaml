@@ -1,0 +1,17 @@
+{{- if .Values.integrationTests.enabled }}
+kind: Service
+apiVersion: v1
+metadata:
+  labels:
+    name: {{ template "consul-integration-tests.name" . }}
+    {{- include "consul-service.defaultLabels" . | nindent 4 }}
+    app.kubernetes.io/name: {{ template "consul-integration-tests.name" . }}
+  name: {{ template "consul-integration-tests.name" . }}
+spec:
+  ports:
+    - name: http
+      port: 8080
+      protocol: TCP
+  selector:
+    name: {{ template "consul-integration-tests.name" . }}
+{{- end }}

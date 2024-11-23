@@ -1,0 +1,16 @@
+{{- if and (eq (include "consul.enableDisasterRecovery" .) "true") .Values.global.disasterRecovery.httpAuth.enabled (ne (include "consul.restrictedEnvironment" .) "true") }}
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: token-review-consul-crb-{{ .Release.Namespace }}
+  labels:
+    {{- include "consul-service.defaultLabels" . | nindent 4 }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ template "consul.fullname" . }}-disaster-recovery
+    namespace: {{ .Release.Namespace }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:auth-delegator
+{{- end }}
