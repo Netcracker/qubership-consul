@@ -1,5 +1,7 @@
 # Consul Helm Chart
 
+This Helm chart is originally based o [HashiCorp Consul Helm chart](https://github.com/hashicorp/consul-k8s) and is distributed under `Mozilla Public License, version 2.0`.
+
 ## Prerequisites
 
 To use the charts here, [Helm](https://helm.sh/) must be installed in your
