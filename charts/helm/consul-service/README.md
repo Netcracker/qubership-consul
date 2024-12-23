@@ -1,13 +1,5 @@
 # Consul Helm Chart
 
-This repository contains the official HashiCorp Helm chart for installing
-and configuring Consul on Kubernetes. This chart supports multiple use
-cases of Consul on Kubernetes depending on the values provided.
-
-For full documentation on this Helm chart along with all the ways you can
-use Consul with Kubernetes, please see the
-[Consul and Kubernetes documentation](https://www.consul.io/docs/platform/k8s/index.html).
-
 ## Prerequisites
 
 To use the charts here, [Helm](https://helm.sh/) must be installed in your
