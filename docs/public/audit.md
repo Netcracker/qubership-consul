@@ -2,7 +2,13 @@ This chapter describes the security audit logging for Consul.
 
 The following topics are covered in this chapter:
 
-[[_TOC_]]
+<!-- TOC -->
+* [Common Information](#common-information)
+* [Configuration](#configuration)
+  * [Example of Events](#example-of-events)
+    * [Failed Login](#failed-login)
+    * [Unauthorized event](#unauthorized-event)
+<!-- TOC -->
 
 # Common Information
 
