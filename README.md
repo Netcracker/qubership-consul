@@ -4,6 +4,17 @@ Qubership Consul is a comprehensive solution for deploying HashiCorp Consul in K
 Includes tools for backup management, monitoring, ACL configuration, and integration testing to ensure reliable operation and security. 
 Designed for creating resilient and secure Consul clusters in a cloud-native environment.
 
+![Application Overview](/docs/public/images/consul_components_overview.drawio.png)
+
+## Documentation
+
+* [Architecture guide](/docs/public/architecture.md).
+* [Installation guide](/docs/public/installation.md).
+* [Monitoring guide](/docs/public/monitoring.md)
+* [Troubleshooting guide](/docs/public/troubleshooting.md).
+* [Guides](/docs/public).
+* [Quick Start](/charts/helm/consul-service/README.md).
+
 ## Repository structure
 
 * `./charts` - directory with main HELM chart for Consul and integration tests.
@@ -13,8 +24,7 @@ Designed for creating resilient and secure Consul clusters in a cloud-native env
 
 ## Useful links
 
-* [Installation guide](/docs/public/installation.md).
-* [Troubleshooting guide](/docs/public/troubleshooting.md).
+* [HashiCorp Consul](https://www.consul.io/)
 
 ## License
 
