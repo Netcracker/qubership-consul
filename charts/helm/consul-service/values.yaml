@@ -2074,7 +2074,7 @@ monitoring:
 backupDaemon:
   # Enable Consul Backup Daemon installation.
   enabled: false
-  image: "ghcr.io/netcracker/qubership-consul-backup-daemon:main"
+  image: "ghcr.io/netcracker/qubership-consul-backup-daemon:0.3.0"
 
   tls:
     enabled: true
@@ -2191,9 +2191,9 @@ consulAclConfigurator:
   enabled: true
   apiGroup: "qubership.org"
   # The image of Consul ACL Configurator Kubernetes operator which implements collecting processing Consul ACL configuration custom resources.
-  operatorImage: "ghcr.io/netcracker/qubership-consul-acl-configurator:main"
+  operatorImage: "ghcr.io/netcracker/qubership-consul-acl-configurator:0.1.0"
   # The image of Consul ACL Configurator HTTP server which allows execute common reconcile for Consul ACL configuration custom resources by HTTP request from any Kubernetes service account.
-  restServerImage: "ghcr.io/netcracker/qubership-consul-rest-acl-configurator:main"
+  restServerImage: "ghcr.io/netcracker/qubership-consul-rest-acl-configurator:0.1.0"
   resources:
     requests:
       memory: 128Mi
@@ -2238,7 +2238,7 @@ consulAclConfigurator:
 
 statusProvisioner:
   enabled: true
-  dockerImage: ghcr.io/netcracker/qubership-deployment-status-provisioner:main
+  dockerImage: ghcr.io/netcracker/qubership-deployment-status-provisioner:0.1.1
   lifetimeAfterCompletion: 600
   podReadinessTimeout: 300
   integrationTestsTimeout: 300
