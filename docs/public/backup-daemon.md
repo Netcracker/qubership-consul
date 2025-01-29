@@ -35,7 +35,7 @@ If you have an old backup that does not contain Consul bootstrap ACL token insid
 backup stored separately, there is an ability to recover Consul after full data loss manually.
 The following guide is going to help with that:
 
-1. Install or upgrade Consul service with required parameters by App/DP Deployer or with Helm if it is necessary.
+1. Install or upgrade Consul service with required parameters by Helm.
 
 2. Restore Consul data from backup using the following command:
 
