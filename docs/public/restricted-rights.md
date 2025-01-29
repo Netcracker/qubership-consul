@@ -1,6 +1,3 @@
-The example of deployment with restricted rights can be found in 
-[Deployment without Cluster Wide Rights](/docs/internal/samples.md#deployment-without-cluster-wide-rights).
-
 # Pod Security Policies
 
 Some Consul features require privileged rights for pods. For example, the Client pods need to open port `8502` on Kubernetes node.

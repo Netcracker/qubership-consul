@@ -99,9 +99,6 @@ global.tls.certManager.clusterIssuerName: "example-tls-issuer"
 
 Where `global.tls.certManager.clusterIssuerName` is the real name of CertManager cluster issuer.
 
-**Pay attention**, when you upgrade Consul from non TLS installation you need to perform it with "reinstall" DP Helm deployer option
-or with full restart all Consul server pods during installation. 
-
 ## Manual Certificates Generation
 
 If you need to generate Consul certificates manually, pay attention, `server` and `client` certificates must be generated with
@@ -183,5 +180,4 @@ Automatic re-encrypt Route creation is not supported out of box, need to perform
 
 **NOTE**: If you can't access the Consul host after Route creation because of "too many redirects" error, then one of the possible root
 causes is there is HTTP traffic between balancers and the cluster. To resolve that issue it's necessary to add the Route name to 
-the exception list at the balancers,
-[see documentation](https://git.netcracker.com/PROD.Platform.HA/ocp-4-support/-/blob/master/documentation/Maintenance.md#configure-tls-offload-at-the-load-balancer-nodes)
+the exception list at the balancers.

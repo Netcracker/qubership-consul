@@ -2,7 +2,7 @@
 
 <!-- TOC -->
 * [Overview](#overview)
-  * [Netcracker Consul Delivery and Features](#netcracker-consul-delivery-and-features)
+  * [Netcracker Consul Delivery and Features](#consul-delivery-and-features)
 * [Consul Components](#consul-components)
   * [Consul](#consul)
   * [Consul Client](#consul-client)
@@ -33,7 +33,7 @@ Consul ships with a simple built-in proxy so that everything works out of the bo
 as Consul DataPlane.
 
 Consul is developed by [HashiCorp](https://www.hashicorp.com/products/consul/). 
-The Netcracker Consul delivery provides official images of Consul and Consul k8s 
+The Qubership-Consul delivery provides official images of Consul and Consul k8s 
 with changed deployment procedure. For more information about Consul, refer to the _Consul Introduction_ at 
 [https://www.consul.io/intro/index.html](https://www.consul.io/intro/index.html).
 
@@ -68,13 +68,13 @@ The Consul datacenter in Kubernetes functions same as a platform independent Con
 bare metal servers or virtual machines.
 Agents communicate over LAN gossip, servers participate in the Raft consensus, and client requests are forwarded to the servers via RPCs.
 
-## Netcracker Consul Delivery and Features
+## Consul Delivery and Features
 
-The Netcracker platform provides Consul deployment to Kubernetes/OpenShift using helm chart based on community Consul Helm chart
+The Qubership-Consul provides Consul deployment to Kubernetes using helm chart based on community Consul Helm chart
 with own services and additional features.
 The deployment procedure and additional features include the following:
 
-* Support of Netcracker deployment jobs for HA scheme and different configurations.
+* Support HA scheme and different configurations.
   For more detailed information, refer to [Installation Guide](/docs/public/installation.md).
 * Backup and restore data. For more detailed information,
   refer to [Consul Backup Daemon Guide](https://github.com/netcracker/consul-backup-daemon/blob/main/documentation/maintenance-guide/development-guide/README.md).
@@ -150,8 +150,8 @@ of host-path persistent volumes within the Kubernetes cluster.
 
 ## Status Provisioner
 
-The Status Provisioner service is designed to monitor the health of all Consul components and relay their status information in
-the App | DP Deployer contract. 
+The Status Provisioner service is designed to monitor the health of all Consul components 
+and further relaying information for integrated platforms.
 It checks the availability and functionality of various Consul components after deployment that they are functioning properly. 
 By providing this status information in the Deployer contract, the Status Provisioner service enables seamless integration
 with other systems that rely on the health and operational status of Consul components.

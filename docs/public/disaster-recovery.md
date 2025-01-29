@@ -145,7 +145,7 @@ You can perform the switchover using the `SiteManager` functionality or Consul d
 
 <!-- #GFCFilterMarkerStart# -->
 For more information about `SiteManager`, refer to 
-[Site Manager](https://github.com/netcracker/DRNavigator/blob/main/README.md) article.
+[Site Manager](https://github.com/Netcracker/DRNavigator/blob/main/documentation/public/architecture.md#site-manager) article.
 <!-- #GFCFilterMarkerEnd# -->
 
 If you want to perform a switchover manually, you need to switch `active` Consul cluster to `standby` mode and then switch `standby`
