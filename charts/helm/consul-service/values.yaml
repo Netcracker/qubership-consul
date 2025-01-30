@@ -402,7 +402,7 @@ global:
 
   # The time in seconds that the consul API client will wait for a response from
   # the API before cancelling the request.
-  consulAPITimeout: 5s
+  consulAPITimeout: 30s
 
   securityContext: {}
 
