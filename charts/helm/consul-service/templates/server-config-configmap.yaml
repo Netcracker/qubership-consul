@@ -50,7 +50,8 @@ data:
         "{{template "consul.fullname" . }}-server-internal.{{ .Release.Namespace }}.svc:{{ .Values.server.ports.serflan.port }}"
       ],
       "server": true,
-      "server_rejoin_age_max": "8760h"
+      "server_rejoin_age_max": "8760h",
+      "raft_snapshot_threshold": {{ .Values.server.raftSnapshotThreshold }}
     }
   {{- if .Values.global.acls.manageSystemACLs }}
   acl-config.json: |-
