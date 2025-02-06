@@ -787,6 +787,7 @@ server:
 
   serverLocalityEnabled: false
 
+  raftSnapshotThreshold: 500
 
 # Configuration for Consul servers when the servers are running outside of Kubernetes.
 # When running external servers, configuring these values is recommended
