@@ -1,0 +1,11 @@
+name: Run Consul Pipeline
+
+on:
+  push
+
+jobs:
+  Consul-Pipeline:
+    uses: Netcracker/qubership-test-pipelines/.github/workflows/consul.yaml@update_actions
+    with:
+      service_branch: '${{ github.head_ref || github.ref_name }}'
+
