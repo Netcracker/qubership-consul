@@ -1,0 +1,16 @@
+name: Run Consul Pipeline
+
+env:
+  BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
+
+on:
+  push:
+    branches:
+      - improvement/run_tests
+
+jobs:
+  Consul-Pipeline:
+    uses: Netcracker/qubership-test-pipelines/.github/workflows/consul.yaml@main
+    with:
+      branch: '${{ github.head_ref || github.ref_name }}'
+
