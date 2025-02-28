@@ -402,7 +402,7 @@ global:
 
   # The time in seconds that the consul API client will wait for a response from
   # the API before cancelling the request.
-  consulAPITimeout: 5s
+  consulAPITimeout: 30s
 
   securityContext: {}
 
@@ -782,11 +782,12 @@ server:
         memory: "100Mi"
         cpu: "50m"
       limits:
-        memory: "100Mi"
-        cpu: "50m"
+        memory: "500Mi"
+        cpu: "100m"
 
   serverLocalityEnabled: false
 
+  raftSnapshotThreshold: 500
 
 # Configuration for Consul servers when the servers are running outside of Kubernetes.
 # When running external servers, configuring these values is recommended

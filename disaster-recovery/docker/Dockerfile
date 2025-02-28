@@ -6,7 +6,7 @@ ARG TARGETARCH
 
 ARG GH_ACCESS_TOKEN
 
-ENV GOSUMDB=off GOPRIVATE=github.com/Netcracker
+ENV GOSUMDB=off
 
 WORKDIR /workspace
 
@@ -17,8 +17,6 @@ COPY go.mod go.mod
 COPY go.sum go.sum
 # cache deps before building and copying source so that we don't need to re-download as much
 # and so that source changes don't invalidate our downloaded layer
-
-RUN git config --global url."https://${GH_ACCESS_TOKEN}@github.com/".insteadOf "https://github.com/"
 
 RUN go mod download
 
