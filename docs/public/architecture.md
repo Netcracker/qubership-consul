@@ -2,7 +2,7 @@
 
 <!-- TOC -->
 * [Overview](#overview)
-  * [Netcracker Consul Delivery and Features](#consul-delivery-and-features)
+  * [Consul Delivery and Features](#consul-delivery-and-features)
 * [Consul Components](#consul-components)
   * [Consul](#consul)
   * [Consul Client](#consul-client)
