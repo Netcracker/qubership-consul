@@ -195,12 +195,15 @@ There are two ways to increase the limit value:
 Problem with error log "agent.server.raft: failed to get log" allows any action:
   
   1. Check backups in backup daemon, likes "/listbackups", "/listbackups/ID". If status equal "Successful" and if last backup is old, then we nees to
-     data loss
-  2. If you have a time to start pods, then connect to pod and delete raft.db file on all pods. If you don't have a time, then connect to kubernetes node in directory with consul PV and delete this file.
-  3. Then you need restart pods. Consul is reload, but part of data is loss.
-  4. Trying restore last backup through backup daemon. If backup daemon don't work, then reload.
-  5. Consul must be work. Check business applications - key manager and configuration-server. If they are failure on authentication to consul, then change secrets to correct from consul-acl-bootstral-secret. Then reboot.
-  6. Check errors, if you have. 
+     data loss.
+  2. If you have a time to start pods:
+     connect to pod and remove raft.db file on all pods. 
+  else:
+      connect to kubernetes node in directory with consul PV and remove this file.
+
+  3. Then you need restart pods. Consul is reload, but part of data will be loss.
+  4. Trying restore last backup through consul backup daemon. If consul backup daemon don't work, then reload.
+  5. Check business applications - key manager and configuration-server. If they are failure on authentication to consul, then change secrets to correct from consul-acl-bootstral-secret. Then reboot.
 
 
 # Deployment Problem
