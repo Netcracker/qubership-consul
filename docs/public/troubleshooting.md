@@ -196,10 +196,9 @@ Problem with error log "agent.server.raft: failed to get log" allows any action:
   
   1. Fetch backups for checking, via routes "/listbackups", "/listbackups/ID. If status equal "Successful" and if last backup is old, that means that we
   are loss the data.
-  2. If you have a time to start pods:
-     connect to pod and remove raft.db file on all pods. 
-  else:
-      connect to kubernetes node in directory with consul PV and remove this file.
+  2. Removing raft.db, you can follow one of the next actions:
+    1) Removing from pod directly: connect to a pod and remove file.
+    2) Removing file from PV.(this action better, if you have any pods, and you will not have a time after raload)
 
   3. Then you need restart pods. Consul is reload, but part of data will be loss.
   4. Trying restore last backup through consul backup daemon. If consul backup daemon don't work, then reload.
