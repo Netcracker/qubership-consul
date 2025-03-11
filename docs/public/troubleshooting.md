@@ -194,8 +194,8 @@ There are two ways to increase the limit value:
 
 Problem with error log "agent.server.raft: failed to get log" allows any action:
   
-  1. Check backups in backup daemon, likes "/listbackups", "/listbackups/ID". If status equal "Successful" and if last backup is old, then we nees to
-     data loss.
+  1. Fetch backups for checking, via routes "/listbackups", "/listbackups/ID. If status equal "Successful" and if last backup is old, that means that we
+  are loss the data.
   2. If you have a time to start pods:
      connect to pod and remove raft.db file on all pods. 
   else:
