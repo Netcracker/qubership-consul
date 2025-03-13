@@ -202,7 +202,7 @@ Problem with error log "agent.server.raft: failed to get log" allows any action:
 
   3. Then you need restart pods. Consul is reload, but part of data will be loss.
   4. Trying restore last backup through consul backup daemon. If consul backup daemon don't work, then reload.
-  5. Check business applications - key manager and configuration-server. If they are failure on authentication to consul, then change secrets to correct from consul-acl-bootstral-secret. Then reboot.
+  5. Check business applications - key-manager and config-server. If they are failure on authentication to consul, then change secrets to correct from consul-acl-bootstral-secret. Then reboot.
 
 
 # Deployment Problem
