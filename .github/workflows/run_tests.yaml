@@ -3,6 +3,11 @@ name: Run Consul Pipeline
 on:
   push
 
+#on:
+#  pull_request:
+#    types: [opened, synchronize]
+#    branches: [main]
+
 jobs:
   Consul-Pipeline:
     uses: Netcracker/qubership-test-pipelines/.github/workflows/consul.yaml@update_actions
