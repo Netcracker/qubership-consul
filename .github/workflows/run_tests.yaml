@@ -10,8 +10,7 @@ on:
 
 jobs:
   Consul-Pipeline:
-    uses: Netcracker/qubership-test-pipelines/.github/workflows/consul.yaml@update_actions
+    uses: Netcracker/qubership-test-pipelines/.github/workflows/consul.yaml@main
     with:
       service_branch: '${{ github.head_ref || github.ref_name }}'
       versions_file: 'integration-tests/versions.yaml'
-
