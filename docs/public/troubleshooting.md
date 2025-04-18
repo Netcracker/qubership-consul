@@ -190,6 +190,21 @@ There are two ways to increase the limit value:
 
   Don't forget to restart Consul servers to apply made changes.
 
+## Failed to get log
+
+Problem with error log "agent.server.raft: failed to get log" allows any action:
+  
+  1. Fetch backups for checking, via routes "/listbackups", "/listbackups/ID. If status equal "Successful" and if last backup is old, that means that we
+  are loss the data.
+  2. Removing raft.db, you can follow one of the next actions:
+    1) Removing from pod directly: connect to a pod and remove file.
+    2) Removing file from PV.(this action better, if you have any pods, and you will not have a time after raload)
+
+  3. Then you need restart pods. Consul is reload, but part of data will be loss.
+  4. Trying restore last backup through consul backup daemon. If consul backup daemon don't work, then reload.
+  5. Check business applications - key-manager and config-server. If they are failure on authentication to consul, then change secrets to correct from consul-acl-bootstral-secret. Then reboot.
+
+
 # Deployment Problem
 
 This section provides information about the issues you may face during deployment of Consul Service.
