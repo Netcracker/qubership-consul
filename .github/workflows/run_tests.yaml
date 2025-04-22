@@ -10,4 +10,5 @@ jobs:
     uses: Netcracker/qubership-test-pipelines/.github/workflows/consul.yaml@main
     with:
       service_branch: '${{ github.head_ref || github.ref_name }}'
-      versions_file: 'integration-tests/versions.yaml'
+      versions_file: '.github/versions.yaml'
+      pipeline_branch: 'main' #this value must match the value after '@' in 'uses'
