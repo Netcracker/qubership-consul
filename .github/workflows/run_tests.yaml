@@ -13,7 +13,8 @@ jobs:
       - name: Write secrets
         run: "echo ${{secrets.AWS_S3_ACCESS_KEY_ID}}"
   Consul-Pipeline:
-    uses: Netcracker/qubership-test-pipelines/.github/workflows/consul_s3.yaml@add_s3
+    uses: Netcracker/qubership-test-pipelines/.github/workflows/consul.yaml@add_s3
+    #uses: Netcracker/qubership-test-pipelines/.github/workflows/consul.yaml@3101e6179f67342ae3d637c51e0767fa296f435e
     with:
       service_branch: '${{ github.head_ref || github.ref_name }}'
       versions_file: '.github/versions.yaml'
