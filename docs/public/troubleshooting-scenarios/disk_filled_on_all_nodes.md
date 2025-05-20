@@ -23,7 +23,7 @@ Possible output is as follows:
 
 ```text
 Filesystem                Size      Used Available Use% Mounted on
-kube06nc-nfs.netcracker.com:/export/pvc-cbc1dc0b-e10c-4a70-bf69-3dd4dd3e8101
+kube06nc-nfs.example.com:/export/pvc-cbc1dc0b-e10c-4a70-bf69-3dd4dd3e8101
                           1.0G     19.0M   1005.0M   2% /consul/data
 ```
 
