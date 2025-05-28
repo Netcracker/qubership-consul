@@ -11,7 +11,7 @@ charts:
     values_file: charts/helm/consul-service/values.yaml
     image:
       - ghcr.io/netcracker/qubership-consul-disaster-recovery:${release}
-      #- ghcr.io/netcracker/backup-daemon:${release}
+      #- ghcr.io/netcracker/qubership-consul-backup-daemon:${release}
       #- ghcr.io/netcracker/qubership-consul-acl-configurator:${release}
       #- ghcr.io/netcracker/qubership-consul-rest-acl-configurator:${release}
       #- ghcr.io/netcracker/qubership-deployment-status-provisioner:${release}
