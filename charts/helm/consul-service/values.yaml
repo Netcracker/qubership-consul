@@ -2075,7 +2075,7 @@ monitoring:
 backupDaemon:
   # Enable Consul Backup Daemon installation.
   enabled: false
-  image: "ghcr.io/netcracker/qubership-consul-backup-daemon:main"
+  image: "ghcr.io/netcracker/backup-daemon:main"
 
   tls:
     enabled: true
@@ -2192,7 +2192,7 @@ consulAclConfigurator:
   enabled: true
   apiGroup: "qubership.org"
   # The image of Consul ACL Configurator Kubernetes operator which implements collecting processing Consul ACL configuration custom resources.
-  operatorImage: "ghcr.io/netcracker/qubership-consul-acl-configurator:main"
+  operatorImage: "ghcr.io/netcracker/acl-configurator:main"
   # The image of Consul ACL Configurator HTTP server which allows execute common reconcile for Consul ACL configuration custom resources by HTTP request from any Kubernetes service account.
   restServerImage: "ghcr.io/netcracker/qubership-consul-rest-acl-configurator:main"
   resources:

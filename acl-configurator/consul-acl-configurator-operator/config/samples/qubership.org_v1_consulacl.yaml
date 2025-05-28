@@ -1,0 +1,6 @@
+apiVersion: qubership.org/v1
+kind: ConsulACL
+metadata:
+  name: consulacl-sample
+spec:
+  # TODO(user): Add fields here

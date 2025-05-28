@@ -1,0 +1,24 @@
+# permissions for end users to edit consulacls.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: consulacl-editor-role
+rules:
+- apiGroups:
+  - qubership.org
+  resources:
+  - consulacls
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - qubership.org
+  resources:
+  - consulacls/status
+  verbs:
+  - get
