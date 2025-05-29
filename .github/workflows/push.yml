@@ -35,9 +35,6 @@ jobs:
           - name: qubership-consul-transfer
             file: docker-transfer/Dockerfile
             context: ""
-          - name: qubership-consul-transfer
-            file: docker-transfer/Dockerfile
-            context: ""
           - name: qubership-consul-acl-configurator
             file: acl-configurator/consul-acl-configurator-operator/Dockerfile
             context: acl-configurator/consul-acl-configurator-operator
