@@ -1,0 +1,34 @@
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: manager-role
+rules:
+- apiGroups:
+  - qubership.org
+  resources:
+  - consulacls
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - qubership.org
+  resources:
+  - consulacls/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - qubership.org
+  resources:
+  - consulacls/status
+  verbs:
+  - get
+  - patch
+  - update

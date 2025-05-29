@@ -1,0 +1,16 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="go build github.com/Netcracker/consul-acl-configurator/consul-acl-configurator-operator" type="GoApplicationRunConfiguration" factoryName="Go Application" nameIsGenerated="true">
+    <module name="consul-acl-configurator" />
+    <working_directory value="$PROJECT_DIR$/../consul-acl-configurator/consul-acl-configurator-operator" />
+    <parameters value="--kubeconfig $PROJECT_DIR$/../../../useful/Kube-confs/miniha" />
+    <envs>
+      <env name="WATCH_NAMESPACE" value="" />
+      <env name="NAMESPACE" value="consul-service" />
+      <env name="OPERATOR_NAME" value="consul-acl-configurator-operator" />
+    </envs>
+    <kind value="PACKAGE" />
+    <package value="github.com/Netcracker/consul-acl-configurator/consul-acl-configurator-operator" />
+    <directory value="$PROJECT_DIR$" />
+    <method v="2" />
+  </configuration>
+</component>

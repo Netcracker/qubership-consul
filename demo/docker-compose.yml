@@ -1,0 +1,19 @@
+version: '2.2'
+services:
+  consul:
+    image: hashicorp/consul:1.6.2
+    ports:
+      - 8500:8500
+  consul-backup-daemon:
+    image: ghcr.io/netcracker/qubership-consul-backup-daemon:latest
+    ports:
+      - 8080:8080
+    links:
+      - consul
+    environment:
+      - CONSUL_HOST=consul
+      - CONSUL_PORT=8500
+      - BACKUP_SCHEDULE=0 * * * *
+      - EVICTION_POLICY=1h/1h
+      - CONSUL_BACKUP_DAEMON_DEBUG=DEBUG
+      - LOG_LEVEL=DEBUG

@@ -1,0 +1,20 @@
+# permissions for end users to view consulacls.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: consulacl-viewer-role
+rules:
+- apiGroups:
+  - qubership.org
+  resources:
+  - consulacls
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - qubership.org
+  resources:
+  - consulacls/status
+  verbs:
+  - get
