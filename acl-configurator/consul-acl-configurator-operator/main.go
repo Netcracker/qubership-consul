@@ -111,7 +111,7 @@ func main() {
 	utilruntime.Must(clientgoscheme.AddToScheme(customScheme))
 
 	GroupVersion := schema.GroupVersion{
-		Group:   "netcracker.com",
+		Group:   "qubership.org",
 		Version: "v1alpha1",
 	}
 	SchemeBuilder := runtime.NewSchemeBuilder(func(scheme *runtime.Scheme) error {
