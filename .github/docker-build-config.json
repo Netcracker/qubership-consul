@@ -1,0 +1,35 @@
+{
+  "components": [
+    {
+      "name": "qubership-consul-integration-tests",
+      "file": "integration-tests/docker/Dockerfile",
+      "context": ""
+    },
+    {
+      "name": "qubership-consul-disaster-recovery",
+      "file": "disaster-recovery/docker/Dockerfile",
+      "context": "disaster-recovery"
+    },
+    {
+      "name": "qubership-consul-transfer",
+      "file": "docker-transfer/Dockerfile",
+      "context": ""
+    },
+    {
+      "name": "qubership-consul-acl-configurator",
+      "file": "acl-configurator/consul-acl-configurator-operator/Dockerfile",
+      "context": "acl-configurator/consul-acl-configurator-operator"
+    },
+    {
+      "name": "qubership-consul-rest-acl-configurator",
+      "file": "acl-configurator/rest-acl-configurator/Dockerfile",
+      "context": "acl-configurator/rest-acl-configurator"
+    },
+    {
+      "name": "qubership-consul-backup-daemon",
+      "file": "backup-daemon/docker/Dockerfile",
+      "context": "backup-daemon"
+    }
+  ],
+  "platforms": "linux/amd64,linux/arm64"
+}
