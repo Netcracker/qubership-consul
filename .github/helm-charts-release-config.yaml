@@ -14,5 +14,5 @@ charts:
       - ghcr.io/netcracker/qubership-consul-backup-daemon:${release}
       - ghcr.io/netcracker/qubership-consul-acl-configurator:${release}
       - ghcr.io/netcracker/qubership-consul-rest-acl-configurator:${release}
-      #- ghcr.io/netcracker/qubership-deployment-status-provisioner:${release}
+      - ghcr.io/netcracker/qubership-deployment-status-provisioner:${sp_release}
       - ghcr.io/netcracker/qubership-consul-integration-tests:${release}
