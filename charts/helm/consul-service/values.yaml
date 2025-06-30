@@ -392,6 +392,45 @@ global:
         memory: "128Mi"
     extraLabels: {}
     securityContext: {}
+    # Affinity Settings for Backup Daemon pod, formatted as a JSON string.
+    # ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
+    # Example:
+    # affinity: {
+    #   "nodeAffinity": {
+    #     "requiredDuringSchedulingIgnoredDuringExecution": {
+    #       "nodeSelectorTerms": [
+    #         {
+    #           "matchExpressions": [
+    #             {
+    #               "key": "node-role.kubernetes.io/master",
+    #               "operator": "DoesNotExist"
+    #             }
+    #           ]
+    #         }
+    #       ]
+    #     }
+    #   }
+    # }
+    affinity: { }
+
+    # Toleration Settings for Backup Daemon pod
+    # This should be a JSON string matching the Toleration array
+    # in a PodSpec.
+    # Example:
+    # tolerations: [
+    #   {
+    #     "operator": "Exists"
+    #   }
+    # ]
+    tolerations: [ ]
+
+    # nodeSelector labels for syncCatalog pod assignment, formatted as a JSON string.
+    # ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#nodeselector
+    # Example:
+    # nodeSelector: {
+    #   "beta.kubernetes.io/arch": "amd64"
+    # }
+    nodeSelector: { }
 
   # Configuration for running this Helm chart on the Red Hat OpenShift platform.
   # This Helm chart currently supports OpenShift v4.x+.
@@ -2211,6 +2250,27 @@ consulAclConfigurator:
   # The name of Kubernetes service for Consul ACL Configurator HTTP server.
   serviceName: "consul-acl-configurator-reconcile"
 
+  # Affinity Settings for Backup Daemon pod, formatted as a JSON string.
+  # ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
+  # Example:
+  # affinity: {
+  #   "nodeAffinity": {
+  #     "requiredDuringSchedulingIgnoredDuringExecution": {
+  #       "nodeSelectorTerms": [
+  #         {
+  #           "matchExpressions": [
+  #             {
+  #               "key": "node-role.kubernetes.io/master",
+  #               "operator": "DoesNotExist"
+  #             }
+  #           ]
+  #         }
+  #       ]
+  #     }
+  #   }
+  # }
+  affinity: {}
+
   # Toleration Settings Consul ACL Configurator pod
   # This should be a JSON string matching the Toleration array
   # in a PodSpec.
@@ -2221,6 +2281,14 @@ consulAclConfigurator:
   #   }
   # ]
   tolerations: {}
+
+  # nodeSelector labels for syncCatalog pod assignment, formatted as a JSON string.
+  # ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#nodeselector
+  # Example:
+  # nodeSelector: {
+  #   "beta.kubernetes.io/arch": "amd64"
+  # }
+  nodeSelector: {}
 
   extraLabels: {}
 

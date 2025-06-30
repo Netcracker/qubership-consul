@@ -41,6 +41,18 @@ spec:
         name: {{ template "consul.fullname" . }}-disaster-recovery
         component: disaster-recovery
     spec:
+      {{- if .Values.global.disasterRecovery.affinity }}
+      affinity:
+        {{ tpl (.Values.global.disasterRecovery.affinity | toYaml) . | nindent 8 | trim }}
+      {{- end }}
+      {{- if .Values.global.disasterRecovery.tolerations }}
+      tolerations:
+        {{ .Values.global.disasterRecovery.tolerations | toYaml | indent 8 | trim }}
+      {{- end }}
+      {{- if .Values.global.disasterRecovery.nodeSelector }}
+      nodeSelector:
+        {{ .Values.global.disasterRecovery.nodeSelector | toYaml | indent 8 | trim }}
+      {{- end }}
       {{- if not (eq (include "openshift.enabled" .) "true") }}
       securityContext:
         {{- include "consul.globalPodSecurityContext" . | nindent 8 }}

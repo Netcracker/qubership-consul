@@ -29,6 +29,18 @@ spec:
       annotations:
         'consul.hashicorp.com/connect-inject': 'false'
     spec:
+      {{- if .Values.consulAclConfigurator.affinity }}
+      affinity:
+        {{ tpl (.Values.consulAclConfigurator.affinity | toYaml) . | nindent 8 | trim }}
+      {{- end }}
+      {{- if .Values.consulAclConfigurator.tolerations }}
+      tolerations:
+        {{ .Values.consulAclConfigurator.tolerations | toYaml | indent 8 | trim }}
+      {{- end }}
+      {{- if .Values.consulAclConfigurator.nodeSelector }}
+      nodeSelector:
+        {{ .Values.consulAclConfigurator.nodeSelector | toYaml | indent 8 | trim }}
+      {{- end }}
       serviceAccountName: {{ template "consul-acl-configurator.name" . }}-operator
       {{- if .Values.consulAclConfigurator.priorityClassName }}
       priorityClassName: {{ .Values.consulAclConfigurator.priorityClassName | quote }}
