@@ -29,10 +29,10 @@ spec:
     metadata:
       labels:
         {{- with .Values.global.extraLabels }}
-{{- toYaml . | indent 8 -}}
+          {{- toYaml . | indent 8 -}}
         {{- end }}
         {{- with .Values.global.disasterRecovery.extraLabels }}
-{{- toYaml . | indent 8 -}}
+          {{- toYaml . | indent 8 -}}
         {{- end }}
         app: {{ template "consul.name" . }}
         chart: {{ template "consul.chart" . }}
