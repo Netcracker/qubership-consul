@@ -1,7 +1,7 @@
 name: Run Consul Pipeline
 
 env:
-  sp_release: 'main'
+  sp_release: '0.1.4'
 
 on:
   pull_request:
