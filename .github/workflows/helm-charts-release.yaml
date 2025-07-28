@@ -124,7 +124,7 @@ jobs:
       - name: Docker build
         uses: netcracker/qubership-workflow-hub/actions/docker-action@main
         with:
-          ref: release-${{ inputs.release }}
+          ref: ${{ inputs.release }}
           download-artifact: false
           dry-run: false
           component: ${{ toJson(matrix.component) }}
@@ -141,7 +141,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: release-${{ inputs.release }}
+          ref: ${{ inputs.release }}
 
       - name: Configure Git
         run: |
@@ -152,7 +152,7 @@ jobs:
         #continue-on-error: true
         uses: netcracker/chart-releaser-action@main
         with:
-          charts_dir: charts/helm
+          charts_dir: operator/charts/helm
           release_name_template: "{{ .Version }}"
           skip_existing: true
           skip_upload: true
