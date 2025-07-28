@@ -124,7 +124,7 @@ jobs:
       - name: Docker build
         uses: netcracker/qubership-workflow-hub/actions/docker-action@main
         with:
-          ref: ${{ inputs.release }}
+          ref: release-${{ inputs.release }}
           download-artifact: false
           dry-run: false
           component: ${{ toJson(matrix.component) }}
@@ -141,7 +141,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: ${{ inputs.release }}
+          ref: release-${{ inputs.release }}
 
       - name: Configure Git
         run: |
