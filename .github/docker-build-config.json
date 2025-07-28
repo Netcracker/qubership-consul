@@ -13,7 +13,7 @@
     {
       "name": "qubership-consul-transfer",
       "file": "docker-transfer/Dockerfile",
-      "context": ""
+      "context": "."
     },
     {
       "name": "qubership-consul-acl-configurator",
