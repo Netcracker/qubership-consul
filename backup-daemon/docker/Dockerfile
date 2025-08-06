@@ -1,4 +1,4 @@
-FROM ghcr.io/netcracker/qubership-backup-daemon:main_alpine
+FROM ghcr.io/netcracker/qubership-backup-daemon:feature_set_region_for_s3_alpine
 
 ENV CONSUL_HOME=/opt/consul \
     CONSUL_BACKUP=/opt/consul/backup-storage
