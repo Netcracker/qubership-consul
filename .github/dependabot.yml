@@ -43,3 +43,13 @@ updates:
     directory: "/acl-configurator/consul-acl-configurator-operator"
     schedule:
       interval: "weekly"
+  
+  # Python (pip)
+  - package-ecosystem: "pip"
+    directory: "/backup-daemon/docker"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "pip"
+    directory: "/integration-tests/docker"
+    schedule:
+      interval: "weekly"
