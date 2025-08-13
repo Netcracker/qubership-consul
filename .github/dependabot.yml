@@ -1,0 +1,31 @@
+version: 2
+updates:
+  # Go modules
+  - package-ecosystem: "gomod"
+    directories: 
+      - "/disaster-recovery"
+      - "/acl-configurator/rest-acl-configurator"
+      - "/acl-configurator/consul-acl-configurator-operator"
+    schedule:
+      interval: "weekly"
+  
+  # Docker images
+  - package-ecosystem: "docker"
+    directories: 
+      - "/docker-transfer"
+      - "/backup-daemon/docker"
+      - "/disaster-recovery/docker"
+      - "/integration-tests/docker"
+      - "/acl-configurator/sdk-tool"
+      - "/acl-configurator/rest-acl-configurator"
+      - "/acl-configurator/consul-acl-configurator-operator"
+    schedule:
+      interval: "weekly"
+  
+  # Python (pip)
+  - package-ecosystem: "pip"
+    directories: 
+      - "/backup-daemon/docker"
+      - "/integration-tests/docker"
+    schedule:
+      interval: "weekly"
