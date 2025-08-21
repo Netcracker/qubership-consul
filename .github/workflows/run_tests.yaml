@@ -7,11 +7,11 @@ on:
 
 jobs:
   Consul-Pipeline:
-    uses: Netcracker/qubership-test-pipelines/.github/workflows/consul.yaml@update_shared_actions
+    uses: Netcracker/qubership-test-pipelines/.github/workflows/consul.yaml@1d34d9654eec8f9a980ec2e810d1f387d52b3f9e
     with:
       service_branch: '${{ github.head_ref || github.ref_name }}'
       versions_file: '.github/versions.yaml'
-      pipeline_branch: 'update_shared_actions' #this value must match the value after '@' in 'uses'
+      pipeline_branch: '1d34d9654eec8f9a980ec2e810d1f387d52b3f9e' #this value must match the value after '@' in 'uses'
     secrets:
       AWS_S3_ACCESS_KEY_ID: ${{secrets.AWS_S3_ACCESS_KEY_ID}}
       AWS_S3_ACCESS_KEY_SECRET: ${{secrets.AWS_S3_ACCESS_KEY_SECRET}}

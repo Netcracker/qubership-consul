@@ -40,7 +40,7 @@ global:
   # image: "consul:1.10.0"
   # # Consul Enterprise 1.10.0
   # image: "hashicorp/consul-enterprise:1.10.0-ent"
-  image: "hashicorp/consul:1.20.0"
+  image: "hashicorp/consul:1.20.6"
 
   # Array of objects containing image pull secret names that will be applied to each service account.
   # This can be used to reference image pull secrets if using a custom consul or consul-k8s Docker image.
@@ -64,12 +64,12 @@ global:
   # If using acls.manageSystemACLs then must be >= 0.10.1.
   # If using connect inject then must be >= 0.10.1.
   # If using Consul Enterprise namespaces, must be >= 0.12.
-  imageK8S: "hashicorp/consul-k8s-control-plane:1.6.0"
+  imageK8S: "hashicorp/consul-k8s-control-plane:1.6.5"
 
   # The name (and tag) of the consul-dataplane Docker image used for the
   # connect-injected sidecar proxies and mesh, terminating, and ingress gateways.
   # @default: hashicorp/consul-dataplane:<latest supported version>
-  imageConsulDataplane: "hashicorp/consul-dataplane:1.6.0"
+  imageConsulDataplane: "hashicorp/consul-dataplane:1.6.5"
 
   # The name of the datacenter that the agents should
   # register as. This can't be changed once the Consul cluster is up and running
@@ -392,6 +392,45 @@ global:
         memory: "128Mi"
     extraLabels: {}
     securityContext: {}
+    # Affinity Settings for Backup Daemon pod, formatted as a JSON string.
+    # ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
+    # Example:
+    # affinity: {
+    #   "nodeAffinity": {
+    #     "requiredDuringSchedulingIgnoredDuringExecution": {
+    #       "nodeSelectorTerms": [
+    #         {
+    #           "matchExpressions": [
+    #             {
+    #               "key": "node-role.kubernetes.io/master",
+    #               "operator": "DoesNotExist"
+    #             }
+    #           ]
+    #         }
+    #       ]
+    #     }
+    #   }
+    # }
+    affinity: { }
+
+    # Toleration Settings for Backup Daemon pod
+    # This should be a JSON string matching the Toleration array
+    # in a PodSpec.
+    # Example:
+    # tolerations: [
+    #   {
+    #     "operator": "Exists"
+    #   }
+    # ]
+    tolerations: [ ]
+
+    # nodeSelector labels for syncCatalog pod assignment, formatted as a JSON string.
+    # ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#nodeselector
+    # Example:
+    # nodeSelector: {
+    #   "beta.kubernetes.io/arch": "amd64"
+    # }
+    nodeSelector: { }
 
   # Configuration for running this Helm chart on the Red Hat OpenShift platform.
   # This Helm chart currently supports OpenShift v4.x+.
@@ -2052,7 +2091,7 @@ meshGateway:
 
 podScheduler:
   enabled: true
-  dockerImage: bitnami/kubectl:1.30.6
+  dockerImage: bitnami/kubectl:1.30.7
   affinity: {}
   nodeSelector: {}
   resources:
@@ -2211,6 +2250,27 @@ consulAclConfigurator:
   # The name of Kubernetes service for Consul ACL Configurator HTTP server.
   serviceName: "consul-acl-configurator-reconcile"
 
+  # Affinity Settings for Backup Daemon pod, formatted as a JSON string.
+  # ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
+  # Example:
+  # affinity: {
+  #   "nodeAffinity": {
+  #     "requiredDuringSchedulingIgnoredDuringExecution": {
+  #       "nodeSelectorTerms": [
+  #         {
+  #           "matchExpressions": [
+  #             {
+  #               "key": "node-role.kubernetes.io/master",
+  #               "operator": "DoesNotExist"
+  #             }
+  #           ]
+  #         }
+  #       ]
+  #     }
+  #   }
+  # }
+  affinity: {}
+
   # Toleration Settings Consul ACL Configurator pod
   # This should be a JSON string matching the Toleration array
   # in a PodSpec.
@@ -2221,6 +2281,14 @@ consulAclConfigurator:
   #   }
   # ]
   tolerations: {}
+
+  # nodeSelector labels for syncCatalog pod assignment, formatted as a JSON string.
+  # ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#nodeselector
+  # Example:
+  # nodeSelector: {
+  #   "beta.kubernetes.io/arch": "amd64"
+  # }
+  nodeSelector: {}
 
   extraLabels: {}
 
