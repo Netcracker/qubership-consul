@@ -2009,4 +2009,4 @@ join them via single WAN gossip pool. You can do this manually during installati
 
 #### Create Multi-DC Configuration Manually
 
-For more information, refer to [Datacenter Federation with WAN Gossip](https://learn.hashicorp.com/consul/security-networking/datacenters).
+For more information, refer to [Datacenter Federation with WAN Gossip](https://developer.hashicorp.com/consul/docs/deploy/server/vm/bootstrap).

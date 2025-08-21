@@ -10,6 +10,7 @@ The following topics are covered in this chapter:
   * [No Cluster Leader - Election Timeout Reached](#no-cluster-leader---election-timeout-reached)
   * [Consul Client Failed Renaming Node ID](#consul-client-failed-renaming-node-id)
   * [Consul Responses with 429 Code](#consul-responses-with-429-code)
+  * [Failed to get log](#failed-to-get-log)
 * [Deployment Problem](#deployment-problem)
   * [Consul Server Pod Does Not Start](#consul-server-pod-does-not-start)
     * [Monitoring](#monitoring)
@@ -59,7 +60,7 @@ The following topics are covered in this chapter:
 This section provides detailed troubleshooting procedures for the Consul Service.
 
 If you face any problem with Consul Service refer to the 
-[Official Troubleshooting Guide](https://learn.hashicorp.com/consul/day-2-operations/troubleshooting).
+[Official Troubleshooting Guide](https://developer.hashicorp.com/consul/docs/troubleshoot).
 
 # Common Problems
 

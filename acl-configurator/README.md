@@ -12,4 +12,4 @@ privilege services (for example Consul backup daemon). The distribution consists
 
 # Documentation
 
-- [Development Guide](../docs/public/acl-configurator)
+- [Development Guide](../docs/public/acl-configurator.md)
