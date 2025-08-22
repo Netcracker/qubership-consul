@@ -1610,7 +1610,7 @@ You can use the following tags:
 
 ### Helm
 
-To deploy via Helm you need to prepare yaml file with custom deploy parameters and run the following
+To deploy via Helm you need to prepare YAML file with custom deploy parameters and run the following
 command in [Consul Chart](/charts/helm/consul-service):
 
 ```bash
