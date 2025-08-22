@@ -205,7 +205,6 @@ Problem with error log "agent.server.raft: failed to get log" allows any action:
   4. Trying restore last backup through consul backup daemon. If consul backup daemon don't work, then reload.
   5. Check business applications - key-manager and config-server. If they are failure on authentication to consul, then change secrets to correct from consul-acl-bootstral-secret. Then reboot.
 
-
 # Deployment Problem
 
 This section provides information about the issues you may face during deployment of Consul Service.

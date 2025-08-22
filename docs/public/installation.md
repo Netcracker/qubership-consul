@@ -92,6 +92,7 @@ Before you start the installation and configuration of a Consul cluster, ensure 
 * All required CRDs are installed
 
 Note the following terms:
+
 * `DEPLOY_W_HELM` means installation is performed with `helm install/upgrade` commands, not `helm template + kubectl apply`.
 
 ### Custom Resource Definitions
