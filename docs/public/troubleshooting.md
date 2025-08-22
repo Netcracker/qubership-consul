@@ -158,7 +158,7 @@ extra-from-values.json: '{"disable_update_check":true, "disable_host_node_id":tr
 ```
 
 Also, the stored Node ID can be discarded by removing the `/data/node-id` file manually in Client pod terminal.
-In both cases, restart the affected Client pods to apply changes and confirm that unique node id is applied
+In both cases, restart the affected Client pods to apply changes and confirm that unique node ID is applied
 for every Consul Client.
 
 ## Consul Responses with 429 Code
@@ -282,7 +282,7 @@ it indicates that the NFS works in "On demand" mode and does not allow to read f
 ==> Error starting agent: Failed to start Consul server: Failed to start Raft: open /consul/data/raft/raft.db: invalid argument
 ```
 
-You need to resolve the issue with NFS configuration or start using local storage instead of NFS.
+You need to resolve the issue with NFS configuration or start using localStorage instead of NFS.
 
 # ACL Issues
 
