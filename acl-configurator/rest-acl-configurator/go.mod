@@ -1,6 +1,6 @@
 module github.com/Netcracker/consul-acl-configurator/rest-acl-configurator
 
-go 1.24.5
+go 1.24.6
 
 require (
 	github.com/golang-jwt/jwt/v4 v4.5.2
