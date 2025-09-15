@@ -40,9 +40,11 @@ import (
 	consulacl "github.com/Netcracker/consul-acl-configurator/consul-acl-configurator-operator/api/v1alpha1"
 )
 
-const (
-	consulAclFinalizer = "qubership.org/consulaclconfigurator-controller"
-	errNotFound        = "ACL not found"
+const errNotFound = "ACL not found"
+
+var (
+    apiGroup           = getEnv("API_GROUP", "qubership.org")
+    consulAclFinalizer = fmt.Sprintf("%s/consulaclconfigurator-controller", apiGroup)
 )
 
 var log = logf.Log.WithName("controller_consulacl")
