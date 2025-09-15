@@ -43,8 +43,8 @@ import (
 const errNotFound = "ACL not found"
 
 var (
-    apiGroup           = getEnv("API_GROUP", "qubership.org")
-    consulAclFinalizer = fmt.Sprintf("%s/consulaclconfigurator-controller", apiGroup)
+    GroupVersion = schema.GroupVersion{Group: getEnv("API_GROUP", "qubership.org"), Version: "v1alpha1"}
+    consulAclFinalizer = GroupVersion.Group + "/consulaclconfigurator-controller"
 )
 
 var log = logf.Log.WithName("controller_consulacl")
