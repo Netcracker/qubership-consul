@@ -14,12 +14,10 @@ COPY ../go.sum go.sum
 # and so that source changes don't invalidate our downloaded layer
 # Copy the go source
 COPY ../remove-tokens.go remove-tokens.go
+RUN go mod tidy
 RUN go mod download
 
 
-
-
-RUN go mod tidy
 RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} GO111MODULE=on go build -a -o manager remove-tokens.go
 
 FROM alpine:3.22
