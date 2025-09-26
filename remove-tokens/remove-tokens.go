@@ -5,11 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
 	"log"
 	"net/http"
 	"net/url"
@@ -18,6 +13,12 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 type Token struct {
@@ -54,20 +55,49 @@ func parseDescription(desc string) *TokenDescription {
 }
 
 func main() {
-	consulHost := strings.TrimSpace(os.Getenv("CONSUL_HOST"))
-	consulPort := strings.TrimSpace(os.Getenv("CONSUL_PORT"))
-	consulToken := strings.TrimSpace(os.Getenv("CONSUL_HTTP_TOKEN"))
-	namespace := strings.TrimSpace(os.Getenv("CONSUL_NAMESPACE"))
-	if consulHost == "" || consulPort == "" || consulToken == "" {
-		log.Fatal("[ERROR] Missing CONSUL_HOST / CONSUL_HTTP_TOKEN env variables")
+	consulHost, consulPort, consulToken, namespace := loadEnv()
+
+	clientset := mustGetKubeClient()
+
+	livePods := getLiveConsulPods(clientset, namespace)
+
+	tokens, err := fetchConsulTokens(consulHost, consulPort, consulToken)
+	if err != nil {
+		log.Fatalln(err, "Failed fetchConsulTokens")
 	}
 
-	//get names of pods
+	tokensByPod := groupTokensByPod(tokens)
+
+	tokensToDelete := pickTokensToDelete(tokensByPod, livePods)
+
+	deleteTokens(consulHost, consulPort, consulToken, tokensToDelete)
+}
+
+// ----------------- ENV -----------------
+
+func loadEnv() (host, port, token, ns string) {
+	host = strings.TrimSpace(os.Getenv("CONSUL_HOST"))
+	port = strings.TrimSpace(os.Getenv("CONSUL_PORT"))
+	token = strings.TrimSpace(os.Getenv("CONSUL_HTTP_TOKEN"))
+	ns = strings.TrimSpace(os.Getenv("CONSUL_NAMESPACE"))
+
+	if host == "" || port == "" || token == "" {
+		log.Fatal("[ERROR] Missing CONSUL_HOST / CONSUL_HTTP_TOKEN env variables")
+	}
+	return
+}
+
+// ----------------- K8S -----------------
+
+func mustGetKubeClient() *kubernetes.Clientset {
 	clientset, err := getKubeClient()
 	if err != nil {
 		log.Fatalf("Cannot create k8s client: %v", err)
 	}
+	return clientset
+}
 
+func getLiveConsulPods(clientset *kubernetes.Clientset, namespace string) map[string]struct{} {
 	pods, err := clientset.CoreV1().Pods(namespace).List(context.Background(), metav1.ListOptions{
 		LabelSelector: "app=consul,component=client",
 	})
@@ -82,36 +112,45 @@ func main() {
 		}
 	}
 	fmt.Printf("[INFO] Found %d live consul client pods\n", len(livePods))
+	return livePods
+}
 
-	urlStr := fmt.Sprintf("http://%s:%s/v1/acl/tokens", consulHost, consulPort)
+// ----------------- Consul Tokens -----------------
+
+func fetchConsulTokens(host, port, token string) ([]Token, error) {
+	urlStr := fmt.Sprintf("http://%s:%s/v1/acl/tokens", host, port)
 	fmt.Println("[INFO] Fetching tokens from Consul...")
 
 	req, err := http.NewRequest("GET", urlStr, nil)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
-	req.Header.Set("X-Consul-Token", consulToken)
+	req.Header.Set("X-Consul-Token", token)
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		log.Fatalf("[ERROR] Failed to fetch tokens: %s", resp.Status)
+		log.Fatalln(resp.Status, "Failed to fetch tokens")
+		return nil, err
 	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		log.Fatal(err)
-	}
-	var tokens []Token
-	if err := json.Unmarshal(body, &tokens); err != nil {
-		log.Fatalf("[ERROR] Invalid JSON from Consul: %v", err)
+		return nil, err
 	}
 
-	// group by pods
+	var tokens []Token
+	if err := json.Unmarshal(body, &tokens); err != nil {
+		return nil, fmt.Errorf("[ERROR] Invalid JSON from Consul: %v", err)
+	}
+	return tokens, nil
+}
+
+func groupTokensByPod(tokens []Token) map[string][]Token {
 	tokensByPod := make(map[string][]Token)
 	for _, t := range tokens {
 		td := parseDescription(t.Description)
@@ -121,21 +160,22 @@ func main() {
 		podName := podKey(td.Pod)
 		tokensByPod[podName] = append(tokensByPod[podName], t)
 	}
+	return tokensByPod
+}
 
-	fmt.Printf("[DEBUG] Grouped tokens: %+v\n", tokensByPod)
-
+func pickTokensToDelete(tokensByPod map[string][]Token, livePods map[string]struct{}) []string {
 	var tokensToDelete []string
 
 	for podName, toks := range tokensByPod {
 		if _, alive := livePods[podName]; !alive {
-			// if pod not healthy, then remove tokens
+			// pod is dead -> delete all tokens
 			for _, t := range toks {
 				tokensToDelete = append(tokensToDelete, t.AccessorID)
 			}
 			continue
 		}
 
-		// if pod is healthy, then save last token
+		// pod is alive -> keep latest token
 		sort.Slice(toks, func(i, j int) bool {
 			return toks[i].CreateTime.After(toks[j].CreateTime)
 		})
@@ -144,6 +184,10 @@ func main() {
 		}
 	}
 
+	return tokensToDelete
+}
+
+func deleteTokens(host, port, token string, tokensToDelete []string) {
 	if len(tokensToDelete) == 0 {
 		fmt.Println("[INFO] No stale client tokens to delete.")
 		return
@@ -153,10 +197,15 @@ func main() {
 	for _, id := range tokensToDelete {
 		fmt.Println(id)
 		idEnc := url.PathEscape(id)
-		delURL := fmt.Sprintf("http://%s:%s/v1/acl/token/%s", consulHost, consulPort, idEnc)
+		delURL := fmt.Sprintf("http://%s:%s/v1/acl/token/%s", host, port, idEnc)
 
-		req, _ := http.NewRequest("DELETE", delURL, nil)
-		req.Header.Set("X-Consul-Token", consulToken)
+		req, err := http.NewRequest("DELETE", delURL, nil)
+		if err != nil {
+			log.Printf("[WARN] Failed to revoke %s: %v", id, err)
+			continue
+		}
+		req.Header.Set("X-Consul-Token", token)
+
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
 			log.Printf("[WARN] Failed to revoke %s: %v", id, err)
