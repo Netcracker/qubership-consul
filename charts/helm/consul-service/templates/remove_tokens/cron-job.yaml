@@ -61,4 +61,6 @@ spec:
                       key: "token"
                       {{- end}}
                     {{- end}}
+              securityContext:
+                {{- include "consul.globalContainerSecurityContext" . | nindent 12 }}
 {{- end }}
