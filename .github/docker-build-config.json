@@ -29,6 +29,11 @@
       "name": "qubership-consul-backup-daemon",
       "file": "backup-daemon/docker/Dockerfile",
       "context": "backup-daemon"
+    },
+    {
+      "name": "qubership-consul-remove-tokens",
+      "file": "remove-tokens/docker/Dockerfile",
+      "context": "remove-tokens"
     }
   ],
   "platforms": "linux/amd64,linux/arm64"

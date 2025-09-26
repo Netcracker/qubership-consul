@@ -19,6 +19,7 @@ updates:
       - "/acl-configurator/sdk-tool"
       - "/acl-configurator/rest-acl-configurator"
       - "/acl-configurator/consul-acl-configurator-operator"
+      - "/remove-tokens/docker"
     schedule:
       interval: "weekly"
 

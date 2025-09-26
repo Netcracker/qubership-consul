@@ -7,6 +7,7 @@ directory:
   - acl-configurator/consul-acl-configurator-operator/controllers
   - acl-configurator/consul-acl-configurator-operator/util
   - acl-configurator/rest-acl-configurator
+  - remove-tokens
   - backup-daemon
   - integration-tests
   - charts
