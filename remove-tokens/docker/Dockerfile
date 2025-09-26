@@ -14,7 +14,6 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} GO111MODULE=on go build 
 
 FROM alpine:3.22
 
-COPY docker/config/alpine-repositories /etc/apk/repositories
 COPY --from=builder --chown=${USER_UID} /app/manager .
 # Upgrade all tools to avoid vulnerabilities
 RUN set -x && apk upgrade --no-cache --available
