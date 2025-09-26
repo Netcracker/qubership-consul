@@ -63,6 +63,9 @@ jobs:
           - name: qubership-consul-backup-daemon
             file: backup-daemon/docker/Dockerfile
             context: backup-daemon
+          - name: qubership-consul-remove-tokens
+            file: remove-tokens/docker/Dockerfile
+            context: remove-tokens
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

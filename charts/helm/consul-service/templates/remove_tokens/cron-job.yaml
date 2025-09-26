@@ -1,0 +1,64 @@
+{{- if (eq (include "remove-tokens.enabled" .) "true") }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: consul-remove-tokens
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "consul-service.defaultLabels" . | nindent 4 }}
+    app.kubernetes.io/name: {{ template "consul.fullname" . }}-remove-tokens
+    name: {{ template "consul.fullname" . }}-remove-tokens
+    app.kubernetes.io/instance: {{ cat (printf "%s-remove-tokens"  (include "consul.fullname" .)) .Values.DELIMITER .Release.Namespace | nospace | trunc 63 }}
+spec:
+  concurrencyPolicy: Forbid
+  schedule: "{{ .Values.consulAclConfigurator.removeTokens.schedule }}"
+  successfulJobsHistoryLimit: 0
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      activeDeadlineSeconds: 1800
+      template:
+        spec:
+          restartPolicy: Never
+          serviceAccountName: consul-remove-tokens
+{{/*          {{- if not (eq (include "openshift.enabled" .) "true") }}*/}}
+          securityContext:
+{{- include "consul.globalPodSecurityContext" . | nindent 12 }}
+{{- with .Values.consulAclConfigurator.removeTokens.securityContext }}
+{{ toYaml . | nindent 12 }}
+{{- end }}
+          containers:
+            - name: remove-tokens
+              image: {{ template "remove-tokens.image" . }}
+              {{- with .Values.consulAclConfigurator.removeTokens.resources }}
+              resources:
+                {{ . | toYaml | indent 16 | trim }}
+              {{- end }}
+              env:
+                - name: CONSUL_HOST
+                  value: "{{ template "consul.fullname" . }}-server"
+                - name: CONSUL_PORT
+                  value: "{{ coalesce .Values.consulAclConfigurator.consul.port (include "consul.port" .) }}"
+                - name: AUTH_METHOD
+                  value: "{{ template "consul.fullname" . }}-consul-k8s-component-auth-method"
+                - name: CONSUL_NAMESPACE
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.namespace
+                {{- if .Values.global.acls.manageSystemACLs }}
+                - name: CONSUL_HTTP_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      {{- if (and .Values.global.acls.bootstrapToken.secretName .Values.global.acls.bootstrapToken.secretKey) }}
+                      name: "{{ .Values.global.acls.bootstrapToken.secretName }}"
+                      key: "{{ .Values.global.acls.bootstrapToken.secretKey }}"
+                      {{- else if (and .Values.global.acls.replicationToken.secretName .Values.global.acls.replicationToken.secretKey) }}
+                      name: "{{ .Values.global.acls.replicationToken.secretName }}"
+                      key: "{{ .Values.global.acls.replicationToken.secretKey }}"
+                      {{- else }}
+                      name: "{{ template "consul.fullname" . }}-bootstrap-acl-token"
+                      key: "token"
+                      {{- end}}
+                    {{- end}}
+{{- end }}

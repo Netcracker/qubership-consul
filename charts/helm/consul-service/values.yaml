@@ -2305,6 +2305,19 @@ consulAclConfigurator:
 
   allowedNamespaces: ""
 
+  removeTokens:
+    enabled: true
+    dockerImage: ghcr.io/netcracker/qubership-consul-remove-tokens:main
+    resources:
+      requests:
+        memory: "75Mi"
+        cpu: "75m"
+      limits:
+        memory: "150Mi"
+        cpu: "150m"
+    schedule: "0 0 * * *"
+    securityContext: { }
+
 statusProvisioner:
   enabled: true
   dockerImage: ghcr.io/netcracker/qubership-deployment-status-provisioner:main

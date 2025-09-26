@@ -435,6 +435,10 @@ Find a Deployment Status Provisioner image in various places.
     {{- printf "%s" .Values.statusProvisioner.dockerImage -}}
 {{- end -}}
 
+{{- define "remove-tokens.image" -}}
+    {{- printf "%s" .Values.consulAclConfigurator.removeTokens.dockerImage -}}
+{{- end -}}
+
 {{/*
 Returns Consul port to communicate.
 */}}
@@ -771,6 +775,14 @@ Is scheduler enabled
 */}}
 {{- define "pod-scheduler.enabled" -}}
   {{- if and .Values.podScheduler.enabled .Values.server.nodes }}
+    {{- "true" -}}
+  {{- else }}
+    {{- "false" -}}
+  {{- end -}}
+{{- end -}}
+
+{{- define "remove-tokens.enabled" -}}
+  {{- if .Values.consulAclConfigurator.removeTokens.enabled}}
     {{- "true" -}}
   {{- else }}
     {{- "false" -}}
