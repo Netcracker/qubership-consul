@@ -1,6 +1,6 @@
 module mod
 
-go 1.23.2
+go 1.24.6
 
 require (
 	k8s.io/api v0.29.2

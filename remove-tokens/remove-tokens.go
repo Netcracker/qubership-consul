@@ -134,8 +134,7 @@ func fetchConsulTokens(host, port, token string) ([]Token, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		log.Fatalln(resp.Status, "Failed to fetch tokens")
-		return nil, err
+		return nil, fmt.Errorf("failed to fetch tokens", resp.Status)
 	}
 
 	body, err := io.ReadAll(resp.Body)
