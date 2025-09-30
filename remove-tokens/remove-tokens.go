@@ -77,11 +77,11 @@ func main() {
 
 func loadEnv() (host, port, token, ns string) {
 	host = strings.TrimSpace(os.Getenv("CONSUL_HOST"))
-	port = strings.TrimSpace(os.Getenv("CONSUL_PORT"))
+	port = "8500"
 	token = strings.TrimSpace(os.Getenv("CONSUL_HTTP_TOKEN"))
 	ns = strings.TrimSpace(os.Getenv("CONSUL_NAMESPACE"))
 
-	if host == "" || port == "" || token == "" {
+	if host == "" || token == "" {
 		log.Fatal("[ERROR] Missing CONSUL_HOST / CONSUL_HTTP_TOKEN env variables")
 	}
 	return
