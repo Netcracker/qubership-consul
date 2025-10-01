@@ -13,9 +13,8 @@ COPY ../go.sum go.sum
 # cache deps before building and copying source so that we don't need to re-download as much
 # and so that source changes don't invalidate our downloaded layer
 # Copy the go source
-RUN go mod download
 COPY ../remove-tokens.go remove-tokens.go
-RUN go mod tidy
+RUN go mod tidy && go mod download
 
 RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} GO111MODULE=on go build -a -o manager remove-tokens.go
 
