@@ -9,11 +9,8 @@ metadata:
 {{ include "consul-service.defaultLabels" . | indent 4 }}
 rules:
   - verbs:
-      - create
       - get
       - list
-      - patch
-      - update
       - watch
     apiGroups:
       - ''
