@@ -60,7 +60,8 @@ spec:
                       name: "{{ template "consul.fullname" . }}-bootstrap-acl-token"
                       key: "token"
                       {{- end}}
-                    {{- end}}
+                {{- end}}
+
               securityContext:
-                {{- include "consul.globalContainerSecurityContext" . | nindent 12 }}
+                {{- include "consul.globalContainerSecurityContext" . | nindent 16 }}
 {{- end }}
