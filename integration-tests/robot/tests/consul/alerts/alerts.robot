@@ -84,9 +84,16 @@ Consul Is Down Alert
     [Tags]  alerts  consul_is_down_alert
     Check That Prometheus Alert Is Inactive  ${CONSUL_IS_DOWN_ALERT_NAME}
     Check Servers Readiness
+    ${ORIGINAL_STATEFULSET_RESOURCES}=  Get Statefulset Resources  ${CONSUL_HOST}  ${CONSUL_NAMESPACE}
+    Patch Statefulset Memory  ${CONSUL_HOST}  ${CONSUL_NAMESPACE}  1Mi  8Mi  ${ORIGINAL_STATEFULSET_RESOURCES}
     Delete Server Pods
     Wait Until Keyword Succeeds  ${ALERT_RETRY_TIME}  ${ALERT_RETRY_INTERVAL}
     ...  Check That Prometheus Alert Is Active  ${CONSUL_IS_DOWN_ALERT_NAME}
+    ${replicas}=  Get Stateful Set Replicas Count  ${CONSUL_HOST}  ${CONSUL_NAMESPACE}
+    Pass Execution If  ${replicas} < 3  Consul cluster has less than 3 servers
+    Set Replicas For Stateful Set  ${CONSUL_HOST}  ${CONSUL_NAMESPACE}  0
+    Restore Statefulset Resources  ${CONSUL_HOST}  ${CONSUL_NAMESPACE}  ${ORIGINAL_STATEFULSET_RESOURCES}
+    Set Replicas For Stateful Set  ${CONSUL_HOST}  ${CONSUL_NAMESPACE}  ${replicas}
     Wait Until Keyword Succeeds  ${ALERT_RETRY_TIME}  ${ALERT_RETRY_INTERVAL}
     ...  Check That Prometheus Alert Is Inactive  ${CONSUL_IS_DOWN_ALERT_NAME}
     [Teardown]  Check Alerts Are Inactive
