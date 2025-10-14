@@ -94,7 +94,7 @@ func drFunction(controllerRequest entity.ControllerRequest) (entity.ControllerRe
 			logger.Info("Backup daemon is scaled up")
 
 			if configMap.Data[statusMode] != entity.DISABLED {
-				if err = startLastBackupRecoverу(kubeClient, backupDaemonClient, consulFullName); err != nil {
+				if err = startLastBackupRecovery(kubeClient, backupDaemonClient, consulFullName); err != nil {
 					return entity.ControllerResponse{}, err
 				}
 			} else {
@@ -143,7 +143,7 @@ func drFunction(controllerRequest entity.ControllerRequest) (entity.ControllerRe
 	}, nil
 }
 
-func startLastBackupRecoverу(kubeClient clients.KubernetesClient, backupDaemonClient clients.BackupDaemonClient, consulFullName string) error {
+func startLastBackupRecovery(kubeClient clients.KubernetesClient, backupDaemonClient clients.BackupDaemonClient, consulFullName string) error {
 	logger.Info("Starting last backup recovery")
 	jobID, err := backupDaemonClient.RestoreLastFullBackup()
 	if err != nil {
