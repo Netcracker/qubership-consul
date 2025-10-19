@@ -38,7 +38,7 @@ import (
 )
 
 var deploymentRes = schema.GroupVersionResource{
-	Group:    getEnv("API_GROUP", "qubership.org"),
+	Group:    getEnv("API_GROUP", "netcracker.com"),
 	Version:  "v1alpha1",
 	Resource: "consulacls"}
 

@@ -85,7 +85,7 @@ func main() {
 		Port:                    9443,
 		HealthProbeBindAddress:  probeAddr,
 		LeaderElection:          enableLeaderElection,
-		LeaderElectionID:        fmt.Sprintf("consulacls.%s.qubership.org", ownNamespace),
+		LeaderElectionID:        fmt.Sprintf("consulacls.%s.netcracker.com", ownNamespace),
 		LeaderElectionNamespace: ownNamespace,
 	}
 
@@ -111,7 +111,7 @@ func main() {
 	utilruntime.Must(clientgoscheme.AddToScheme(customScheme))
 
 	GroupVersion := schema.GroupVersion{
-		Group:   "qubership.org",
+		Group:   "netcracker.com",
 		Version: "v1alpha1",
 	}
 	SchemeBuilder := runtime.NewSchemeBuilder(func(scheme *runtime.Scheme) error {

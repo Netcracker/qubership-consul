@@ -378,7 +378,7 @@ global:
     mode: ""
     region: ""
     siteManagerEnabled: true
-    siteManagerApiGroup: "qubership.org"
+    siteManagerApiGroup: "netcracker.com"
     timeout: 600
     backupTimeout: "180s"
     restoreTimeout: "240s"
@@ -2229,7 +2229,7 @@ backupDaemon:
 consulAclConfigurator:
   # Enable Consul ACL Configurator installation.
   enabled: true
-  apiGroup: "qubership.org"
+  apiGroup: "netcracker.com"
   # The image of Consul ACL Configurator Kubernetes operator which implements collecting processing Consul ACL configuration custom resources.
   operatorImage: "ghcr.io/netcracker/qubership-consul-acl-configurator:main"
   # The image of Consul ACL Configurator HTTP server which allows execute common reconcile for Consul ACL configuration custom resources by HTTP request from any Kubernetes service account.

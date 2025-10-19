@@ -121,7 +121,7 @@ To avoid using `cluster-wide` rights during the deployment, the following condit
     ```yaml
     rules:
       - apiGroups:
-          - qubership.org
+          - netcracker.com
         resources:
           - "*"
         verbs:
