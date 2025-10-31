@@ -1,0 +1,42 @@
+name: Consul Integration Build
+run-name: "Event: Tag ${{ github.event.client_payload.tag }} from ${{ github.event.client_payload.repo }}  #${{ github.run_number }}"
+
+permissions:
+  contents: read
+  packages: write
+  actions: read
+
+on:
+  repository_dispatch:
+    types: [integration-consul-built]
+
+env:
+  EVENT_TAG: ${{ github.event.client_payload.tag }}
+  EVENT_BASE_IMAGE: ${{ github.event.client_payload.base_image }}
+  EVENT_OWNER: ${{ github.event.client_payload.owner }}
+  EVENT_REPO: ${{ github.event.client_payload.repo }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check payload
+        run: |
+          echo "TAG=${{ env.EVENT_TAG }}"
+          echo "BASE_IMAGE=${{ env.EVENT_BASE_IMAGE }}"
+          echo "OWNER=${{ env.EVENT_OWNER }}"
+          echo "REPO_NAME=${{ env.EVENT_REPO }}"
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Update image reference
+        run: |
+          IMAGE=${{ github.event.client_payload.base_image }}
+          FILE="charts/helm/consul-service/values.yaml"
+
+          echo "Updating Consul image to: $IMAGE"
+          sed -i "0,/^  image: \".*\"/s|^  image: \".*\"|  image: \"$IMAGE\"|" "$FILE"
+
+          echo "Diff:"
+          git diff -- "$FILE"
