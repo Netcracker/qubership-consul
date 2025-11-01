@@ -81,6 +81,22 @@ spec:
               cpu: {{ default "100m" .Values.consulAclConfigurator.resources.limits.cpu }}
           securityContext:
             {{- include "consul.globalContainerSecurityContext" . | nindent 12 }}
+          livenessProbe:
+            tcpSocket:
+              port: 8088
+            initialDelaySeconds: 40
+            timeoutSeconds: 5
+            periodSeconds: 15
+            successThreshold: 1
+            failureThreshold: 5
+          readinessProbe:
+            tcpSocket:
+              port: 8088
+            initialDelaySeconds: 40
+            timeoutSeconds: 15
+            periodSeconds: 15
+            successThreshold: 1
+            failureThreshold: 5
           imagePullPolicy: Always
         - name: consul-acl-configurator-operator
           image: {{ template "consul-acl-configurator-operator.image" . }}
@@ -138,6 +154,26 @@ spec:
               cpu: {{ default "100m" .Values.consulAclConfigurator.resources.limits.cpu }}
           securityContext:
             {{- include "consul.globalContainerSecurityContext" . | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8081
+              scheme: HTTP
+            initialDelaySeconds: 30
+            timeoutSeconds: 5
+            periodSeconds: 15
+            successThreshold: 1
+            failureThreshold: 5
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8081
+              scheme: HTTP
+            initialDelaySeconds: 40
+            timeoutSeconds: 15
+            periodSeconds: 15
+            successThreshold: 1
+            failureThreshold: 5
       {{- if .Values.consulAclConfigurator.tolerations }}
       tolerations:
         {{ .Values.consulAclConfigurator.tolerations | toJson }}
