@@ -22,6 +22,9 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       TARGET_BRANCH: ${{ steps.update_image.outputs.target_branch }}
+      components: ${{ steps.load_config.outputs.components }}
+      platforms: ${{ steps.load_config.outputs.platforms }}
+      tags: ${{ steps.meta.outputs.result }}
     steps:
       - name: Check payload
         run: |
@@ -31,7 +34,10 @@ jobs:
           echo "REPO_NAME=${{ env.EVENT_REPO }}"
 
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ env.BRANCH }}
+          fetch-depth: 0
 
       - name: Update image reference
         id: update_image
@@ -59,10 +65,53 @@ jobs:
 
           git add "$FILE"
           git commit -m "[IBuild] Update Consul with [patched] image to $IMAGE"
-          git push origin "$BRANCH" --force
+
+      - name: Load Config
+        id: load_config
+        run: |
+          echo "components=$(jq -c '.components' .github/integration-build.cfg)" >> "$GITHUB_OUTPUT"
+          echo "platforms=$(jq -c '.platforms' .github/integration-build.cfg)" >> "$GITHUB_OUTPUT"
+          echo components=$components
+          echo platforms=$platforms
+
+      - name: CReate Meta info (tags)
+        uses: netcracker/qubership-workflow-hub/actions/metadata-action@b575bad3a0959c4e883bc34f9d055ff07fde2dbd #2.0.1
+        id: meta
+        with:
+          ref: ${{ env.BRANCH }}
+          default-template: "{{ref-name}}"
+          extra-tags: ${{ env.EVENT_TAG }}
+          replace-symbol: "_"
+  multiplatform_build:
+    name: Build Docker Images
+    needs: update-image-reference
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        component: ${{ fromJson(needs.update-image-reference.outputs.components) }}
+    steps:
+      - name: Debug tags and components
+        run: |
+          echo "Tags: ${{ needs.update-image-reference.outputs.tags }}"
+          echo "Component: ${{ toJson(matrix.component) }}"
+
+      - name: Docker
+        uses: netcracker/qubership-workflow-hub/actions/docker-action@b575bad3a0959c4e883bc34f9d055ff07fde2dbd #2.0.1
+        with:
+          ref: ${{ env.BRANCH }}
+          component: ${{ toJson(matrix.component) }}
+          download-artifact: false
+          platforms: ${{ needs.update-image-reference.outputs.platforms }}
+          tags: ${{ needs.update-image-reference.outputs.tags }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   consul-pipeline:
-    needs: update-image-reference
+    needs: [update-image-reference, multiplatform_build]
     uses: Netcracker/qubership-test-pipelines/.github/workflows/consul.yaml@d45ea797961a4886faeb675da5d75de90c2bd8c0
     with:
       service_branch: "${{ needs.update-image-reference.outputs.TARGET_BRANCH }}"
