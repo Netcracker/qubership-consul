@@ -74,7 +74,7 @@ jobs:
           echo components=$components
           echo platforms=$platforms
 
-      - name: CReate Meta info (tags)
+      - name: Create Meta info (tags)
         uses: netcracker/qubership-workflow-hub/actions/metadata-action@b575bad3a0959c4e883bc34f9d055ff07fde2dbd #2.0.1
         id: meta
         with:
@@ -82,6 +82,7 @@ jobs:
           default-template: "{{ref-name}}"
           extra-tags: ${{ env.EVENT_TAG }}
           replace-symbol: "_"
+
   multiplatform_build:
     name: Build Docker Images
     needs: update-image-reference
