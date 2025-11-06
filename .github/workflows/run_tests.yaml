@@ -1,18 +1,19 @@
 name: Run Consul Pipeline
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened]
-    branches: [main]
+  push
+#  pull_request:
+#    types: [opened, synchronize, reopened]
+#    branches: [main]
 
 jobs:
   Consul-Pipeline:
     if: github.event.pull_request.user.login != 'dependabot[bot]'
-    uses: Netcracker/qubership-test-pipelines/.github/workflows/consul.yaml@d45ea797961a4886faeb675da5d75de90c2bd8c0
+    uses: Netcracker/qubership-test-pipelines/.github/workflows/consul.yaml@fix_crd
     with:
       service_branch: '${{ github.head_ref || github.ref_name }}'
       versions_file: '.github/versions.yaml'
-      pipeline_branch: 'd45ea797961a4886faeb675da5d75de90c2bd8c0' #this value must match the value after '@' in 'uses'
+      pipeline_branch: 'fix_crd' #this value must match the value after '@' in 'uses'
     secrets:
       AWS_S3_ACCESS_KEY_ID: ${{ secrets.AWS_S3_ACCESS_KEY_ID }}
       AWS_S3_ACCESS_KEY_SECRET: ${{ secrets.AWS_S3_ACCESS_KEY_SECRET }}
