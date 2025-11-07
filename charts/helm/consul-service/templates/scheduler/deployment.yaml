@@ -69,6 +69,35 @@ spec:
           {{- end }}
           securityContext:
           {{- include "consul.globalContainerSecurityContext" . | nindent 12 }}
+          readinessProbe:
+            exec:
+              command:
+                - /bin/bash
+                - -ec
+                - |
+                  test -f /tmp/last_beat
+                  now=$(date +%s)
+                  last=$(cat /tmp/last_beat || echo 0)
+                  [[ $(( now - last )) -lt 60 ]]
+                  kubectl --request-timeout=5s -n {{ .Release.Namespace }} auth can-i get pods >/dev/null
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            exec:
+              command:
+                - /bin/bash
+                - -ec
+                - |
+                  test -f /tmp/last_beat
+                  now=$(date +%s)
+                  last=$(cat /tmp/last_beat || echo 0)
+                  [[ $(( now - last )) -lt 300 ]]
+            initialDelaySeconds: 60
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
       serviceAccountName: {{ template "consul.fullname" . }}-pod-scheduler
       {{- with .Values.podScheduler.affinity }}
       affinity:
@@ -77,5 +106,5 @@ spec:
       {{- with .Values.podScheduler.nodeSelector }}
       nodeSelector:
         {{ toYaml . | indent 8 | trim }}
-      {{- end }} 
+      {{- end }}
   {{- end }}
