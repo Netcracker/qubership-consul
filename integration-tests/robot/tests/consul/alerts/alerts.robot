@@ -90,4 +90,3 @@ Consul Is Down Alert
     Wait Until Keyword Succeeds  ${ALERT_RETRY_TIME}  ${ALERT_RETRY_INTERVAL}
     ...  Check That Prometheus Alert Is Inactive  ${CONSUL_IS_DOWN_ALERT_NAME}
     [Teardown]  Check Alerts Are Inactive
-
