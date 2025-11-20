@@ -101,7 +101,7 @@ func makeKubeClient() *kubernetes.Clientset {
 
 func main() {
 	log.Fatal(http.ListenAndServe(
-		fmt.Sprintf("%s:%s", "localhost", "8088"),
+		":8088",
 		AdapterMainHandler(),
 	))
 }
@@ -113,6 +113,11 @@ func AdapterMainHandler() http.Handler {
 			os.Stdout,
 			http.HandlerFunc(handlerFunc),
 		)).Methods("GET")
+
+	r.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("ok"))
+	}).Methods("GET")
 
 	return JsonContentType(handlers.CompressHandler(r))
 }

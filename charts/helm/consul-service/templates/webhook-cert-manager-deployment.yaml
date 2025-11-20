@@ -68,6 +68,28 @@ spec:
             memory: 50Mi
         securityContext:
           {{- include "consul.globalContainerSecurityContext" . | nindent 10 }}
+        livenessProbe:
+          exec:
+            command:
+              - /bin/sh
+              - -ec
+              - |
+                pgrep -f 'consul-k8s-control-plane.*webhook-cert-manager' >/dev/null
+          initialDelaySeconds: 30
+          periodSeconds: 20
+          timeoutSeconds: 3
+          failureThreshold: 3
+        readinessProbe:
+          exec:
+            command:
+              - /bin/sh
+              - -ec
+              - |
+                pgrep -f 'consul-k8s-control-plane.*webhook-cert-manager' >/dev/null
+          initialDelaySeconds: 30
+          periodSeconds: 20
+          timeoutSeconds: 3
+          failureThreshold: 3
         volumeMounts:
         - name: config
           mountPath: /bootstrap/config
