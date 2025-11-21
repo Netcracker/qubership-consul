@@ -20,11 +20,11 @@ jobs:
           poll-interval: 20
   Consul-Pipeline:
     needs: Wait-for-images
-    uses: Netcracker/qubership-test-pipelines/.github/workflows/consul.yaml@delete_provisioner
+    uses: Netcracker/qubership-test-pipelines/.github/workflows/consul.yaml@main
     with:
       service_branch: '${{ github.head_ref || github.ref_name }}'
       versions_file: '.github/versions.yaml'
-      pipeline_branch: 'delete_provisioner' #this value must match the value after '@' in 'uses'
+      pipeline_branch: 'main' #this value must match the value after '@' in 'uses'
     secrets:
       AWS_S3_ACCESS_KEY_ID: ${{secrets.AWS_S3_ACCESS_KEY_ID}}
       AWS_S3_ACCESS_KEY_SECRET: ${{secrets.AWS_S3_ACCESS_KEY_SECRET}}
