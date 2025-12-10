@@ -18,6 +18,7 @@ env:
   EVENT_OWNER: ${{ github.event.client_payload.owner }}
   EVENT_TARGET_BRANCH: ${{ github.event.client_payload.target_branch }}
   EVENT_FORCE_CREATE: ${{ github.event.client_payload.force_create }}
+  TECH_BRANCH: feature/integration-build
 
 jobs:
   update-image-reference:
@@ -35,35 +36,32 @@ jobs:
           echo "OWNER=${{ env.EVENT_OWNER }}"
           echo "REPO_NAME=${{ env.EVENT_REPO }}"
 
-      - name: Checkout
+      - name: Checkout target branch
         uses: actions/checkout@v6
         with:
           ref: ${{ env.EVENT_TARGET_BRANCH }}
-          fetch-depth: 0
 
-      - name: Create or upade tech branch
-        run: |
-
-          git fetch origin
-          if git show-ref --verify --quiet refs/heads/feature/integration-build; then
-            git checkout feature/integration-build
-            git reset --hard origin/${{ env.EVENT_TARGET_BRANCH }}
-          else
-            git checkout -b feature/integration-build origin/${{ env.EVENT_TARGET_BRANCH }}
-          fi
-
-      - name: Update image reference
+      - name: Create/update tech branch and update image
         id: update_image
         run: |
-          IMAGE=${{ env.EVENT_BASE_IMAGE }}
-          BRANCH=${{ env.EVENT_TARGET_BRANCH }}
-          echo "target_branch=${BRANCH}" >> "$GITHUB_OUTPUT"
-
+          TECH_BRANCH="${{ env.TECH_BRANCH }}"
+          TARGET_BRANCH="${{ env.EVENT_TARGET_BRANCH }}"
+          IMAGE="${{ env.EVENT_BASE_IMAGE }}"
           FILE="charts/helm/consul-service/values.yaml"
 
+          git fetch origin
+
+          if git show-ref --verify --quiet "refs/heads/$TECH_BRANCH"; then
+            echo "Local branch $TECH_BRANCH exists. Updating from origin/$TARGET_BRANCH"
+            git checkout "$TECH_BRANCH"
+            git reset --hard "origin/$TARGET_BRANCH"
+          else
+            echo "Local branch $TECH_BRANCH does not exist. Creating from origin/$TARGET_BRANCH"
+            git checkout -b "$TECH_BRANCH" "origin/$TARGET_BRANCH"
+          fi
+
           git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]qubership.com"
-          git checkout -B "$BRANCH"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
 
           echo "Updating Consul image to: $IMAGE"
           sed -i "0,/^  image: \".*\"/s|^  image: \".*\"|  image: \"$IMAGE\"|" "$FILE"
@@ -73,11 +71,21 @@ jobs:
 
           if git diff --quiet "$FILE"; then
             echo "No changes detected."
+            echo "target_branch=$TECH_BRANCH" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
           git add "$FILE"
           git commit -m "[IBuild] Update Consul with [patched] image to $IMAGE"
+          git push origin "$TECH_BRANCH"
+
+          echo "target_branch=$TECH_BRANCH" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ env.TECH_BRANCH }}
+          fetch-depth: 0
 
       - name: Load Config
         id: load_config
@@ -91,7 +99,7 @@ jobs:
         uses: netcracker/qubership-workflow-hub/actions/metadata-action@b575bad3a0959c4e883bc34f9d055ff07fde2dbd #2.0.1
         id: meta
         with:
-          ref: ${{ env.EVENT_TARGET_BRANCH }}
+          ref: ${{ env.TECH_BRANCH }}
           default-template: "{{ref-name}}"
           extra-tags: ${{ env.EVENT_TAG }}
           replace-symbol: "_"
@@ -116,7 +124,7 @@ jobs:
       - name: Docker
         uses: netcracker/qubership-workflow-hub/actions/docker-action@b575bad3a0959c4e883bc34f9d055ff07fde2dbd #2.0.1
         with:
-          ref: ${{ env.EVENT_TARGET_BRANCH }}
+          ref: ${{ env.TECH_BRANCH }}
           component: ${{ toJson(matrix.component) }}
           download-artifact: false
           platforms: ${{ needs.update-image-reference.outputs.platforms }}
