@@ -35,11 +35,11 @@ jobs:
           echo "OWNER=${{ env.EVENT_OWNER }}"
           echo "REPO_NAME=${{ env.EVENT_REPO }}"
 
-      # - name: Checkout
-      #   uses: actions/checkout@v6
-      #   with:
-      #     ref: ${{ env.EVENT_TARGET_BRANCH }}
-      #     fetch-depth: 0
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ env.EVENT_TARGET_BRANCH }}
+          fetch-depth: 0
 
       - name: Create or upade tech branch
         run: |
