@@ -11,11 +11,13 @@ on:
     types: [integration-consul-built]
 
 env:
-  EVENT_TAG: ${{ github.event.client_payload.tag }}
   EVENT_BASE_IMAGE: ${{ github.event.client_payload.base_image }}
-  EVENT_OWNER: ${{ github.event.client_payload.owner }}
+  EVENT_TAG: ${{ github.event.client_payload.tag }}
+  EVENT_PATCHED_TAG: ${{ github.event.client_payload.patched_tag }}
   EVENT_REPO: ${{ github.event.client_payload.repo }}
-  BRANCH: "feature/consul-patched"
+  EVENT_OWNER: ${{ github.event.client_payload.owner }}
+  EVENT_TARGET_BRANCH: ${{ github.event.client_payload.target_branch }}
+  EVENT_FORCE_CREATE: ${{ github.event.client_payload.force_create }}
 
 jobs:
   update-image-reference:
@@ -34,16 +36,27 @@ jobs:
           echo "REPO_NAME=${{ env.EVENT_REPO }}"
 
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
-          ref: ${{ env.BRANCH }}
+          ref: ${{ env.EVENT_TARGET_BRANCH }}
           fetch-depth: 0
+
+      - name: Create or upade tech branch
+        run: |
+
+          git fetch origin
+          if git show-ref --verify --quiet refs/heads/feature/integration-build; then
+            git checkout feature/integration-build
+            git reset --hard origin/${{ env.EVENT_TARGET_BRANCH }}
+          else
+            git checkout -b feature/integration-build origin/${{ env.EVENT_TARGET_BRANCH }}
+          fi
 
       - name: Update image reference
         id: update_image
         run: |
           IMAGE=${{ env.EVENT_BASE_IMAGE }}
-          BRANCH=${{ env.BRANCH }}
+          BRANCH=${{ env.EVENT_TARGET_BRANCH }}
           echo "target_branch=${BRANCH}" >> "$GITHUB_OUTPUT"
 
           FILE="charts/helm/consul-service/values.yaml"
@@ -78,7 +91,7 @@ jobs:
         uses: netcracker/qubership-workflow-hub/actions/metadata-action@b575bad3a0959c4e883bc34f9d055ff07fde2dbd #2.0.1
         id: meta
         with:
-          ref: ${{ env.BRANCH }}
+          ref: ${{ env.EVENT_TARGET_BRANCH }}
           default-template: "{{ref-name}}"
           extra-tags: ${{ env.EVENT_TAG }}
           replace-symbol: "_"
@@ -103,7 +116,7 @@ jobs:
       - name: Docker
         uses: netcracker/qubership-workflow-hub/actions/docker-action@b575bad3a0959c4e883bc34f9d055ff07fde2dbd #2.0.1
         with:
-          ref: ${{ env.BRANCH }}
+          ref: ${{ env.EVENT_TARGET_BRANCH }}
           component: ${{ toJson(matrix.component) }}
           download-artifact: false
           platforms: ${{ needs.update-image-reference.outputs.platforms }}
