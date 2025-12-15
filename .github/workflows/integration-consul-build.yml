@@ -49,16 +49,13 @@ jobs:
           IMAGE="${{ env.EVENT_BASE_IMAGE }}"
           FILE="charts/helm/consul-service/values.yaml"
 
-          git fetch origin
+          git fetch origin "$TARGET_BRANCH"
 
-          if git show-ref --verify --quiet "refs/heads/$TECH_BRANCH"; then
-            echo "Local branch $TECH_BRANCH exists. Updating from origin/$TARGET_BRANCH"
-            git checkout "$TECH_BRANCH"
-            git reset --hard "origin/$TARGET_BRANCH"
-          else
-            echo "Local branch $TECH_BRANCH does not exist. Creating from origin/$TARGET_BRANCH"
-            git checkout -b "$TECH_BRANCH" "origin/$TARGET_BRANCH"
-          fi
+          echo "Resetting $TECH_BRANCH to origin/$TARGET_BRANCH"
+
+          git checkout -B "$TECH_BRANCH" "origin/$TARGET_BRANCH"
+          git push origin "$TECH_BRANCH" --force
+          echo "target_branch=$TECH_BRANCH" >> "$GITHUB_OUTPUT"
 
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
