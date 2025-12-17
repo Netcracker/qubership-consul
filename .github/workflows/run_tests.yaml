@@ -6,13 +6,25 @@ on:
     branches: [main]
 
 jobs:
+  Wait-for-images:
+    runs-on: ubuntu-latest
+    outputs:
+      conclusion: ${{ steps.wait.outputs.conclusion }}
+    steps:
+      - name: Wait for push.yml to complete
+        uses: netcracker/qubership-workflow-hub/actions/wait-for-workflow@3e428f45132119ce49d90f3770a45d4fe1d1078d  #v2.0.4
+        id: wait
+        with:
+          workflow: push.yml
+          token: ${{ secrets.GITHUB_TOKEN }}
+          poll-interval: 20
   Consul-Pipeline:
-    if: github.event.pull_request.user.login != 'dependabot[bot]'
-    uses: Netcracker/qubership-test-pipelines/.github/workflows/consul.yaml@d45ea797961a4886faeb675da5d75de90c2bd8c0
+    needs: Wait-for-images
+    uses: Netcracker/qubership-test-pipelines/.github/workflows/consul.yaml@d035050ec322700c3df9a7ec62efc0220abe4243  #v1.1.0
     with:
       service_branch: '${{ github.head_ref || github.ref_name }}'
       versions_file: '.github/versions.yaml'
-      pipeline_branch: 'd45ea797961a4886faeb675da5d75de90c2bd8c0' #this value must match the value after '@' in 'uses'
+      pipeline_branch: 'd035050ec322700c3df9a7ec62efc0220abe4243' #this value must match the value after '@' in 'uses'
     secrets:
-      AWS_S3_ACCESS_KEY_ID: ${{ secrets.AWS_S3_ACCESS_KEY_ID }}
-      AWS_S3_ACCESS_KEY_SECRET: ${{ secrets.AWS_S3_ACCESS_KEY_SECRET }}
+      AWS_S3_ACCESS_KEY_ID: ${{secrets.AWS_S3_ACCESS_KEY_ID}}
+      AWS_S3_ACCESS_KEY_SECRET: ${{secrets.AWS_S3_ACCESS_KEY_SECRET}}

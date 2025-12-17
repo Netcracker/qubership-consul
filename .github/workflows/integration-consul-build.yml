@@ -11,11 +11,14 @@ on:
     types: [integration-consul-built]
 
 env:
-  EVENT_TAG: ${{ github.event.client_payload.tag }}
   EVENT_BASE_IMAGE: ${{ github.event.client_payload.base_image }}
-  EVENT_OWNER: ${{ github.event.client_payload.owner }}
+  EVENT_TAG: ${{ github.event.client_payload.tag }}
+  EVENT_PATCHED_TAG: ${{ github.event.client_payload.patched_tag }}
   EVENT_REPO: ${{ github.event.client_payload.repo }}
-  BRANCH: "feature/consul-patched"
+  EVENT_OWNER: ${{ github.event.client_payload.owner }}
+  EVENT_TARGET_BRANCH: ${{ github.event.client_payload.target_branch }}
+  EVENT_FORCE_CREATE: ${{ github.event.client_payload.force_create }}
+  TECH_BRANCH: feature/integration-build
 
 jobs:
   update-image-reference:
@@ -33,24 +36,29 @@ jobs:
           echo "OWNER=${{ env.EVENT_OWNER }}"
           echo "REPO_NAME=${{ env.EVENT_REPO }}"
 
-      - name: Checkout
-        uses: actions/checkout@v5
+      - name: Checkout target branch
+        uses: actions/checkout@v6
         with:
-          ref: ${{ env.BRANCH }}
-          fetch-depth: 0
+          ref: ${{ env.EVENT_TARGET_BRANCH }}
 
-      - name: Update image reference
+      - name: Create/update tech branch and update image
         id: update_image
         run: |
-          IMAGE=${{ env.EVENT_BASE_IMAGE }}
-          BRANCH=${{ env.BRANCH }}
-          echo "target_branch=${BRANCH}" >> "$GITHUB_OUTPUT"
-
+          TECH_BRANCH="${{ env.TECH_BRANCH }}"
+          TARGET_BRANCH="${{ env.EVENT_TARGET_BRANCH }}"
+          IMAGE="${{ env.EVENT_BASE_IMAGE }}"
           FILE="charts/helm/consul-service/values.yaml"
 
+          git fetch origin "$TARGET_BRANCH"
+
+          echo "Resetting $TECH_BRANCH to origin/$TARGET_BRANCH"
+
+          git checkout -B "$TECH_BRANCH" "origin/$TARGET_BRANCH"
+          git push origin "$TECH_BRANCH" --force
+          echo "target_branch=$TECH_BRANCH" >> "$GITHUB_OUTPUT"
+
           git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]qubership.com"
-          git checkout -B "$BRANCH"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
 
           echo "Updating Consul image to: $IMAGE"
           sed -i "0,/^  image: \".*\"/s|^  image: \".*\"|  image: \"$IMAGE\"|" "$FILE"
@@ -60,11 +68,21 @@ jobs:
 
           if git diff --quiet "$FILE"; then
             echo "No changes detected."
+            echo "target_branch=$TECH_BRANCH" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
           git add "$FILE"
           git commit -m "[IBuild] Update Consul with [patched] image to $IMAGE"
+          git push origin "$TECH_BRANCH"
+
+          echo "target_branch=$TECH_BRANCH" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ env.TECH_BRANCH }}
+          fetch-depth: 0
 
       - name: Load Config
         id: load_config
@@ -78,7 +96,7 @@ jobs:
         uses: netcracker/qubership-workflow-hub/actions/metadata-action@b575bad3a0959c4e883bc34f9d055ff07fde2dbd #2.0.1
         id: meta
         with:
-          ref: ${{ env.BRANCH }}
+          ref: ${{ env.TECH_BRANCH }}
           default-template: "{{ref-name}}"
           extra-tags: ${{ env.EVENT_TAG }}
           replace-symbol: "_"
@@ -103,7 +121,7 @@ jobs:
       - name: Docker
         uses: netcracker/qubership-workflow-hub/actions/docker-action@b575bad3a0959c4e883bc34f9d055ff07fde2dbd #2.0.1
         with:
-          ref: ${{ env.BRANCH }}
+          ref: ${{ env.TECH_BRANCH }}
           component: ${{ toJson(matrix.component) }}
           download-artifact: false
           platforms: ${{ needs.update-image-reference.outputs.platforms }}
