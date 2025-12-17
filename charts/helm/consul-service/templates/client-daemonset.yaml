@@ -371,6 +371,20 @@ spec:
             - containerPort: 8600
               name: dns-udp
               protocol: "UDP"
+          livenessProbe:
+            exec:
+              command:
+                - "/bin/sh"
+                - "-ec"
+                - |
+                  {{- if .Values.global.tls.enabled }}
+                  curl \
+                    -k \
+                    https://127.0.0.1:8501/v1/status/leader \
+                  {{- else }}
+                  curl http://127.0.0.1:8500/v1/status/leader \
+                  {{- end }}
+                  2>/dev/null | grep -E '".+"'
           readinessProbe:
             # NOTE(mitchellh): when our HTTP status endpoints support the
             # proper status codes, we should switch to that. This is temporary.

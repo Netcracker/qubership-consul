@@ -820,6 +820,7 @@ Core Consul operator chart related resources labels with backend component label
 {{- define "consul-service.defaultLabels" -}}
 {{ include "consul-service.coreLabels" . }}
 app.kubernetes.io/component: 'backend'
+app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- end -}}
 
 {{- define "consul.monitoredImages" -}}

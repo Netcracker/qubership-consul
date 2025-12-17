@@ -1,0 +1,141 @@
+name: Consul Integration Build
+run-name: "Event: Tag ${{ github.event.client_payload.tag }} from ${{ github.event.client_payload.repo }}  #${{ github.run_number }}"
+
+permissions:
+  contents: write
+  packages: write
+  actions: read
+
+on:
+  repository_dispatch:
+    types: [integration-consul-built]
+
+env:
+  EVENT_BASE_IMAGE: ${{ github.event.client_payload.base_image }}
+  EVENT_TAG: ${{ github.event.client_payload.tag }}
+  EVENT_PATCHED_TAG: ${{ github.event.client_payload.patched_tag }}
+  EVENT_REPO: ${{ github.event.client_payload.repo }}
+  EVENT_OWNER: ${{ github.event.client_payload.owner }}
+  EVENT_TARGET_BRANCH: ${{ github.event.client_payload.target_branch }}
+  EVENT_FORCE_CREATE: ${{ github.event.client_payload.force_create }}
+  TECH_BRANCH: feature/integration-build
+
+jobs:
+  update-image-reference:
+    runs-on: ubuntu-latest
+    outputs:
+      TARGET_BRANCH: ${{ steps.update_image.outputs.target_branch }}
+      components: ${{ steps.load_config.outputs.components }}
+      platforms: ${{ steps.load_config.outputs.platforms }}
+      tags: ${{ steps.meta.outputs.result }}
+    steps:
+      - name: Check payload
+        run: |
+          echo "TAG=${{ env.EVENT_TAG }}"
+          echo "BASE_IMAGE=${{ env.EVENT_BASE_IMAGE }}"
+          echo "OWNER=${{ env.EVENT_OWNER }}"
+          echo "REPO_NAME=${{ env.EVENT_REPO }}"
+
+      - name: Checkout target branch
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ env.EVENT_TARGET_BRANCH }}
+
+      - name: Create/update tech branch and update image
+        id: update_image
+        run: |
+          TECH_BRANCH="${{ env.TECH_BRANCH }}"
+          TARGET_BRANCH="${{ env.EVENT_TARGET_BRANCH }}"
+          IMAGE="${{ env.EVENT_BASE_IMAGE }}"
+          FILE="charts/helm/consul-service/values.yaml"
+
+          git fetch origin "$TARGET_BRANCH"
+
+          echo "Resetting $TECH_BRANCH to origin/$TARGET_BRANCH"
+
+          git checkout -B "$TECH_BRANCH" "origin/$TARGET_BRANCH"
+          git push origin "$TECH_BRANCH" --force
+          echo "target_branch=$TECH_BRANCH" >> "$GITHUB_OUTPUT"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          echo "Updating Consul image to: $IMAGE"
+          sed -i "0,/^  image: \".*\"/s|^  image: \".*\"|  image: \"$IMAGE\"|" "$FILE"
+
+          echo "Diff:"
+          git diff -- "$FILE"
+
+          if git diff --quiet "$FILE"; then
+            echo "No changes detected."
+            echo "target_branch=$TECH_BRANCH" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          git add "$FILE"
+          git commit -m "[IBuild] Update Consul with [patched] image to $IMAGE"
+          git push origin "$TECH_BRANCH"
+
+          echo "target_branch=$TECH_BRANCH" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ env.TECH_BRANCH }}
+          fetch-depth: 0
+
+      - name: Load Config
+        id: load_config
+        run: |
+          echo "components=$(jq -c '.components' .github/integration-build.cfg)" >> "$GITHUB_OUTPUT"
+          echo "platforms=$(jq -c '.platforms' .github/integration-build.cfg)" >> "$GITHUB_OUTPUT"
+          echo components=$components
+          echo platforms=$platforms
+
+      - name: Create Meta info (tags)
+        uses: netcracker/qubership-workflow-hub/actions/metadata-action@b575bad3a0959c4e883bc34f9d055ff07fde2dbd #2.0.1
+        id: meta
+        with:
+          ref: ${{ env.TECH_BRANCH }}
+          default-template: "{{ref-name}}"
+          extra-tags: ${{ env.EVENT_TAG }}
+          replace-symbol: "_"
+
+  multiplatform_build:
+    name: Build Docker Images
+    needs: update-image-reference
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        component: ${{ fromJson(needs.update-image-reference.outputs.components) }}
+    steps:
+      - name: Debug tags and components
+        run: |
+          echo "Tags: ${{ needs.update-image-reference.outputs.tags }}"
+          echo "Component: ${{ toJson(matrix.component) }}"
+
+      - name: Docker
+        uses: netcracker/qubership-workflow-hub/actions/docker-action@b575bad3a0959c4e883bc34f9d055ff07fde2dbd #2.0.1
+        with:
+          ref: ${{ env.TECH_BRANCH }}
+          component: ${{ toJson(matrix.component) }}
+          download-artifact: false
+          platforms: ${{ needs.update-image-reference.outputs.platforms }}
+          tags: ${{ needs.update-image-reference.outputs.tags }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  consul-pipeline:
+    needs: [update-image-reference, multiplatform_build]
+    uses: Netcracker/qubership-test-pipelines/.github/workflows/consul.yaml@d45ea797961a4886faeb675da5d75de90c2bd8c0
+    with:
+      service_branch: "${{ needs.update-image-reference.outputs.TARGET_BRANCH }}"
+      versions_file: ".github/versions.yaml"
+      pipeline_branch: "d45ea797961a4886faeb675da5d75de90c2bd8c0" #this value must match the value after '@' in 'uses'
+    secrets:
+      AWS_S3_ACCESS_KEY_ID: ${{ secrets.AWS_S3_ACCESS_KEY_ID }}
+      AWS_S3_ACCESS_KEY_SECRET: ${{ secrets.AWS_S3_ACCESS_KEY_SECRET }}

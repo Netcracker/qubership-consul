@@ -5,7 +5,7 @@ metadata:
   name: consulacl-viewer-role
 rules:
 - apiGroups:
-  - qubership.org
+  - netcracker.com
   resources:
   - consulacls
   verbs:
@@ -13,7 +13,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - qubership.org
+  - netcracker.com
   resources:
   - consulacls/status
   verbs:

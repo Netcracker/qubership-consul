@@ -156,6 +156,25 @@ spec:
               cpu: {{ default "400m" .Values.integrationTests.resources.limits.cpu }}
           securityContext:
             {{- include "consul.globalContainerSecurityContext" . | nindent 12 }}
+          livenessProbe:
+            exec:
+              command: ["sh", "-c", "true"]
+            initialDelaySeconds: 20
+            timeoutSeconds: 5
+            periodSeconds: 20
+            successThreshold: 1
+            failureThreshold: 5
+          readinessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - 'cat /opt/robot/output/result.txt | grep -q "RESULT: TESTS PASSED"'
+            initialDelaySeconds: 20
+            timeoutSeconds: 5
+            periodSeconds: 20
+            successThreshold: 1
+            failureThreshold: 5
           volumeMounts:
           {{- if and .Values.backupDaemon.enabled .Values.global.tls.enabled .Values.backupDaemon.tls.enabled (include "backupDaemon.tlsSecretName" .) }}
             - name: backup-tls-certs

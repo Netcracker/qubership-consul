@@ -61,9 +61,9 @@ type ConsulACLReconciler struct {
 	ResourceVersions map[string]string
 }
 
-//+kubebuilder:rbac:groups=qubership.org,resources=consulacls,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=qubership.org,resources=consulacls/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=qubership.org,resources=consulacls/finalizers,verbs=update
+//+kubebuilder:rbac:groups=netcracker.com,resources=consulacls,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=netcracker.com,resources=consulacls/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=netcracker.com,resources=consulacls/finalizers,verbs=update
 
 func (r *ConsulACLReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
