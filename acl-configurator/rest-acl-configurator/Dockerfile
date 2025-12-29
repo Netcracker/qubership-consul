@@ -23,7 +23,7 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} GO111MODULE=on go build 
 
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
-FROM alpine:3.22
+FROM alpine:3.23
 
 WORKDIR /
 COPY --from=builder --chown=${USER_UID} /workspace/manager .
