@@ -18,7 +18,7 @@ RUN go mod tidy && go mod download
 
 RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} GO111MODULE=on go build -a -o manager remove-tokens.go
 
-FROM golanalpine:3.23
+FROM alpine:3.23
 
 WORKDIR /
 COPY --from=builder --chown=${USER_UID} /app/manager .
