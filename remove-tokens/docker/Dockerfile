@@ -5,7 +5,7 @@ ARG TARGETARCH
 ENV GOSUMDB=off
 
 WORKDIR /app
-RUN apk add --no-cache git=2.49.1-r0
+RUN apk add --no-cache git
 
 # Copy the Go Modules manifests
 COPY ../go.mod go.mod
