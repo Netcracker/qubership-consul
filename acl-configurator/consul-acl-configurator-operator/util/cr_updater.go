@@ -37,7 +37,7 @@ func NewCustomResourceUpdater(client client.Client, cr *consulacl.ConsulACL) Cus
 }
 
 func (cru CustomResourceUpdater) UpdateWithRetry(updateFunc func(*consulacl.ConsulACL)) error {
-	return cru.updateWithRetry(updateFunc, cru.client)
+	return cru.updateWithRetry(updateFunc, cru.client.Status())
 }
 
 func (cru CustomResourceUpdater) UpdateStatusWithRetry(statusUpdateFunc func(*consulacl.ConsulACL)) error {
