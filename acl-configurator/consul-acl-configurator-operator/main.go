@@ -21,6 +21,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"os"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"strings"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
@@ -80,9 +82,13 @@ func main() {
 	}
 
 	mgrOptions := ctrl.Options{
-		Scheme:                  scheme,
-		MetricsBindAddress:      metricsAddr,
-		Port:                    9443,
+		Scheme: scheme,
+		Metrics: metricsserver.Options{
+			BindAddress: metricsAddr,
+		},
+		WebhookServer: webhook.NewServer(webhook.Options{
+			Port: 9443,
+		}),
 		HealthProbeBindAddress:  probeAddr,
 		LeaderElection:          enableLeaderElection,
 		LeaderElectionID:        fmt.Sprintf("consulacls.%s.netcracker.com", ownNamespace),
@@ -165,13 +171,20 @@ func getWatchNamespace() (string, error) {
 }
 
 func configureMgrNamespaces(mgrOptions *ctrl.Options, namespace string, ownNamespace string) {
-	if namespace == "" || namespace == ownNamespace {
-		mgrOptions.Namespace = namespace
-	} else {
-		namespaces := strings.Split(namespace, ",")
-		if !util.Contains(ownNamespace, namespaces) {
-			namespaces = append(namespaces, ownNamespace)
-		}
-		mgrOptions.NewCache = cache.MultiNamespacedCacheBuilder(namespaces)
+	namespaces := strings.Split(namespace, ",")
+	if !util.Contains(ownNamespace, namespaces) {
+		namespaces = append(namespaces, ownNamespace)
 	}
+	nsMap := make(map[string]cache.Config, len(namespaces))
+	for _, ns := range namespaces {
+		ns = strings.TrimSpace(ns)
+		if ns == "" {
+			continue
+		}
+		nsMap[ns] = cache.Config{}
+	}
+	if len(nsMap) == 0 {
+		return
+	}
+	mgrOptions.Cache.DefaultNamespaces = nsMap
 }
