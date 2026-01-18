@@ -37,14 +37,18 @@ func NewCustomResourceUpdater(client client.Client, cr *consulacl.ConsulACL) Cus
 }
 
 func (cru CustomResourceUpdater) UpdateWithRetry(updateFunc func(*consulacl.ConsulACL)) error {
-	return cru.updateWithRetry(updateFunc, cru.client.Status())
+	return cru.updateWithRetry(updateFunc, func(ctx context.Context, obj client.Object) error {
+		return cru.client.Update(ctx, obj)
+	})
 }
 
 func (cru CustomResourceUpdater) UpdateStatusWithRetry(statusUpdateFunc func(*consulacl.ConsulACL)) error {
-	return cru.updateWithRetry(statusUpdateFunc, cru.client.Status())
+	return cru.updateWithRetry(statusUpdateFunc, func(ctx context.Context, obj client.Object) error {
+		return cru.client.Status().Update(ctx, obj)
+	})
 }
 
-func (cru CustomResourceUpdater) updateWithRetry(updateFunc func(*consulacl.ConsulACL), writer client.StatusWriter) error {
+func (cru CustomResourceUpdater) updateWithRetry(updateFunc func(*consulacl.ConsulACL), doUpdate func(context.Context, client.Object) error) error {
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		instance := &consulacl.ConsulACL{}
 		if err := cru.client.Get(context.TODO(),
@@ -52,6 +56,6 @@ func (cru CustomResourceUpdater) updateWithRetry(updateFunc func(*consulacl.Cons
 			return err
 		}
 		updateFunc(instance)
-		return writer.Update(context.TODO(), instance)
+		return doUpdate(context.TODO(), instance)
 	})
 }
