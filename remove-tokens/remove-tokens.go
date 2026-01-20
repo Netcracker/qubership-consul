@@ -210,7 +210,7 @@ func deleteTokens(host, port, token string, tokensToDelete []string) {
 			log.Printf("[WARN] Failed to revoke %s: %v", id, err)
 			continue
 		}
-		resp.Body.Close()
+		_ = resp.Body.Close()
 
 		if resp.StatusCode != 200 {
 			log.Printf("[WARN] Failed to revoke %s: %s", id, resp.Status)
