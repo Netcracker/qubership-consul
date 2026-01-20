@@ -18,7 +18,6 @@ import (
 	"flag"
 	"fmt"
 	"github.com/Netcracker/consul-acl-configurator/consul-acl-configurator-operator/util"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"os"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -111,34 +110,6 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "ConsulACL")
 		os.Exit(1)
 	}
-
-	customScheme := runtime.NewScheme()
-
-	utilruntime.Must(clientgoscheme.AddToScheme(customScheme))
-
-	GroupVersion := schema.GroupVersion{
-		Group:   "netcracker.com",
-		Version: "v1alpha1",
-	}
-	SchemeBuilder := runtime.NewSchemeBuilder(func(scheme *runtime.Scheme) error {
-		scheme.AddKnownTypes(GroupVersion, &qubershiporgv1.ConsulACL{})
-		return nil
-	})
-
-	AddToScheme := SchemeBuilder.AddToScheme
-	err = AddToScheme(customScheme)
-	if err != nil {
-		panic(err)
-	}
-	if err = (&controllers.ConsulACLReconciler{
-		Client:           mgr.GetClient(),
-		Scheme:           customScheme,
-		ResourceVersions: map[string]string{},
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "ConsulACL")
-		os.Exit(1)
-	}
-	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
 		setupLog.Error(err, "unable to set up health check")
