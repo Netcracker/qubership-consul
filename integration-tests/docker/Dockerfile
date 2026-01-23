@@ -8,6 +8,9 @@ ENV STATUS_CUSTOM_RESOURCE_VERSION=v1
 ENV STATUS_CUSTOM_RESOURCE_PLURAL=deployments
 ENV STATUS_CUSTOM_RESOURCE_NAME=consul-integration-tests-runner
 
+RUN echo "https://dl-cdn.alpinelinux.org/alpine/v3.23/main" > /etc/apk/repositories && \
+    echo "https://dl-cdn.alpinelinux.org/alpine/v3.23/community" >> /etc/apk/repositories
+
 RUN mkdir -p ${ROBOT_OUTPUT}
 
 COPY integration-tests/docker/requirements.txt ${ROBOT_HOME}/requirements.txt
