@@ -1,7 +1,5 @@
 github.com/Masterminds/semver/v3 v3.4.0 h1:Zog+i5UMtVoCU8oKka5P7i9q9HgrJeGzI9SA1Xbatp0=
 github.com/Masterminds/semver/v3 v3.4.0/go.mod h1:4V+yj/TJE1HU9XfppCwVMZq3I84lprf4nC11bSS5beM=
-github.com/Netcracker/qubership-disaster-recovery-daemon v0.4.1 h1:1IgkYS8Zh3ntrlqxu32s+lzQOvPiDrl1bWzMCAODw6w=
-github.com/Netcracker/qubership-disaster-recovery-daemon v0.4.1/go.mod h1:MMX9ApcyLfam03ApEKaJmgWmW7xJ2RSw7EQpJFQnpTo=
 github.com/Netcracker/qubership-disaster-recovery-daemon v0.4.10 h1:YpK3thzJQOP0BGh98MgEb/6PAfyMCy8OoFZILCDFZDI=
 github.com/Netcracker/qubership-disaster-recovery-daemon v0.4.10/go.mod h1:qd43vgai3L6Wv4doiICTDfSq4a5Q4rNvLNF828Acvww=
 github.com/avast/retry-go/v4 v4.6.0 h1:K9xNA+KeB8HHc2aWFuLb25Offp+0iVRXEvFx8IinRJA=
