@@ -7,6 +7,9 @@ COPY backup-daemon.conf /etc/backup-daemon.conf
 COPY docker/requirements.txt ${CONSUL_HOME}/requirements.txt
 COPY scripts/ ${CONSUL_HOME}/scripts/
 
+RUN echo "https://dl-cdn.alpinelinux.org/alpine/v3.23/main" > /etc/apk/repositories && \
+    echo "https://dl-cdn.alpinelinux.org/alpine/v3.23/community" >> /etc/apk/repositories
+
 RUN set -x \
     && apk add --update --no-cache curl py3-pip apk-tools \
     && pip3 install -r ${CONSUL_HOME}/requirements.txt \
