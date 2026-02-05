@@ -37,7 +37,7 @@ jobs:
           echo "REPO_NAME=${{ env.EVENT_REPO }}"
 
       - name: Checkout target branch
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ env.EVENT_TARGET_BRANCH }}
 
@@ -79,7 +79,7 @@ jobs:
           echo "target_branch=$TECH_BRANCH" >> "$GITHUB_OUTPUT"
 
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ env.TECH_BRANCH }}
           fetch-depth: 0
@@ -93,7 +93,7 @@ jobs:
           echo platforms=$platforms
 
       - name: Create Meta info (tags)
-        uses: netcracker/qubership-workflow-hub/actions/metadata-action@b575bad3a0959c4e883bc34f9d055ff07fde2dbd #2.0.1
+        uses: netcracker/qubership-workflow-hub/actions/metadata-action@8d542a426ce561c7dce745f6b9cee068d1d7e101 #2.0.10
         id: meta
         with:
           ref: ${{ env.TECH_BRANCH }}
@@ -119,7 +119,7 @@ jobs:
           echo "Component: ${{ toJson(matrix.component) }}"
 
       - name: Docker
-        uses: netcracker/qubership-workflow-hub/actions/docker-action@b575bad3a0959c4e883bc34f9d055ff07fde2dbd #2.0.1
+        uses: netcracker/qubership-workflow-hub/actions/docker-action@8d542a426ce561c7dce745f6b9cee068d1d7e101 #2.0.10
         with:
           ref: ${{ env.TECH_BRANCH }}
           component: ${{ toJson(matrix.component) }}
@@ -131,11 +131,11 @@ jobs:
 
   consul-pipeline:
     needs: [update-image-reference, multiplatform_build]
-    uses: Netcracker/qubership-test-pipelines/.github/workflows/consul.yaml@d45ea797961a4886faeb675da5d75de90c2bd8c0
+    uses: Netcracker/qubership-test-pipelines/.github/workflows/consul.yaml@4487afa083e5ba0cf64690d2e93e3d8ee94fab4f # v1.3.0
     with:
       service_branch: "${{ needs.update-image-reference.outputs.TARGET_BRANCH }}"
       versions_file: ".github/versions.yaml"
-      pipeline_branch: "d45ea797961a4886faeb675da5d75de90c2bd8c0" #this value must match the value after '@' in 'uses'
+      pipeline_branch: "4487afa083e5ba0cf64690d2e93e3d8ee94fab4f" #this value must match the value after '@' in 'uses'
     secrets:
       AWS_S3_ACCESS_KEY_ID: ${{ secrets.AWS_S3_ACCESS_KEY_ID }}
       AWS_S3_ACCESS_KEY_SECRET: ${{ secrets.AWS_S3_ACCESS_KEY_SECRET }}
