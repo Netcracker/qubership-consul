@@ -2,9 +2,7 @@ name: Consul Integration Build
 run-name: "Event: Tag ${{ github.event.client_payload.tag }} from ${{ github.event.client_payload.repo }}  #${{ github.run_number }}"
 
 permissions:
-  contents: write
-  packages: write
-  actions: read
+  contents: read
 
 on:
   repository_dispatch:
@@ -22,6 +20,8 @@ env:
 
 jobs:
   update-image-reference:
+    permissions:
+      contents: write
     runs-on: ubuntu-latest
     outputs:
       TARGET_BRANCH: ${{ steps.update_image.outputs.target_branch }}
@@ -31,22 +31,23 @@ jobs:
     steps:
       - name: Check payload
         run: |
-          echo "TAG=${{ env.EVENT_TAG }}"
-          echo "BASE_IMAGE=${{ env.EVENT_BASE_IMAGE }}"
-          echo "OWNER=${{ env.EVENT_OWNER }}"
-          echo "REPO_NAME=${{ env.EVENT_REPO }}"
+          echo "TAG=${EVENT_TAG}"
+          echo "BASE_IMAGE=${EVENT_BASE_IMAGE}"
+          echo "OWNER=${EVENT_OWNER}"
+          echo "REPO_NAME=${EVENT_REPO}"
 
       - name: Checkout target branch
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ env.EVENT_TARGET_BRANCH }}
+          persist-credentials: true
 
       - name: Create/update tech branch and update image
         id: update_image
         run: |
-          TECH_BRANCH="${{ env.TECH_BRANCH }}"
-          TARGET_BRANCH="${{ env.EVENT_TARGET_BRANCH }}"
-          IMAGE="${{ env.EVENT_BASE_IMAGE }}"
+          # TECH_BRANCH="${{ env.TECH_BRANCH }}"
+          TARGET_BRANCH="${EVENT_TARGET_BRANCH}"
+          IMAGE="${EVENT_BASE_IMAGE}"
           FILE="charts/helm/consul-service/values.yaml"
 
           git fetch origin "$TARGET_BRANCH"
@@ -83,6 +84,7 @@ jobs:
         with:
           ref: ${{ env.TECH_BRANCH }}
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Load Config
         id: load_config
@@ -115,8 +117,11 @@ jobs:
     steps:
       - name: Debug tags and components
         run: |
-          echo "Tags: ${{ needs.update-image-reference.outputs.tags }}"
-          echo "Component: ${{ toJson(matrix.component) }}"
+          echo "Tags: ${TAGS}"
+          echo "Component: ${COMPONENT}"
+        env:
+          TAGS: ${{ needs.update-image-reference.outputs.tags }}
+          COMPONENT: ${{ toJson(matrix.component) }}
 
       - name: Docker
         uses: netcracker/qubership-workflow-hub/actions/docker-action@8d542a426ce561c7dce745f6b9cee068d1d7e101 #2.0.10
