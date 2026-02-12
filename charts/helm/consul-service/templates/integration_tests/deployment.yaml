@@ -133,6 +133,27 @@ spec:
               value: {{ .Values.global.datacenter }}
             - name: RANDOM_RUN_TRIGGER
               value: {{ randAlphaNum 10 | quote }}
+            # ATP Storage variables for S3 integration
+            - name: ATP_STORAGE_PROVIDER
+              value: {{ .Values.integrationTests.atpStorage.provider | quote }}
+            - name: ATP_STORAGE_SERVER_URL
+              value: {{ .Values.integrationTests.atpStorage.serverUrl | quote }}
+            - name: ATP_STORAGE_SERVER_UI_URL
+              value: {{ .Values.integrationTests.atpStorage.serverUiUrl | quote }}
+            - name: ATP_STORAGE_BUCKET
+              value: {{ .Values.integrationTests.atpStorage.bucket | quote }}
+            - name: ATP_STORAGE_REGION
+              value: {{ .Values.integrationTests.atpStorage.region | quote }}
+            - name: ATP_STORAGE_USERNAME
+              value: {{ .Values.integrationTests.atpStorage.username | quote }}
+            - name: ATP_STORAGE_PASSWORD
+              value: {{ .Values.integrationTests.atpStorage.password | quote }}
+            - name: ATP_REPORT_VIEW_UI_URL
+              value: {{ .Values.integrationTests.atpReportViewUiUrl | quote }}
+            - name: ENVIRONMENT_NAME
+              value: {{ .Values.integrationTests.environmentName | quote }}
+            - name: ENABLE_JIRA_INTEGRATION
+              value: {{ .Values.integrationTests.enableJiraIntegration | quote }}
             {{- if .Values.monitoring.enabled }}
             - name: PROMETHEUS_URL
               value: {{ .Values.integrationTests.prometheusUrl }}
