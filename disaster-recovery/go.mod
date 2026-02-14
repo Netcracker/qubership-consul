@@ -3,7 +3,7 @@ module disaster-recovery
 go 1.25.5
 
 require (
-	github.com/Netcracker/qubership-disaster-recovery-daemon v0.4.10
+	github.com/Netcracker/qubership-disaster-recovery-daemon v0.4.14
 	github.com/sirupsen/logrus v1.9.3
 	k8s.io/api v0.35.0
 	k8s.io/apimachinery v0.35.0
@@ -11,9 +11,9 @@ require (
 )
 
 require (
-	github.com/avast/retry-go/v4 v4.6.0 // indirect
+	github.com/avast/retry-go/v4 v4.7.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/emicklei/go-restful/v3 v3.12.2 // indirect
+	github.com/emicklei/go-restful/v3 v3.13.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/fxamacker/cbor/v2 v2.9.0 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
