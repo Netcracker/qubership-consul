@@ -2380,11 +2380,16 @@ integrationTests:
       ]
     }
   }
+  # Test tags to include. Use "OR" to combine multiple tags (e.g. "crud OR ha OR backup")
+  # Available tags: crud, smoke, ha, backup, s3_storage, alerts, consul_images
+  # Leave empty ("") to run ALL tests
   tags: "crud"
   statusWritingEnabled: true
   isShortStatusMessage: true
   # The parameter specifies Consul server port. Default value is 8500 for http, and 8501 for https.
   consulPort: ""
+  # Prometheus URL for alerts tests (e.g., http://prometheus-operated.monitoring:9090)
+  # Leave empty to auto-exclude alerts tests if Prometheus is not available
   prometheusUrl: ""
   resources:
     requests:
@@ -2395,6 +2400,32 @@ integrationTests:
       cpu: 400m
   extraLabels: {}
   securityContext: {}
+
+  # ATP Storage configuration for test results upload to S3-compatible storage
+  # If atpStorage.bucket is empty, S3 integration is disabled
+  atpStorage:
+    # S3 provider type: aws (for real AWS S3), minio, s3 (for S3-compatible with custom endpoint)
+    provider: "aws"
+    # S3 API server URL (e.g., https://s3.amazonaws.com or https://minio.example.com)
+    serverUrl: "https://s3.amazonaws.com"
+    # S3 UI URL for browsing results (e.g., https://minio.example.com)
+    serverUiUrl: "https://console.test.com"
+    # S3 bucket name. If empty - S3 integration is disabled and results stay local
+    bucket: ""
+    # S3 region (required for AWS S3)
+    region: "us-east-1"
+    # S3 credentials (will be stored in secret)
+    username: ""
+    password: ""
+
+  # URL for viewing Allure reports (e.g., https://reports.example.com)
+  atpReportViewUiUrl: "https://test.com"
+
+  # Environment name for organizing test results path in S3
+  environmentName: "consul"
+
+  # Enable Jira integration (writes to marker file for external processing)
+  enableJiraIntegration: false
 
 # Cloud Release Integration
 # The name of the Service exposed for the database.
