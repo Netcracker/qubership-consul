@@ -32,6 +32,16 @@ spec:
             - "/bin/bash"
             - "-c"
             - |
+              set -e
+              
+              kubectl get service {{ template "consul.fullname" . }}-server -o json \
+              | jq '
+                  .spec.ports |= (
+                    sort_by(.name) | group_by(.name) | map(.[0])
+                  )
+                ' \
+              | kubectl apply -f -
+
               clusterIP=$(kubectl get service {{ template "consul.fullname" . }}-server -o json | grep clusterIP)
               if [[ "$clusterIP" == *"None"* ]]; then
                 serviceConfig=$(kubectl get service {{ template "consul.fullname" . }}-server -o json | sed -z 's/"clusterIPs\?":[^,]*,//g')
