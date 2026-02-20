@@ -2091,7 +2091,7 @@ meshGateway:
 
 podScheduler:
   enabled: true
-  dockerImage: bitnami/kubectl:1.30.7
+  dockerImage: ghcr.io/netcracker/qubership-docker-kubectl:main
   affinity: {}
   nodeSelector: {}
   resources:
