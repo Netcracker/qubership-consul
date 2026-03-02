@@ -1346,6 +1346,14 @@ ui:
     # @type: string
     annotations: null
 
+  envoyGateway:
+    enabled: false
+    host: ""
+    parentRefs:
+      - name: default-external-gateway
+        namespace: gateway-system
+        
+
   # Configurations for displaying metrics in the UI.
   metrics:
     # Enable displaying metrics in the UI. The default value of "-"
