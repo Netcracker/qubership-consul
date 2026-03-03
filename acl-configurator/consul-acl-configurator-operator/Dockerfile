@@ -1,5 +1,5 @@
 # Build the manager binary
-FROM --platform=$BUILDPLATFORM golang:1.24-alpine3.22 as builder
+FROM --platform=$BUILDPLATFORM golang:1.25-alpine3.23 as builder
 ARG BUILDPLATFORM
 ARG TARGETOS
 ARG TARGETARCH
@@ -25,7 +25,7 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -a -o manager m
 
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
-FROM alpine:3.22
+FROM alpine:3.23
 
 ENV USER_UID=1001 \
     USER_NAME=consul-acl-configurator-operator \
