@@ -2,14 +2,17 @@ name: Run Consul Pipeline
 
 permissions:
   contents: read
+  packages: read
+  actions: read
 
 on:
-  push
-#  pull_request:
-#    types: [opened, synchronize, reopened]
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [main]
+  push:
 #    branches: [main]
-#  push:
-#    branches: [main]
+  schedule:
+    - cron: '0 23 * * *'
 
 jobs:
   Wait-for-images:
@@ -24,12 +27,27 @@ jobs:
           workflow: dev_build.yml
           token: ${{ secrets.GITHUB_TOKEN }}
           poll-interval: 20
-  Consul-Pipeline:
+
+  Consul-Pipeline-pr:
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
     needs: Wait-for-images
     uses: Netcracker/qubership-test-pipelines/.github/workflows/consul.yaml@feat/consul_night_run #v1.4.1
     with:
       service_branch: '${{ github.head_ref || github.ref_name }}'
-      pipeline_branch: 'feat/consul_night_run' #this value must match the value after '@' in 'uses'
+      pipeline_branch: 'feat/consul_night_run'  # должно совпадать с версией после '@'
     secrets:
-      AWS_S3_ACCESS_KEY_ID: ${{secrets.AWS_S3_ACCESS_KEY_ID}}
-      AWS_S3_ACCESS_KEY_SECRET: ${{secrets.AWS_S3_ACCESS_KEY_SECRET}}
+      AWS_S3_ACCESS_KEY_ID: ${{ secrets.AWS_S3_ACCESS_KEY_ID }}
+      AWS_S3_ACCESS_KEY_SECRET: ${{ secrets.AWS_S3_ACCESS_KEY_SECRET }}
+
+  Consul-Pipeline-nightly:
+    if: github.event_name == 'schedule'
+    needs: Wait-for-images
+    uses: Netcracker/qubership-test-pipelines/.github/workflows/consul.yaml@feat/consul_night_run  # v1.4.1
+    with:
+      repository_name: ${{ github.repository }}
+      service_branch: '${{ github.head_ref || github.ref_name }}'  # для schedule head_ref пуст, возьмётся ref_name (обычно main)
+      pipeline_branch: 'feat/consul_night_run'
+      scope: 'nightly'
+    secrets:
+      AWS_S3_ACCESS_KEY_ID: ${{ secrets.AWS_S3_ACCESS_KEY_ID }}
+      AWS_S3_ACCESS_KEY_SECRET: ${{ secrets.AWS_S3_ACCESS_KEY_SECRET }}
