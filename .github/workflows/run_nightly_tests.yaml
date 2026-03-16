@@ -4,52 +4,15 @@ permissions:
   contents: read
 
 on:
-  push:
-    paths-ignore:
-      - "docs/**"
-      - "CODE-OF-CONDUCT.md"
-      - "CONTRIBUTING.md"
-      - "LICENSE"
-      - "README.md"
-      - "SECURITY.md"
-#  pull_request:
-#    types: [opened, synchronize, reopened]
-#    branches: [main]
-#    paths-ignore:
-#      - "docs/**"
-#      - "CODE-OF-CONDUCT.md"
-#      - "CONTRIBUTING.md"
-#      - "LICENSE"
-#      - "README.md"
-#      - "SECURITY.md"
-#  push:
-#    branches: [main]
-#    paths-ignore:
-#      - "docs/**"
-#      - "CODE-OF-CONDUCT.md"
-#      - "CONTRIBUTING.md"
-#      - "LICENSE"
-#      - "README.md"
-#      - "SECURITY.md"
+  push
+  #schedule:
+    #- cron: '0 0 * * *'
 
 jobs:
-  Wait-for-images:
-    runs-on: ubuntu-latest
-    outputs:
-      conclusion: ${{ steps.wait.outputs.conclusion }}
-    steps:
-      - name: Wait for dev_build.yml to complete
-        uses: netcracker/qubership-workflow-hub/actions/wait-for-workflow@3e428f45132119ce49d90f3770a45d4fe1d1078d  #v2.0.4
-        id: wait
-        with:
-          workflow: dev_build.yml
-          token: ${{ secrets.GITHUB_TOKEN }}
-          poll-interval: 20
-  Consul-Pipeline:
-    needs: Wait-for-images
+  Nightly-Consul-Pipeline:
     uses: Netcracker/qubership-test-pipelines/.github/workflows/consul.yaml@a23bed13d489e8fe6e335fe717258dea12cbb006 #v1.6.0
     with:
-      service_branch: '${{ github.head_ref || github.ref_name }}'
+      service_branch: 'main'
       pipeline_branch: 'a23bed13d489e8fe6e335fe717258dea12cbb006' #this value must match the value after '@' in 'uses'
       scope: 'nightly'
     secrets:
