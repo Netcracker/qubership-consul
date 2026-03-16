@@ -1,4 +1,4 @@
-name: Run Consul Pipeline
+name: Run Consul Night Pipeline
 
 permissions:
   contents: read
