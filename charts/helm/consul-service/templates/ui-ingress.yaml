@@ -37,6 +37,7 @@ metadata:
   {{ .Values.ui.ingress.annotations | toYaml | indent 4 | trim }}
   {{- end }}
   {{- end }}
+  gateway-api-converter.netcracker.com/ignore: "true"
 spec:
   rules:
   {{ $global := .Values.global }}
