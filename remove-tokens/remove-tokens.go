@@ -131,7 +131,7 @@ func fetchConsulTokens(host, port, token string) ([]Token, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != 200 {
 		return nil, fmt.Errorf("failed to fetch tokens %s", resp.Status)
@@ -210,7 +210,7 @@ func deleteTokens(host, port, token string, tokensToDelete []string) {
 			log.Printf("[WARN] Failed to revoke %s: %v", id, err)
 			continue
 		}
-		resp.Body.Close()
+		_ = resp.Body.Close()
 
 		if resp.StatusCode != 200 {
 			log.Printf("[WARN] Failed to revoke %s: %s", id, resp.Status)
