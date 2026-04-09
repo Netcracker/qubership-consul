@@ -33,13 +33,11 @@ spec:
             - "-c"
             - |
               
-              clusterIP=$(kubectl get service {{ template "consul.fullname" . }}-server -o json | grep clusterIP)
+              kubectl get service {{ template "consul.fullname" . }}-server -o json | sed -z 's/"clusterIPs\?":[^,]*,//g' \
+              > /tmp/service.json
               kubectl delete service {{ template "consul.fullname" . }}-server --ignore-not-found=true
-              if [[ "$clusterIP" == *"None"* ]]; then
-                serviceConfig=$(kubectl get service {{ template "consul.fullname" . }}-server -o json | sed -z 's/"clusterIPs\?":[^,]*,//g')
-                # kubectl delete service {{ template "consul.fullname" . }}-server --ignore-not-found=true
-                echo $serviceConfig | kubectl apply -f -
-              fi
+              kubectl apply -f /tmp/service.json
+
               statefulsetServiceName=$(kubectl get statefulset {{ template "consul.fullname" . }}-server -o json | grep serviceName)
               if [[ "$statefulsetServiceName" == *"{{ template "consul.fullname" . }}-server"* ]]; then
                 kubectl delete statefulset {{ template "consul.fullname" . }}-server --ignore-not-found=true --cascade=orphan
