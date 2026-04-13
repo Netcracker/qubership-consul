@@ -16,8 +16,8 @@ RUN set -x \
     && rm -rf /var/cache/apk/*
 
 #https://peps.python.org/pep-0668/
-RUN apk add --no-cache wget python3 py3-pip pip==26.0 \
-    && pip install --break-system-packages --upgrade pip setuptools==80.10.2 wheel==0.46.2 jaraco.context==6.1.0 wheel==0.46.2
+RUN apk add --no-cache wget python3 py3-pip \
+    && pip install --break-system-packages --upgrade pip==26.0.1 setuptools==80.10.2 wheel==0.46.2 jaraco.context==6.1.0
 
 # Upgrade all tools to avoid vulnerabilities
 RUN set -x && apk upgrade --no-cache --available

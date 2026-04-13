@@ -22,8 +22,8 @@ RUN set -x \
     && pip3 install -r ${ROBOT_HOME}/requirements.txt \
     && rm -rf /var/cache/apk/*
 
-    #https://peps.python.org/pep-0668/
-RUN apk add --no-cache wget python3 py3-pip pip==26.0
+    # https://peps.python.org/pep-0668/
+RUN apk add --no-cache wget python3 py3-pip
 
 # Upgrade all tools to avoid vulnerabilities
 RUN set -x && apk add --update --no-cache apk-tools && apk upgrade --no-cache --available
