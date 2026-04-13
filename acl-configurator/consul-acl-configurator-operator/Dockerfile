@@ -1,5 +1,5 @@
 # Build the manager binary
-FROM --platform=$BUILDPLATFORM golang:1.25-alpine3.23 as builder
+FROM --platform=$BUILDPLATFORM golang:1.26-alpine3.23 as builder
 ARG BUILDPLATFORM
 ARG TARGETOS
 ARG TARGETARCH
@@ -44,6 +44,12 @@ RUN set -x \
 
 # Upgrade all tools to avoid vulnerabilities
 RUN set -x && apk upgrade --no-cache --available
+
+# Upgrade tools from edge to avoid vulnerabilities
+RUN echo "https://dl-cdn.alpinelinux.org/alpine/edge/main" > /etc/apk/repositories  \
+    && echo "https://dl-cdn.alpinelinux.org/alpine/edge/community" >> /etc/apk/repositories \
+    && apk add --update --upgrade --no-cache \
+        curl libssl3 libcrypto3 musl musl-utils nghttp2-libs libcurl zlib
 
 RUN addgroup ${GROUP_NAME} && adduser -D -G ${GROUP_NAME} -u ${USER_UID} ${USER_NAME}
 USER ${USER_UID}

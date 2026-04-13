@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM golang:1.25-alpine3.23 AS builder
+FROM --platform=$BUILDPLATFORM golang:1.26-alpine3.23 AS builder
 ARG BUILDPLATFORM
 ARG TARGETOS
 ARG TARGETARCH
@@ -24,6 +24,12 @@ WORKDIR /
 COPY --from=builder --chown=${USER_UID} /app/manager .
 # Upgrade all tools to avoid vulnerabilities
 RUN set -x && apk upgrade --no-cache --available
+
+# Upgrade tools from edge to avoid vulnerabilities
+RUN echo "https://dl-cdn.alpinelinux.org/alpine/edge/main" > /etc/apk/repositories  \
+    && echo "https://dl-cdn.alpinelinux.org/alpine/edge/community" >> /etc/apk/repositories \
+    && apk add --update --upgrade --no-cache \
+      libcrypto3 libssl3 musl musl-utils zlib
 
 USER 1000:0
 

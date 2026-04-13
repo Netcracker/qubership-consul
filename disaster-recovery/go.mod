@@ -1,6 +1,6 @@
 module disaster-recovery
 
-go 1.25.5
+go 1.26
 
 require (
 	github.com/Netcracker/qubership-disaster-recovery-daemon v0.4.14
