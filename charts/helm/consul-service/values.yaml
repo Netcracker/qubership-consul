@@ -40,7 +40,7 @@ global:
   # image: "consul:1.10.0"
   # # Consul Enterprise 1.10.0
   # image: "hashicorp/consul-enterprise:1.10.0-ent"
-  image: "hashicorp/consul:1.21.5"
+  image: "hashicorp/consul:1.22.6"
 
   # Array of objects containing image pull secret names that will be applied to each service account.
   # This can be used to reference image pull secrets if using a custom consul or consul-k8s Docker image.
@@ -64,12 +64,12 @@ global:
   # If using acls.manageSystemACLs then must be >= 0.10.1.
   # If using connect inject then must be >= 0.10.1.
   # If using Consul Enterprise namespaces, must be >= 0.12.
-  imageK8S: "hashicorp/consul-k8s-control-plane:1.8.3"
+  imageK8S: "hashicorp/consul-k8s-control-plane:1.9.6"
 
   # The name (and tag) of the consul-dataplane Docker image used for the
   # connect-injected sidecar proxies and mesh, terminating, and ingress gateways.
   # @default: hashicorp/consul-dataplane:<latest supported version>
-  imageConsulDataplane: "hashicorp/consul-dataplane:1.8.3"
+  imageConsulDataplane: "hashicorp/consul-dataplane:1.9.6"
 
   # The name of the datacenter that the agents should
   # register as. This can't be changed once the Consul cluster is up and running
@@ -1346,6 +1346,14 @@ ui:
     # @type: string
     annotations: null
 
+  envoyGateway:
+    enabled: false
+    host: ""
+    parentRefs:
+      - name: default-external-gateway
+        namespace: gateway-system
+        
+
   # Configurations for displaying metrics in the UI.
   metrics:
     # Enable displaying metrics in the UI. The default value of "-"
@@ -2091,7 +2099,7 @@ meshGateway:
 
 podScheduler:
   enabled: true
-  dockerImage: bitnami/kubectl:1.30.7
+  dockerImage: ghcr.io/netcracker/qubership-docker-kubectl:main
   affinity: {}
   nodeSelector: {}
   resources:
@@ -2380,11 +2388,16 @@ integrationTests:
       ]
     }
   }
+  # Test tags to include. Use "OR" to combine multiple tags (e.g. "crud OR ha OR backup")
+  # Available tags: crud, smoke, ha, backup, s3_storage, alerts, consul_images
+  # Leave empty ("") to run ALL tests
   tags: "crud"
   statusWritingEnabled: true
   isShortStatusMessage: true
   # The parameter specifies Consul server port. Default value is 8500 for http, and 8501 for https.
   consulPort: ""
+  # Prometheus URL for alerts tests (e.g., http://prometheus-operated.monitoring:9090)
+  # Leave empty to auto-exclude alerts tests if Prometheus is not available
   prometheusUrl: ""
   resources:
     requests:
@@ -2395,6 +2408,36 @@ integrationTests:
       cpu: 400m
   extraLabels: {}
   securityContext: {}
+
+  # ATP Storage configuration for test results upload to S3-compatible storage
+  # If atpStorage.bucket is empty, S3 integration is disabled
+  atpStorage:
+    # S3 provider type: aws (for real AWS S3), minio, s3 (for S3-compatible with custom endpoint)
+    provider: "aws"
+    # S3 API server URL (e.g., https://s3.amazonaws.com or https://minio.example.com)
+    serverUrl: "https://s3.amazonaws.com"
+    # S3 UI URL for browsing results (e.g., https://minio.example.com)
+    serverUiUrl: "https://console.test.com"
+    # S3 bucket name. If empty - S3 integration is disabled and results stay local
+    bucket: ""
+    # S3 region (required for AWS S3)
+    region: "us-east-1"
+    # S3 credentials (will be stored in secret)
+    username: ""
+    password: ""
+
+  # Maps to env ATP_REPORT_ENABLED in docker-integration-tests (S3 upload must be true explicitly)
+  atpReport:
+    enabled: false
+
+  # URL for viewing Allure reports (e.g., https://reports.example.com)
+  atpReportViewUiUrl: "https://test.com"
+
+  # Environment name for organizing test results path in S3
+  environmentName: "consul"
+
+  # Enable Jira integration (writes to marker file for external processing)
+  enableJiraIntegration: false
 
 # Cloud Release Integration
 # The name of the Service exposed for the database.

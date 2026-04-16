@@ -30,3 +30,4 @@ Designed for creating resilient and secure Consul clusters in a cloud-native env
 
 * Main part is distributed under `Apache License, Version 2.0`.
 * Folder `charts/helm/consul-service` is distributed under `Mozilla Public License, Version 2.0`.
+ 
