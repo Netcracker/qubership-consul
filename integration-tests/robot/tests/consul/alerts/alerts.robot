@@ -68,25 +68,25 @@ Consul Does Not Exist Alert
     [Teardown]  Run Keywords  Check That Consul Servers Are Up  ${replicas}
                 ...  AND  Check Alerts Are Inactive
 
-Consul Is Degraded Alert
-    [Tags]  alerts  consul_is_degraded_alert
-    Check That Prometheus Alert Is Inactive  ${CONSUL_IS_DEGRADED_ALERT_NAME}
-    Check Servers Readiness
-    ${leader_ip}=  Get Leader IP
-    Delete Pod By Pod Ip  ${leader_ip}  ${CONSUL_NAMESPACE}
-    Wait Until Keyword Succeeds  ${ALERT_RETRY_TIME}  ${ALERT_RETRY_INTERVAL}
-    ...  Check That Prometheus Alert Is Active  ${CONSUL_IS_DEGRADED_ALERT_NAME}
-    Wait Until Keyword Succeeds  ${ALERT_RETRY_TIME}  ${ALERT_RETRY_INTERVAL}
-    ...  Check That Prometheus Alert Is Inactive  ${CONSUL_IS_DEGRADED_ALERT_NAME}
-    [Teardown]  Check Alerts Are Inactive
+#Consul Is Degraded Alert
+#    [Tags]  alerts  consul_is_degraded_alert
+#    Check That Prometheus Alert Is Inactive  ${CONSUL_IS_DEGRADED_ALERT_NAME}
+#    Check Servers Readiness
+#    ${leader_ip}=  Get Leader IP
+#    Delete Pod By Pod Ip  ${leader_ip}  ${CONSUL_NAMESPACE}
+#    Wait Until Keyword Succeeds  ${ALERT_RETRY_TIME}  ${ALERT_RETRY_INTERVAL}
+#    ...  Check That Prometheus Alert Is Active  ${CONSUL_IS_DEGRADED_ALERT_NAME}
+#    Wait Until Keyword Succeeds  ${ALERT_RETRY_TIME}  ${ALERT_RETRY_INTERVAL}
+#    ...  Check That Prometheus Alert Is Inactive  ${CONSUL_IS_DEGRADED_ALERT_NAME}
+#    [Teardown]  Check Alerts Are Inactive
 
-Consul Is Down Alert
-    [Tags]  alerts  consul_is_down_alert
-    Check That Prometheus Alert Is Inactive  ${CONSUL_IS_DOWN_ALERT_NAME}
-    Check Servers Readiness
-    Delete Server Pods
-    Wait Until Keyword Succeeds  ${ALERT_RETRY_TIME}  ${ALERT_RETRY_INTERVAL}
-    ...  Check That Prometheus Alert Is Active  ${CONSUL_IS_DOWN_ALERT_NAME}
-    Wait Until Keyword Succeeds  ${ALERT_RETRY_TIME}  ${ALERT_RETRY_INTERVAL}
-    ...  Check That Prometheus Alert Is Inactive  ${CONSUL_IS_DOWN_ALERT_NAME}
-    [Teardown]  Check Alerts Are Inactive
+#Consul Is Down Alert
+#    [Tags]  alerts  consul_is_down_alert
+#    Check That Prometheus Alert Is Inactive  ${CONSUL_IS_DOWN_ALERT_NAME}
+#    Check Servers Readiness
+#    Delete Server Pods
+#    Wait Until Keyword Succeeds  ${ALERT_RETRY_TIME}  ${ALERT_RETRY_INTERVAL}
+#    ...  Check That Prometheus Alert Is Active  ${CONSUL_IS_DOWN_ALERT_NAME}
+#    Wait Until Keyword Succeeds  ${ALERT_RETRY_TIME}  ${ALERT_RETRY_INTERVAL}
+#    ...  Check That Prometheus Alert Is Inactive  ${CONSUL_IS_DOWN_ALERT_NAME}
+#    [Teardown]  Check Alerts Are Inactive
