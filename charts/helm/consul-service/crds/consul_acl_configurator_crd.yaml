@@ -5,9 +5,9 @@ metadata:
     crd/version: 0.0.18
     controller-gen.kubebuilder.io/version: v0.6.2
   creationTimestamp: null
-  name: consulacls.qubership.org
+  name: consulacls.netcracker.com
 spec:
-  group: qubership.org
+  group: netcracker.com
   names:
     kind: ConsulACL
     listKind: ConsulACLList

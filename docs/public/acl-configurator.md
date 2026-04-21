@@ -7,7 +7,7 @@ This section describes a contract between a client service and Consul ACL Config
 To create/update Consul ACL policy, role or rule binding a client service should implement "consulacls" Kubernetes custom resource
 For example,
 ```yaml
-apiVersion: qubership.org/v1alpha1
+apiVersion: netcracker.com/v1alpha1
 kind: ConsulACL
 metadata:
   name: example-consul-acl-config
@@ -47,7 +47,7 @@ spec:
       }
 ```
 There are some required yaml fields 
-- `apiVersion` (qubership.org/v1alpha1), 
+- `apiVersion` (netcracker.com/v1alpha1), 
 - `kind` (ConsulACL), 
 - `metadata.name` (any name but it should be unique for namespace "consulacls" CRs), 
 - `spec.acl.name` (any name), 

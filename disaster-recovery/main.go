@@ -27,6 +27,7 @@ import (
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/features"
 	"log"
 	"net/http"
 	"os"
@@ -41,7 +42,32 @@ const (
 
 var logger = logrus.WithFields(logrus.Fields{"name": "disasterrecovery"}).Logger
 
+// disableWatchListGates wraps the default feature gates and forces WatchListClient off
+// to avoid "event bookmark expired" reflector warnings when the API server doesn't
+// send the required bookmark event in time.
+type disableWatchListGates struct {
+	inner features.Gates
+}
+
+func (g *disableWatchListGates) Enabled(key features.Feature) bool {
+	if key == features.WatchListClient {
+		return false
+	}
+	return g.inner.Enabled(key)
+}
+
+func disableWatchListFeatureGate() {
+	current := features.FeatureGates()
+	features.ReplaceFeatureGates(&disableWatchListGates{inner: current})
+}
+
 func main() {
+	// Disable WatchList client feature to avoid "event bookmark expired" warnings.
+	// WatchList mode requires a bookmark event to mark the end of the initial stream;
+	// if the API server doesn't send it in time, client-go logs this warning. Using
+	// the traditional LIST+WATCH flow avoids that requirement.
+	disableWatchListFeatureGate()
+
 	level := logrus.InfoLevel
 	if _, found := os.LookupEnv("DEBUG"); found {
 		level = logrus.DebugLevel
@@ -94,7 +120,7 @@ func drFunction(controllerRequest entity.ControllerRequest) (entity.ControllerRe
 			logger.Info("Backup daemon is scaled up")
 
 			if configMap.Data[statusMode] != entity.DISABLED {
-				if err = startLastBackupRecoverу(kubeClient, backupDaemonClient, consulFullName); err != nil {
+				if err = startLastBackupRecovery(kubeClient, backupDaemonClient, consulFullName); err != nil {
 					return entity.ControllerResponse{}, err
 				}
 			} else {
@@ -143,7 +169,7 @@ func drFunction(controllerRequest entity.ControllerRequest) (entity.ControllerRe
 	}, nil
 }
 
-func startLastBackupRecoverу(kubeClient clients.KubernetesClient, backupDaemonClient clients.BackupDaemonClient, consulFullName string) error {
+func startLastBackupRecovery(kubeClient clients.KubernetesClient, backupDaemonClient clients.BackupDaemonClient, consulFullName string) error {
 	logger.Info("Starting last backup recovery")
 	jobID, err := backupDaemonClient.RestoreLastFullBackup()
 	if err != nil {

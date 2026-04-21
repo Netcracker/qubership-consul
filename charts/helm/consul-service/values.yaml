@@ -40,7 +40,7 @@ global:
   # image: "consul:1.10.0"
   # # Consul Enterprise 1.10.0
   # image: "hashicorp/consul-enterprise:1.10.0-ent"
-  image: "hashicorp/consul:1.20.6"
+  image: "hashicorp/consul:1.22.6"
 
   # Array of objects containing image pull secret names that will be applied to each service account.
   # This can be used to reference image pull secrets if using a custom consul or consul-k8s Docker image.
@@ -64,12 +64,12 @@ global:
   # If using acls.manageSystemACLs then must be >= 0.10.1.
   # If using connect inject then must be >= 0.10.1.
   # If using Consul Enterprise namespaces, must be >= 0.12.
-  imageK8S: "hashicorp/consul-k8s-control-plane:1.6.5"
+  imageK8S: "hashicorp/consul-k8s-control-plane:1.9.6"
 
   # The name (and tag) of the consul-dataplane Docker image used for the
   # connect-injected sidecar proxies and mesh, terminating, and ingress gateways.
   # @default: hashicorp/consul-dataplane:<latest supported version>
-  imageConsulDataplane: "hashicorp/consul-dataplane:1.6.5"
+  imageConsulDataplane: "hashicorp/consul-dataplane:1.9.6"
 
   # The name of the datacenter that the agents should
   # register as. This can't be changed once the Consul cluster is up and running
@@ -378,7 +378,7 @@ global:
     mode: ""
     region: ""
     siteManagerEnabled: true
-    siteManagerApiGroup: "qubership.org"
+    siteManagerApiGroup: "netcracker.com"
     timeout: 600
     backupTimeout: "180s"
     restoreTimeout: "240s"
@@ -1346,6 +1346,14 @@ ui:
     # @type: string
     annotations: null
 
+  envoyGateway:
+    enabled: false
+    host: ""
+    parentRefs:
+      - name: default-external-gateway
+        namespace: gateway-system
+        
+
   # Configurations for displaying metrics in the UI.
   metrics:
     # Enable displaying metrics in the UI. The default value of "-"
@@ -2091,7 +2099,7 @@ meshGateway:
 
 podScheduler:
   enabled: true
-  dockerImage: bitnami/kubectl:1.30.7
+  dockerImage: ghcr.io/netcracker/qubership-docker-kubectl:main
   affinity: {}
   nodeSelector: {}
   resources:
@@ -2229,7 +2237,7 @@ backupDaemon:
 consulAclConfigurator:
   # Enable Consul ACL Configurator installation.
   enabled: true
-  apiGroup: "qubership.org"
+  apiGroup: "netcracker.com"
   # The image of Consul ACL Configurator Kubernetes operator which implements collecting processing Consul ACL configuration custom resources.
   operatorImage: "ghcr.io/netcracker/qubership-consul-acl-configurator:main"
   # The image of Consul ACL Configurator HTTP server which allows execute common reconcile for Consul ACL configuration custom resources by HTTP request from any Kubernetes service account.
@@ -2304,6 +2312,19 @@ consulAclConfigurator:
     port: ""
 
   allowedNamespaces: ""
+
+  removeTokens:
+    enabled: true
+    dockerImage: ghcr.io/netcracker/qubership-consul-remove-tokens:main
+    resources:
+      requests:
+        memory: "75Mi"
+        cpu: "75m"
+      limits:
+        memory: "150Mi"
+        cpu: "150m"
+    schedule: "0 0 * * *"
+    securityContext: { }
 
 statusProvisioner:
   enabled: true

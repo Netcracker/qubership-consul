@@ -16,3 +16,4 @@ charts:
       - ghcr.io/netcracker/qubership-consul-rest-acl-configurator:${release}
       - ghcr.io/netcracker/qubership-deployment-status-provisioner:#latest
       - ghcr.io/netcracker/qubership-consul-integration-tests:${release}
+      - ghcr.io/netcracker/qubership-consul-remove-tokens:${release}

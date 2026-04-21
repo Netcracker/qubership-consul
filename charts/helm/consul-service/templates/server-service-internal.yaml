@@ -16,6 +16,7 @@ metadata:
     name: {{ template "consul.fullname" . }}-server-internal
     release: {{ .Release.Name }}
     component: server
+    app.kubernetes.io/name: {{ template "consul.fullname" . }}-server
     {{- include "consul-service.defaultLabels" . | nindent 4 }}
   annotations:
     {{- if .Values.server.service.annotations }}

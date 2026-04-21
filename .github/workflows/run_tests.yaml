@@ -1,18 +1,49 @@
 name: Run Consul Pipeline
 
+permissions:
+  contents: read
+
 on:
   pull_request:
     types: [opened, synchronize, reopened]
     branches: [main]
+    paths-ignore:
+      - "docs/**"
+      - "CODE-OF-CONDUCT.md"
+      - "CONTRIBUTING.md"
+      - "LICENSE"
+      - "README.md"
+      - "SECURITY.md"
+  push:
+    branches: [main]
+    paths-ignore:
+      - "docs/**"
+      - "CODE-OF-CONDUCT.md"
+      - "CONTRIBUTING.md"
+      - "LICENSE"
+      - "README.md"
+      - "SECURITY.md"
 
 jobs:
+  Wait-for-images:
+    runs-on: ubuntu-latest
+    outputs:
+      conclusion: ${{ steps.wait.outputs.conclusion }}
+    steps:
+      - name: Wait for dev_build.yml to complete
+        uses: netcracker/qubership-workflow-hub/actions/wait-for-workflow@3e428f45132119ce49d90f3770a45d4fe1d1078d  #v2.0.4
+        id: wait
+        with:
+          workflow: dev_build.yml
+          token: ${{ secrets.GITHUB_TOKEN }}
+          poll-interval: 20
   Consul-Pipeline:
-    if: github.event.pull_request.user.login != 'dependabot[bot]'
-    uses: Netcracker/qubership-test-pipelines/.github/workflows/consul.yaml@d45ea797961a4886faeb675da5d75de90c2bd8c0
+    needs: Wait-for-images
+    uses: Netcracker/qubership-test-pipelines/.github/workflows/consul.yaml@0317a7311f0fdd1e6d492fb3a75d722835851b15 #v1.6.1
     with:
       service_branch: '${{ github.head_ref || github.ref_name }}'
-      versions_file: '.github/versions.yaml'
-      pipeline_branch: 'd45ea797961a4886faeb675da5d75de90c2bd8c0' #this value must match the value after '@' in 'uses'
+      pipeline_branch: '0317a7311f0fdd1e6d492fb3a75d722835851b15' #this value must match the value after '@' in 'uses'
     secrets:
-      AWS_S3_ACCESS_KEY_ID: ${{ secrets.AWS_S3_ACCESS_KEY_ID }}
-      AWS_S3_ACCESS_KEY_SECRET: ${{ secrets.AWS_S3_ACCESS_KEY_SECRET }}
+      AWS_S3_ACCESS_KEY_ID: ${{secrets.AWS_S3_ACCESS_KEY_ID}}
+      AWS_S3_ACCESS_KEY_SECRET: ${{secrets.AWS_S3_ACCESS_KEY_SECRET}}
+

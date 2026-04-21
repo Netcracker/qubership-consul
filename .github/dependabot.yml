@@ -1,17 +1,23 @@
 version: 2
 updates:
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+
   # Go modules
   - package-ecosystem: "gomod"
-    directories: 
+    directories:
       - "/disaster-recovery"
       - "/acl-configurator/rest-acl-configurator"
       - "/acl-configurator/consul-acl-configurator-operator"
     schedule:
       interval: "weekly"
-  
+
   # Docker images
   - package-ecosystem: "docker"
-    directories: 
+    directories:
       - "/docker-transfer"
       - "/backup-daemon/docker"
       - "/disaster-recovery/docker"
@@ -19,12 +25,13 @@ updates:
       - "/acl-configurator/sdk-tool"
       - "/acl-configurator/rest-acl-configurator"
       - "/acl-configurator/consul-acl-configurator-operator"
+      - "/remove-tokens/docker"
     schedule:
       interval: "weekly"
-  
+
   # Python (pip)
   - package-ecosystem: "pip"
-    directories: 
+    directories:
       - "/backup-daemon/docker"
       - "/integration-tests/docker"
     schedule:

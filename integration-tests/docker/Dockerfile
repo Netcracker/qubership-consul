@@ -8,6 +8,9 @@ ENV STATUS_CUSTOM_RESOURCE_VERSION=v1
 ENV STATUS_CUSTOM_RESOURCE_PLURAL=deployments
 ENV STATUS_CUSTOM_RESOURCE_NAME=consul-integration-tests-runner
 
+RUN echo "https://dl-cdn.alpinelinux.org/alpine/v3.23/main" > /etc/apk/repositories && \
+    echo "https://dl-cdn.alpinelinux.org/alpine/v3.23/community" >> /etc/apk/repositories
+
 RUN mkdir -p ${ROBOT_OUTPUT}
 
 COPY integration-tests/docker/requirements.txt ${ROBOT_HOME}/requirements.txt
@@ -19,8 +22,17 @@ RUN set -x \
     && pip3 install -r ${ROBOT_HOME}/requirements.txt \
     && rm -rf /var/cache/apk/*
 
+    # https://peps.python.org/pep-0668/
+RUN apk add --no-cache wget python3 py3-pip
+
 # Upgrade all tools to avoid vulnerabilities
 RUN set -x && apk add --update --no-cache apk-tools && apk upgrade --no-cache --available
+
+# Upgrade tools from edge to avoid vulnerabilities
+RUN echo "https://dl-cdn.alpinelinux.org/alpine/edge/main" > /etc/apk/repositories  \
+    && echo "https://dl-cdn.alpinelinux.org/alpine/edge/community" >> /etc/apk/repositories \
+    && apk add --update --upgrade --no-cache \
+      curl libcurl musl musl-utils musl-dev libcrypto3 libssl3 libuuid vim vim-common xxd
 
 USER 1000:0
 
