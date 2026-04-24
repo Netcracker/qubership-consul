@@ -133,6 +133,37 @@ spec:
               value: {{ .Values.global.datacenter }}
             - name: RANDOM_RUN_TRIGGER
               value: {{ randAlphaNum 10 | quote }}
+            {{- if .Values.integrationTests.atpReport.enabled }}
+            # ATP Storage variables for S3 integration
+            - name: ATP_REPORT_ENABLED
+              value: {{ .Values.integrationTests.atpReport.enabled | quote }}
+            - name: ATP_STORAGE_PROVIDER
+              value: {{ .Values.integrationTests.atpReport.atpStorage.provider | quote }}
+            - name: ATP_STORAGE_SERVER_URL
+              value: {{ .Values.integrationTests.atpReport.atpStorage.serverUrl | quote }}
+            - name: ATP_STORAGE_SERVER_UI_URL
+              value: {{ .Values.integrationTests.atpReport.atpStorage.serverUiUrl | quote }}
+            - name: ATP_STORAGE_BUCKET
+              value: {{ .Values.integrationTests.atpReport.atpStorage.bucket | quote }}
+            - name: ATP_STORAGE_REGION
+              value: {{ .Values.integrationTests.atpReport.atpStorage.region | quote }}
+            - name: ATP_STORAGE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ template "consul-integration-tests.name" . }}-atp-storage-secret
+                  key: atp-storage-username
+            - name: ATP_STORAGE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ template "consul-integration-tests.name" . }}-atp-storage-secret
+                  key: atp-storage-password
+            - name: ATP_REPORT_VIEW_UI_URL
+              value: {{ .Values.integrationTests.atpReportViewUiUrl | quote }}
+            {{- end }}
+            - name: ENVIRONMENT_NAME
+              value: {{ .Values.integrationTests.environmentName | quote }}
+            - name: ENABLE_JIRA_INTEGRATION
+              value: {{ .Values.integrationTests.enableJiraIntegration | quote }}
             {{- if .Values.monitoring.enabled }}
             - name: PROMETHEUS_URL
               value: {{ .Values.integrationTests.prometheusUrl }}
