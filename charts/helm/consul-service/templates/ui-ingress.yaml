@@ -25,6 +25,8 @@ metadata:
     release: {{ .Release.Name }}
     {{- include "consul-service.defaultLabels" . | nindent 4 }}
     component: ui
+    deployment.netcracker.com/ingress-type: private-network
+    deployment.netcracker.com/ingress-audience-type: ops-user
   annotations:
     gateway-api-converter.netcracker.com/ignore: "true"
   {{- if and .Values.global.tls.enabled .Values.global.tls.httpsOnly }}
