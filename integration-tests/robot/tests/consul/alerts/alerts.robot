@@ -25,7 +25,7 @@ Check That Prometheus Alert Is Inactive
 Get Leader IP
     ${leader}=  Get Leader
     ${resp} =  Delete Port  ${leader}
-    [Return]  ${resp}
+    RETURN  ${resp}
 
 Check Servers Readiness
     ${replicas}=  Get Stateful Set Replicas Count  ${CONSUL_HOST}  ${CONSUL_NAMESPACE}

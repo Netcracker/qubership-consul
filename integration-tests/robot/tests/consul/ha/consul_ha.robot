@@ -24,12 +24,12 @@ Check CRUD Operations
 
 Get Consul Leader
     ${response} =  Get Leader
-    [Return]  ${response}
+    RETURN  ${response}
 
 Get IP For Consul Leader
     [Arguments]  ${leader}
     ${resp} =  Delete Port  ${leader}
-    [Return]  ${resp}
+    RETURN  ${resp}
 
 Delete Consul Leader Pod
     [Arguments]  ${leader_ip}
@@ -51,7 +51,7 @@ Leader Should Be Presented
 Get Leader Pod Name By IP
     [Arguments]  ${pod_ip}
     ${resp} =  Look Up Pod Name By Host IP  ${pod_ip}  ${CONSUL_NAMESPACE}
-    [Return]  ${resp}
+    RETURN  ${resp}
 
 *** Test Cases ***
 Test Value With Exceeding Limit Size
