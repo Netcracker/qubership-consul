@@ -19,6 +19,8 @@ metadata:
     release: {{ .Release.Name }}
     {{- include "consul-service.defaultLabels" . | nindent 4 }}
     component: ui
+    deployment.netcracker.com/ingress-type: 'private-network'
+    deployment.netcracker.com/ingress-audience-type: 'ops-user'
 spec:
   parentRefs:
   {{- if and .Values.GATEWAY_SYSTEM_NAME .Values.GATEWAY_SYSTEM_NAMESPACE }}
