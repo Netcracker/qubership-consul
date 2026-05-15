@@ -25,6 +25,9 @@ RUN set -x \
     && pip3 install -r ${ROBOT_HOME}/requirements.txt \
     && rm -rf /var/cache/apk/*
 
+    # https://peps.python.org/pep-0668/
+RUN apk add --no-cache wget python3 py3-pip
+
 # Upgrade all tools to avoid vulnerabilities
 RUN set -x && apk add --update --no-cache apk-tools && apk upgrade --no-cache --available
 
@@ -38,6 +41,12 @@ RUN set -x && apk add --update --no-cache apk-tools && apk upgrade --no-cache --
 RUN chown -R 1000:0 ${ROBOT_HOME} && chmod -R 775 ${ROBOT_HOME}
 
 # Switch back to non-root user for AWS EKS security compliance
+# Upgrade tools from edge to avoid vulnerabilities
+RUN echo "https://dl-cdn.alpinelinux.org/alpine/edge/main" > /etc/apk/repositories  \
+    && echo "https://dl-cdn.alpinelinux.org/alpine/edge/community" >> /etc/apk/repositories \
+    && apk add --update --upgrade --no-cache \
+      curl libcurl musl musl-utils musl-dev libcrypto3 libssl3 libuuid vim vim-common xxd
+
 USER 1000:0
 
 EXPOSE 8080

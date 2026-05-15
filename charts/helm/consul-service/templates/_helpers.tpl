@@ -641,6 +641,9 @@ DNS names used to generate TLS certificate with "Subject Alternative Name" field
   {{- $consulServerName := printf "%s-server" (include "consul.fullname" .) -}}
   {{- $dnsNames := list "localhost" $consulServerName (printf "*.%s" $consulServerName) (printf "*.%s.%s" $consulServerName .Release.Namespace) (printf "%s.%s" $consulServerName .Release.Namespace) (printf "*.%s.%s.svc" $consulServerName .Release.Namespace) (printf "%s.%s.svc" $consulServerName .Release.Namespace) (printf "server.%s.%s" .Values.global.datacenter .Values.global.domain) (printf "*.server.%s.%s" .Values.global.datacenter .Values.global.domain) -}}
   {{- $dnsNames = concat $dnsNames .Values.global.tls.serverAdditionalDNSSANs -}}
+  {{- if .Values.ui.envoyGateway.host }}
+  {{- $dnsNames = append $dnsNames .Values.ui.envoyGateway.host }}
+  {{- end }}
   {{- $dnsNames | toYaml -}}
 {{- end -}}
 
