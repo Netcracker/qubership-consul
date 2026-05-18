@@ -48,5 +48,5 @@ Test Delete Data Under Path
 
 *** Test Cases ***
 Test Fail Read Deleted Key
-    [Tags]  smoke  negative
+    [Tags]  smoke  crud
     Get And Check Test Data From Consul  ${test_key}  ${test_value}
