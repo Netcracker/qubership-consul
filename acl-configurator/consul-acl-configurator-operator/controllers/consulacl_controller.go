@@ -40,6 +40,14 @@ import (
 	consulacl "github.com/Netcracker/consul-acl-configurator/consul-acl-configurator-operator/api/v1alpha1"
 )
 
+func readSecretFromFile(filePath string) (string, error) {
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimRight(string(data), "\n\r"), nil
+}
+
 const errNotFound = "ACL not found"
 
 var consulAclFinalizer = consulacl.GroupVersion.Group + "/consulaclconfigurator-controller"
@@ -49,10 +57,22 @@ var log = logf.Log.WithName("controller_consulacl")
 var ConsulClientService = os.Getenv("CONSUL_HOST")
 var ConsulClientPort = os.Getenv("CONSUL_PORT")
 var ConsulClientScheme = os.Getenv("CONSUL_SCHEME")
-var bootstrapToken = os.Getenv("CONSUL_ACL_BOOTSTRAP_TOKEN")
+var bootstrapToken = readBootstrapToken()
 var authMethod = os.Getenv("CONSUL_AUTH_METHOD_NAME")
 var periodTime, _ = strconv.Atoi(os.Getenv("RECONCILE_PERIOD_SECONDS"))
 var aclClient = makeAclClient()
+
+func readBootstrapToken() string {
+	if tokenFile := os.Getenv("CONSUL_ACL_BOOTSTRAP_TOKEN_FILE"); tokenFile != "" {
+		token, err := readSecretFromFile(tokenFile)
+		if err != nil {
+			// log is not yet initialized at package init time; panic to surface the misconfiguration
+			panic(fmt.Sprintf("failed to read bootstrap token from file %s: %v", tokenFile, err))
+		}
+		return token
+	}
+	return os.Getenv("CONSUL_ACL_BOOTSTRAP_TOKEN")
+}
 
 // ConsulACLReconciler reconciles a ConsulACL object
 type ConsulACLReconciler struct {

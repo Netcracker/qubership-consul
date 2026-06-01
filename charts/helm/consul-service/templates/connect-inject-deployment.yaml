@@ -90,17 +90,13 @@ spec:
             - name: CONSUL_LOGIN_META
               value: "component=connect-injector,pod=$(NAMESPACE)/$(POD_NAME)"
             {{- end }}
-            {{- if (and .Values.connectInject.aclInjectToken.secretName .Values.connectInject.aclInjectToken.secretKey) }}
-            - name: CONSUL_ACL_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.connectInject.aclInjectToken.secretName }}
-                  key: {{ .Values.connectInject.aclInjectToken.secretKey }}
-            {{- end }}
           command:
             - "/bin/sh"
             - "-ec"
             - |
+              {{- if (and .Values.connectInject.aclInjectToken.secretName .Values.connectInject.aclInjectToken.secretKey) }}
+              export CONSUL_ACL_TOKEN="$(cat /var/run/secrets/consul-connect-inject/acl-token)"
+              {{- end }}
               consul-k8s-control-plane inject-connect \
                 {{- if .Values.global.federation.enabled }}
                 -enable-federation \
@@ -236,6 +232,11 @@ spec:
             mountPath: /consul/tls/ca
             readOnly: true
           {{- end }}
+          {{- if (and .Values.connectInject.aclInjectToken.secretName .Values.connectInject.aclInjectToken.secretKey) }}
+          - name: connect-inject-acl-token
+            mountPath: /var/run/secrets/consul-connect-inject
+            readOnly: true
+          {{- end }}
           {{- with .Values.connectInject.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
@@ -256,6 +257,17 @@ spec:
           - key: {{ default "tls.crt" .Values.global.tls.caCert.secretKey }}
             path: tls.crt
       {{- end }}
+      {{- end }}
+      {{- if (and .Values.connectInject.aclInjectToken.secretName .Values.connectInject.aclInjectToken.secretKey) }}
+      - name: connect-inject-acl-token
+        projected:
+          defaultMode: 0400
+          sources:
+          - secret:
+              name: {{ .Values.connectInject.aclInjectToken.secretName }}
+              items:
+              - key: {{ .Values.connectInject.aclInjectToken.secretKey }}
+                path: acl-token
       {{- end }}
       {{- if .Values.connectInject.priorityClassName }}
       priorityClassName: {{ .Values.connectInject.priorityClassName | quote }}

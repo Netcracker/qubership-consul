@@ -71,6 +71,17 @@ spec:
           medium: "Memory"
       {{- end }}
       {{- end }}
+      {{- if (and .Values.syncCatalog.aclSyncToken.secretName .Values.syncCatalog.aclSyncToken.secretKey) }}
+      - name: sync-catalog-acl-token
+        projected:
+          defaultMode: 0400
+          sources:
+          - secret:
+              name: {{ .Values.syncCatalog.aclSyncToken.secretName }}
+              items:
+              - key: {{ .Values.syncCatalog.aclSyncToken.secretKey }}
+                path: acl-token
+      {{- end }}
       containers:
         - name: sync-catalog
           image: {{ template "consul-k8s.image" . }}
@@ -87,13 +98,6 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
-            {{- if (and .Values.syncCatalog.aclSyncToken.secretName .Values.syncCatalog.aclSyncToken.secretKey) }}
-            - name: CONSUL_HTTP_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.syncCatalog.aclSyncToken.secretName }}
-                  key: {{ .Values.syncCatalog.aclSyncToken.secretKey }}
-            {{- end }}
             {{- if .Values.global.tls.enabled }}
             {{- if .Values.client.enabled }}
             - name: CONSUL_HTTP_ADDR
@@ -126,10 +130,18 @@ spec:
               mountPath: /consul/tls/ca
               readOnly: true
             {{- end }}
+            {{- if (and .Values.syncCatalog.aclSyncToken.secretName .Values.syncCatalog.aclSyncToken.secretKey) }}
+            - name: sync-catalog-acl-token
+              mountPath: /var/run/secrets/consul-sync-catalog
+              readOnly: true
+            {{- end }}
           command:
             - "/bin/sh"
             - "-ec"
             - |
+              {{- if (and .Values.syncCatalog.aclSyncToken.secretName .Values.syncCatalog.aclSyncToken.secretKey) }}
+              export CONSUL_HTTP_TOKEN="$(cat /var/run/secrets/consul-sync-catalog/acl-token)"
+              {{- end }}
               consul-k8s-control-plane sync-catalog \
                 -consul-api-timeout={{ .Values.global.consulAPITimeout }} \
                 -k8s-default-sync={{ .Values.syncCatalog.default }} \

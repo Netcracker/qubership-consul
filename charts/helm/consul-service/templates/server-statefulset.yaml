@@ -131,6 +131,33 @@ spec:
           secret:
             secretName: {{ .Values.server.enterpriseLicense.secretName }}
         {{- end }}
+        {{- if (or (and .Values.global.gossipEncryption.secretName .Values.global.gossipEncryption.secretKey) (and .Values.global.acls.bootstrapToken.secretName .Values.global.acls.bootstrapToken.secretKey) (and .Values.global.acls.replicationToken.secretName .Values.global.acls.replicationToken.secretKey)) }}
+        - name: consul-server-secrets
+          projected:
+            defaultMode: 0400
+            sources:
+            {{- if (and .Values.global.gossipEncryption.secretName .Values.global.gossipEncryption.secretKey) }}
+            - secret:
+                name: {{ .Values.global.gossipEncryption.secretName }}
+                items:
+                - key: {{ .Values.global.gossipEncryption.secretKey }}
+                  path: gossip-key
+            {{- end }}
+            {{- if and .Values.global.acls.bootstrapToken.secretName .Values.global.acls.bootstrapToken.secretKey }}
+            - secret:
+                name: {{ .Values.global.acls.bootstrapToken.secretName | quote }}
+                items:
+                - key: {{ .Values.global.acls.bootstrapToken.secretKey | quote }}
+                  path: bootstrap-token
+            {{- end }}
+            {{- if (and .Values.global.acls.replicationToken.secretName .Values.global.acls.replicationToken.secretKey) }}
+            - secret:
+                name: {{ .Values.global.acls.replicationToken.secretName | quote }}
+                items:
+                - key: {{ .Values.global.acls.replicationToken.secretKey | quote }}
+                  path: replication-token
+            {{- end }}
+        {{- end }}
         {{- range .Values.server.extraVolumes }}
         - name: userconfig-{{ .name }}
           {{ .type }}:
@@ -205,11 +232,8 @@ spec:
             - name: TMPDIR
               value: /consul/data
             {{- if (and .Values.global.gossipEncryption.secretName .Values.global.gossipEncryption.secretKey) }}
-            - name: GOSSIP_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.global.gossipEncryption.secretName }}
-                  key: {{ .Values.global.gossipEncryption.secretKey }}
+            - name: GOSSIP_KEY_FILE
+              value: /var/run/secrets/consul/gossip-key
             {{- end }}
             {{- if .Values.global.tls.enabled }}
             - name: CONSUL_HTTP_ADDR
@@ -222,18 +246,12 @@ spec:
               value: /consul/license/{{ .Values.server.enterpriseLicense.secretKey }}
             {{- end }}
             {{- if and .Values.global.acls.bootstrapToken.secretName .Values.global.acls.bootstrapToken.secretKey }}
-            - name: ACL_BOOTSTRAP_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.global.acls.bootstrapToken.secretName | quote }}
-                  key: {{ .Values.global.acls.bootstrapToken.secretKey | quote }}
-                    {{- end }}
+            - name: ACL_BOOTSTRAP_TOKEN_FILE
+              value: /var/run/secrets/consul/bootstrap-token
+            {{- end }}
             {{- if (and .Values.global.acls.replicationToken.secretName .Values.global.acls.replicationToken.secretKey) }}
-            - name: ACL_REPLICATION_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.global.acls.replicationToken.secretName | quote }}
-                  key: {{ .Values.global.acls.replicationToken.secretKey | quote }}
+            - name: ACL_REPLICATION_TOKEN_FILE
+              value: /var/run/secrets/consul/replication-token
             {{- end }}
             {{- include "consul.extraEnvironmentVars" .Values.server | nindent 12 }}
           command:
@@ -277,17 +295,17 @@ spec:
                 -data-dir=/consul/data \
                 -domain={{ .Values.global.domain }} \
                 {{- if (and .Values.global.gossipEncryption.secretName .Values.global.gossipEncryption.secretKey) }}
-                -encrypt="${GOSSIP_KEY}" \
+                -encrypt="$(cat ${GOSSIP_KEY_FILE})" \
                 {{- end }}
                 -hcl='telemetry { {{ template "consul-telemetry.configuration" . }} }' \
                 {{- if .Values.global.federation.enabled }}
                 -hcl="connect { enable_mesh_gateway_wan_federation = true }" \
                 {{- end }}
                 {{- if (and .Values.global.acls.replicationToken.secretName .Values.global.acls.replicationToken.secretKey) }}
-                -hcl="acl { tokens { agent = \"${ACL_REPLICATION_TOKEN}\", replication = \"${ACL_REPLICATION_TOKEN}\" } }" \
+                -hcl="acl { tokens { agent = \"$(cat ${ACL_REPLICATION_TOKEN_FILE})\", replication = \"$(cat ${ACL_REPLICATION_TOKEN_FILE})\" } }" \
                 {{- end }}
                 {{- if and .Values.global.acls.bootstrapToken.secretName .Values.global.acls.bootstrapToken.secretKey }}
-                -hcl="acl { tokens { initial_management = \"${ACL_BOOTSTRAP_TOKEN}\" } }" \
+                -hcl="acl { tokens { initial_management = \"$(cat ${ACL_BOOTSTRAP_TOKEN_FILE})\" } }" \
                 {{- end }}
                 {{- if .Values.ui.enabled }}
                 -ui \
@@ -325,6 +343,11 @@ spec:
             - name: userconfig-{{ .name }}
               readOnly: true
               mountPath: /consul/userconfig/{{ .name }}
+            {{- end }}
+            {{- if (or (and .Values.global.gossipEncryption.secretName .Values.global.gossipEncryption.secretKey) (and .Values.global.acls.bootstrapToken.secretName .Values.global.acls.bootstrapToken.secretKey) (and .Values.global.acls.replicationToken.secretName .Values.global.acls.replicationToken.secretKey)) }}
+            - name: consul-server-secrets
+              mountPath: /var/run/secrets/consul
+              readOnly: true
             {{- end }}
           ports:
             {{- if (or (not .Values.global.tls.enabled) (not .Values.global.tls.httpsOnly)) }}

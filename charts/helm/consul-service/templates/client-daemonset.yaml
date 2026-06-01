@@ -155,6 +155,17 @@ spec:
             secretName: {{ .Values.server.enterpriseLicense.secretName }}
         {{- end }}
         {{- end }}
+        {{- if (and .Values.global.gossipEncryption.secretName .Values.global.gossipEncryption.secretKey) }}
+        - name: consul-client-secrets
+          projected:
+            defaultMode: 0400
+            sources:
+            - secret:
+                name: {{ .Values.global.gossipEncryption.secretName }}
+                items:
+                - key: {{ .Values.global.gossipEncryption.secretKey }}
+                  path: gossip-key
+        {{- end }}
       containers:
         - name: consul
           image: {{ template "consul.image" . }}
@@ -200,11 +211,8 @@ spec:
             - name: CONSUL_DISABLE_PERM_MGMT
               value: "true"
             {{- if (and .Values.global.gossipEncryption.secretName .Values.global.gossipEncryption.secretKey) }}
-            - name: GOSSIP_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.global.gossipEncryption.secretName }}
-                  key: {{ .Values.global.gossipEncryption.secretKey }}
+            - name: GOSSIP_KEY_FILE
+              value: /var/run/secrets/consul/gossip-key
             {{- end }}
             {{- if (and .Values.server.enterpriseLicense.secretName .Values.server.enterpriseLicense.secretKey .Values.server.enterpriseLicense.enableLicenseAutoload (not .Values.global.acls.manageSystemACLs)) }}
             - name: CONSUL_LICENSE_PATH
@@ -284,7 +292,7 @@ spec:
                 -datacenter={{ .Values.global.datacenter }} \
                 -data-dir=/consul/data \
                 {{- if (and .Values.global.gossipEncryption.secretName .Values.global.gossipEncryption.secretKey) }}
-                -encrypt="${GOSSIP_KEY}" \
+                -encrypt="$(cat ${GOSSIP_KEY_FILE})" \
                 {{- end }}
                 {{- if .Values.client.join }}
                 {{- range $value := .Values.client.join }}
@@ -341,6 +349,11 @@ spec:
               mountPath: /consul/license
               readOnly: true
             {{- end }}
+            {{- end }}
+            {{- if (and .Values.global.gossipEncryption.secretName .Values.global.gossipEncryption.secretKey) }}
+            - name: consul-client-secrets
+              mountPath: /var/run/secrets/consul
+              readOnly: true
             {{- end }}
           ports:
             {{- if (or (not .Values.global.tls.enabled) (not .Values.global.tls.httpsOnly)) }}
