@@ -103,6 +103,7 @@ spec:
         {{- include "server.securityContext" . | nindent 8 }}
       {{- end }}
       volumes:
+        {{- include "consul.tmpVolume" "8Mi" | nindent 8 }}
         - name: config
           configMap:
             name: {{ template "consul.fullname" . }}-server-config
@@ -165,6 +166,7 @@ spec:
             - |
               consul-k8s-control-plane fetch-server-region -node-name "$NODE_NAME" -output-file /consul/extra-config/locality.json
           volumeMounts:
+            {{- include "consul.tmpVolumeMount" . | nindent 12 }}
             - name: extra-config
               mountPath: /consul/extra-config
           securityContext:
@@ -296,6 +298,7 @@ spec:
                 -recursor={{ quote $value }} \
                 {{- end }}
           volumeMounts:
+            {{- include "consul.tmpVolumeMount" . | nindent 12 }}
             - name: data-{{ .Release.Namespace | trunc 58 | trimSuffix "-" }}
               mountPath: /consul/data
             - name: config

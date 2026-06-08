@@ -65,8 +65,9 @@ spec:
         - name: consul-disaster-recovery
           image: {{ template "disaster-recovery.image" . }}
           imagePullPolicy: Always
-          {{- if or (eq (include "disaster-recovery.tlsEnabled" .) "true") (eq (include "backup-daemon.tlsEnabled" .) "true") }}
           volumeMounts:
+            {{- include "consul.tmpVolumeMount" . | nindent 12 }}
+          {{- if or (eq (include "disaster-recovery.tlsEnabled" .) "true") (eq (include "backup-daemon.tlsEnabled" .) "true") }}
             {{- if eq (include "disaster-recovery.tlsEnabled" .) "true" }}
             - name: certs
               mountPath: /tls/own
@@ -164,8 +165,9 @@ spec:
               memory: {{ default "32Mi" .Values.global.disasterRecovery.resources.requests.memory }}
           securityContext:
             {{- include "consul.globalContainerSecurityContext" . | nindent 12 }}
-      {{- if or (eq (include "disaster-recovery.tlsEnabled" .) "true") (eq (include "backup-daemon.tlsEnabled" .) "true") }}
       volumes:
+        {{- include "consul.tmpVolume" "8Mi" | nindent 8 }}
+      {{- if or (eq (include "disaster-recovery.tlsEnabled" .) "true") (eq (include "backup-daemon.tlsEnabled" .) "true") }}
         {{- if eq (include "disaster-recovery.tlsEnabled" .) "true" }}
         - name: certs
           secret:

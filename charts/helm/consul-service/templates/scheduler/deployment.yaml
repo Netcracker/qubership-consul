@@ -40,6 +40,8 @@ spec:
         {{ toYaml . | nindent 8  -}}
         {{- end }}
       {{- end }}
+      volumes:
+        {{- include "consul.tmpVolume" "8Mi" | nindent 8 }}
       containers:
         - name: pod-scheduler
           image: {{ template "kubectl.image" . }}
@@ -69,6 +71,8 @@ spec:
           {{- end }}
           securityContext:
           {{- include "consul.globalContainerSecurityContext" . | nindent 12 }}
+          volumeMounts:
+            {{- include "consul.tmpVolumeMount" . | nindent 12 }}
           readinessProbe:
             exec:
               command:

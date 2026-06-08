@@ -61,6 +61,8 @@ spec:
       {{- end }}
       restartPolicy: Never
       serviceAccountName: {{ template "consul.fullname" . }}-server-acl-init-cleanup
+      volumes:
+        {{- include "consul.tmpVolume" "8Mi" | nindent 8 }}
       containers:
         - name: server-acl-init-cleanup
           image: {{ template "consul-k8s.image" . }}
@@ -77,6 +79,8 @@ spec:
             limits:
               memory: "50Mi"
               cpu: "50m"
+          volumeMounts:
+            {{- include "consul.tmpVolumeMount" . | nindent 12 }}
           securityContext:
             {{- include "consul.globalContainerSecurityContext" . | nindent 12 }}
 {{- end }}

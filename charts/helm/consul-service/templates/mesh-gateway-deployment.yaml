@@ -94,6 +94,7 @@ spec:
       terminationGracePeriodSeconds: 10
       serviceAccountName: {{ template "consul.fullname" . }}-mesh-gateway
       volumes:
+      {{- include "consul.tmpVolume" "8Mi" | nindent 6 }}
       - name: consul-service
         emptyDir:
           medium: "Memory"
@@ -159,6 +160,7 @@ spec:
               -log-level={{ default .Values.global.logLevel }} \
               -log-json={{ .Values.global.logJSON }}
         volumeMounts:
+          {{- include "consul.tmpVolumeMount" . | nindent 10 }}
           - name: consul-service
             mountPath: /consul/service
           {{- if .Values.global.tls.enabled }}
@@ -184,6 +186,7 @@ spec:
           securityContext:
             {{- include "consul.globalContainerSecurityContext" . | nindent 12 }}
           volumeMounts:
+          {{- include "consul.tmpVolumeMount" . | nindent 10 }}
           - mountPath: /consul/service
             name: consul-service
             readOnly: true

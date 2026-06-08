@@ -163,7 +163,10 @@ This template is for an init container.
         -server-port=8501 \
         -ca-file=/consul/tls/ca/tls.crt
         {{- end }}
+  securityContext:
+    {{- include "consul.globalContainerSecurityContext" . | nindent 4 }}
   volumeMounts:
+    {{- include "consul.tmpVolumeMount" . | nindent 4 }}
     {{- if not (and .Values.externalServers.enabled .Values.externalServers.useSystemRoots) }}
     - name: consul-ca-cert
       mountPath: /consul/tls/ca
@@ -202,6 +205,10 @@ Configure Consul service 'replicasForSingleService' property
 runAsNonRoot: true
 seccompProfile:
   type: "RuntimeDefault"
+{{- if eq (default "" .Values.PAAS_PLATFORM) "KUBERNETES" }}
+runAsUser: 1000
+runAsGroup: 1000
+{{- end }}
 {{- with .Values.global.securityContext }}
 {{ toYaml . }}
 {{- end -}}
@@ -209,8 +216,29 @@ seccompProfile:
 
 {{- define "consul.globalContainerSecurityContext" -}}
 allowPrivilegeEscalation: false
+readOnlyRootFilesystem: true
 capabilities:
   drop: ["ALL"]
+{{- end -}}
+
+{{/* Temporary helper for containers whose image still mutates root FS.
+     Replace with globalContainerSecurityContext after image refactor. */}}
+{{- define "consul.globalContainerSecurityContextRWRootFs" -}}
+allowPrivilegeEscalation: false
+readOnlyRootFilesystem: false
+capabilities:
+  drop: ["ALL"]
+{{- end -}}
+
+{{- define "consul.tmpVolume" -}}
+- name: tmp
+  emptyDir:
+    sizeLimit: {{ . }}
+{{- end -}}
+
+{{- define "consul.tmpVolumeMount" -}}
+- name: tmp
+  mountPath: /tmp
 {{- end -}}
 
 {{/*

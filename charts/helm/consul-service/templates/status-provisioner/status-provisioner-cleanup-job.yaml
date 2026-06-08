@@ -35,9 +35,14 @@ spec:
       {{- end }}
       restartPolicy: Never
       serviceAccountName: {{ template "consul.fullname" . }}-status-provisioner-cleanup
+      volumes:
+        {{- include "consul.tmpVolume" "16Mi" | nindent 8 }}
       containers:
         - name: status-provisioner-cleanup
           image: {{ template "deployment-status-provisioner.image" . }}
+          env:
+            - name: PYTHONDONTWRITEBYTECODE
+              value: "1"
           command:
             - "/bin/bash"
             - "-c"
@@ -49,6 +54,8 @@ spec:
             limits:
               cpu: {{ default "100m" .Values.statusProvisioner.resources.limits.cpu }}
               memory: {{ default "100Mi" .Values.statusProvisioner.resources.limits.memory }}
+          volumeMounts:
+            {{- include "consul.tmpVolumeMount" . | nindent 12 }}
           securityContext:
             {{- include "consul.globalContainerSecurityContext" . | nindent 12 }}
 {{- end }}

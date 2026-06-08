@@ -43,8 +43,9 @@ spec:
       {{- end }}
       restartPolicy: Never
       serviceAccountName: {{ template "consul.fullname" . }}-tls-init
-      {{- if (and .Values.global.tls.caCert.secretName .Values.global.tls.caKey.secretName) }}
       volumes:
+      {{- include "consul.tmpVolume" "8Mi" | nindent 6 }}
+      {{- if (and .Values.global.tls.caCert.secretName .Values.global.tls.caKey.secretName) }}
       - name: consul-ca-cert
         secret:
           secretName: {{ .Values.global.tls.caCert.secretName }}
@@ -97,8 +98,9 @@ spec:
                 -additional-dnsname={{ . }} \
                 {{- end }}
                 -dc={{ .Values.global.datacenter }}
-          {{- if (and .Values.global.tls.caCert.secretName .Values.global.tls.caKey.secretName) }}
           volumeMounts:
+            {{- include "consul.tmpVolumeMount" . | nindent 12 }}
+          {{- if (and .Values.global.tls.caCert.secretName .Values.global.tls.caKey.secretName) }}
             - name: consul-ca-cert
               mountPath: /consul/tls/ca/cert
               readOnly: true

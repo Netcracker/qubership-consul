@@ -86,6 +86,7 @@ spec:
       {{- end }}
 
       volumes:
+        {{- include "consul.tmpVolume" "8Mi" | nindent 8 }}
         - name: data
         {{- if .Values.client.dataDirectoryHostPath }}
           hostPath:
@@ -302,7 +303,10 @@ spec:
                 {{- end }}
                 -config-dir=/consul/extra-config \
                 -domain={{ .Values.global.domain }}
+          securityContext:
+            {{- include "consul.globalContainerSecurityContext" . | nindent 12 }}
           volumeMounts:
+            {{- include "consul.tmpVolumeMount" . | nindent 12 }}
             - name: data
               mountPath: /consul/data
             - name: config
@@ -444,7 +448,10 @@ spec:
               -log-level={{ default .Values.global.logLevel .Values.client.logLevel }} \
               -log-json={{ .Values.global.logJSON }} \
               -init-type="client"
+        securityContext:
+          {{- include "consul.globalContainerSecurityContext" . | nindent 10 }}
         volumeMounts:
+          {{- include "consul.tmpVolumeMount" . | nindent 10 }}
           - name: aclconfig
             mountPath: /consul/aclconfig
           - mountPath: /consul/login
@@ -492,7 +499,10 @@ spec:
             mv {{ .Values.global.datacenter }}-client-{{ .Values.global.domain }}-0.pem tls.crt
             mv {{ .Values.global.datacenter }}-client-{{ .Values.global.domain }}-0-key.pem tls.key
             cat /consul/tls/ca/cert/tls.crt >> tls.crt
+        securityContext:
+          {{- include "consul.globalContainerSecurityContext" . | nindent 10 }}
         volumeMounts:
+          {{- include "consul.tmpVolumeMount" . | nindent 10 }}
           - name: consul-client-cert
             mountPath: /consul/tls/client
           - name: consul-ca-cert

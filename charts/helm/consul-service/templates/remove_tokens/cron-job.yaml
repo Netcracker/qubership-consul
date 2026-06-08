@@ -28,6 +28,8 @@ spec:
 {{- with .Values.consulAclConfigurator.removeTokens.securityContext }}
 {{ toYaml . | nindent 12 }}
 {{- end }}
+          volumes:
+            {{- include "consul.tmpVolume" "8Mi" | nindent 12 }}
           containers:
             - name: remove-tokens
               image: {{ template "remove-tokens.image" . }}
@@ -61,6 +63,8 @@ spec:
                       key: "token"
                       {{- end}}
                     {{- end}}
+              volumeMounts:
+                {{- include "consul.tmpVolumeMount" . | nindent 16 }}
               securityContext:
                 {{- include "consul.globalContainerSecurityContext" . | nindent 16 }}
 {{- end }}

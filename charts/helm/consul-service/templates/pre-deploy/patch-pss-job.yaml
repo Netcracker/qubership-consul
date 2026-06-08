@@ -24,6 +24,8 @@ spec:
         {{- end }}
       restartPolicy: Never
       serviceAccountName: {{ template "consul.fullname" . }}-patch-pss
+      volumes:
+        {{- include "consul.tmpVolume" "8Mi" | nindent 8 }}
       containers:
         - name: upgrade-preparation
           image: {{ template "kubectl.image" . }}
@@ -59,6 +61,8 @@ spec:
             limits:
               cpu: {{ default "150m" .Values.updateResourcesJob.resources.limits.cpu }}
               memory: {{ default "150Mi" .Values.updateResourcesJob.resources.limits.memory }}
+          volumeMounts:
+            {{- include "consul.tmpVolumeMount" . | nindent 12 }}
           securityContext:
             {{- include "consul.globalContainerSecurityContext" . | nindent 12 }}
 {{ end }}

@@ -45,8 +45,9 @@ spec:
       {{- if .Values.consulAclConfigurator.priorityClassName }}
       priorityClassName: {{ .Values.consulAclConfigurator.priorityClassName | quote }}
       {{- end }}
-      {{- if .Values.global.tls.enabled }}
       volumes:
+        {{- include "consul.tmpVolume" "8Mi" | nindent 8 }}
+      {{- if .Values.global.tls.enabled }}
         - name: consul-ca-cert
           secret:
             secretName: {{ template "consul.caCertSecretName" . }}
@@ -81,6 +82,8 @@ spec:
               cpu: {{ default "100m" .Values.consulAclConfigurator.resources.limits.cpu }}
           securityContext:
             {{- include "consul.globalContainerSecurityContext" . | nindent 12 }}
+          volumeMounts:
+            {{- include "consul.tmpVolumeMount" . | nindent 12 }}
           livenessProbe:
             httpGet:
               path: /healthz
@@ -101,8 +104,9 @@ spec:
         - name: consul-acl-configurator-operator
           image: {{ template "consul-acl-configurator-operator.image" . }}
           imagePullPolicy: Always
-          {{- if .Values.global.tls.enabled }}
           volumeMounts:
+            {{- include "consul.tmpVolumeMount" . | nindent 12 }}
+          {{- if .Values.global.tls.enabled }}
             - name: consul-ca-cert
               mountPath: /consul/tls/ca/
               readOnly: true
