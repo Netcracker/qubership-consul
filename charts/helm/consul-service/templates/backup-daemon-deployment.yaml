@@ -3,6 +3,8 @@
 {{- if and (include "backupDaemon.storageClass" .) (eq .Values.backupDaemon.s3.enabled true) }}
 {{ fail "'.Values.backupDaemon.storageClass' is specified and '.Values.backupDaemon.s3.enabled' is true therefore, it is a conflict configuration. please choose one of the options. " }}
 {{- end }}
+{{- $s3AliasesData := fromYaml (include "backupDaemon.s3Aliases" .) }}
+{{- $hasS3Aliases := not (empty $s3AliasesData.items) }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -106,6 +108,11 @@ spec:
               - key: {{ default "tls.crt" .Values.global.tls.caCert.secretKey }}
                 path: tls.crt
         {{- end }}
+        {{- if $hasS3Aliases }}
+        - name: {{ template "consul.fullname" . }}-backup-daemon-s3-aliases
+          secret:
+            secretName: {{ template "consul.fullname" . }}-backup-daemon-s3-aliases
+        {{- end }}
       containers:
         - name: consul-backup-daemon
           image: {{ template "consul-backup-daemon.image" . }}
@@ -131,6 +138,11 @@ spec:
             {{- end }}
             - name: backup-storage
               mountPath: /opt/consul/backup-storage
+            {{- if $hasS3Aliases }}
+            - name: {{ template "consul.fullname" . }}-backup-daemon-s3-aliases
+              mountPath: /aliases/
+              readOnly: true
+            {{- end }}
             {{- if .Values.global.tls.enabled }}
             - name: consul-ca-cert
               mountPath: /consul/tls/ca/
@@ -151,6 +163,8 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
+            - name: S3_ALIASES_USED
+              value: {{ $hasS3Aliases | quote }}
             {{- if .Values.backupDaemon.s3.enabled }}
             - name: S3_ENABLED
               value: "{{ .Values.backupDaemon.s3.enabled }}"
