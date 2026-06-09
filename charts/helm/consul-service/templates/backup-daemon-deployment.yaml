@@ -231,8 +231,10 @@ spec:
               value: {{ .Values.global.disasterRecovery.region }}
             {{- end }}
           livenessProbe:
-            tcpSocket:
+            httpGet:
+              path: /health/prometheus
               port: {{ template "backupDaemon.port" . }}
+              scheme: {{ include "backupDaemon.protocol" . | upper }}
             failureThreshold: 3
             initialDelaySeconds: 30
             periodSeconds: 5
@@ -240,15 +242,11 @@ spec:
             timeoutSeconds: 5
           readinessProbe:
             httpGet:
-              path: /health
+              path: /health/prometheus
               port: {{ template "backupDaemon.port" . }}
-              {{- if and .Values.global.tls.enabled .Values.backupDaemon.tls.enabled }}
-              scheme: HTTPS
-              {{ else }}
-              scheme: HTTP
-              {{- end }}
-            failureThreshold: 5
-            initialDelaySeconds: 10
+              scheme: {{ include "backupDaemon.protocol" . | upper }}
+            failureThreshold: 3
+            initialDelaySeconds: 30
             periodSeconds: 5
             successThreshold: 1
             timeoutSeconds: 5
