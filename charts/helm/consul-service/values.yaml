@@ -2460,3 +2460,4 @@ PART_OF: "consul-service"
 DELIMITER: "-"
 # Artifact descriptor version which is installed.
 ARTIFACT_DESCRIPTOR_VERSION: ""  # TO_BE_REPLACED
+PAAS_PLATFORM: KUBERNETES
