@@ -92,7 +92,6 @@ spec:
           timeoutSeconds: 3
           failureThreshold: 3
         volumeMounts:
-        {{- include "consul.tmpVolumeMount" . | nindent 8 }}
         - name: config
           mountPath: /bootstrap/config
       terminationGracePeriodSeconds: 10
@@ -105,7 +104,6 @@ spec:
         {{- end }}
       {{- end }}
       volumes:
-      {{- include "consul.tmpVolume" "8Mi" | nindent 6 }}
       - name: config
         configMap:
           name: {{ template "consul.fullname" . }}-webhook-cert-manager-config

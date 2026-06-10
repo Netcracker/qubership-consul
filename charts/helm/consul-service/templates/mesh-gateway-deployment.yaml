@@ -187,7 +187,6 @@ spec:
           securityContext:
             {{- include "consul.globalContainerSecurityContext" . | nindent 12 }}
           volumeMounts:
-          {{- include "consul.tmpVolumeMount" . | nindent 10 }}
           - mountPath: /consul/service
             name: consul-service
             readOnly: true
