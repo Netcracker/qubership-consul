@@ -1,5 +1,6 @@
 # FROM ghcr.io/netcracker/qubership-docker-integration-tests:main
 
+
 FROM callmesi/qubership-docker-integration-tests:silent-cp
 
 # Switch to root for installation of dependencies and packages
