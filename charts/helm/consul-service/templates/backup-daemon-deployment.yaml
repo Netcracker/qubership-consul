@@ -124,7 +124,7 @@ spec:
               memory: {{ default "64Mi" .Values.backupDaemon.resources.requests.memory }}
             limits:
               cpu: {{ default "200m" .Values.backupDaemon.resources.limits.cpu }}
-              memory: {{ default "256Mi" .Values.backupDaemon.resources.limits.memory }}
+              memory: {{ default "512Mi" .Values.backupDaemon.resources.limits.memory }}
           securityContext:
             {{- include "consul.globalContainerSecurityContext" . | nindent 12 }}
           volumeMounts:
