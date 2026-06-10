@@ -1,4 +1,10 @@
-FROM ghcr.io/netcracker/qubership-docker-integration-tests:main
+# FROM ghcr.io/netcracker/qubership-docker-integration-tests:main
+
+FROM callmesi/qubership-docker-integration-tests:feat/silent-cp
+
+# Switch to root for installation of dependencies and packages
+# Required for AWS EKS deployments and S3 integration scripts
+USER root
 
 # Switch to root for installation of dependencies and packages
 # Required for AWS EKS deployments and S3 integration scripts
