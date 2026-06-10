@@ -25,5 +25,5 @@ RUN set -x && apk upgrade --no-cache --available
 
 RUN chmod +x ${CONSUL_HOME}/scripts/*.py
 
-USER 1000:0
+USER 100:0
 VOLUME ["${CONSUL_BACKUP}"]
