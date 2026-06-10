@@ -4,6 +4,17 @@ permissions:
   contents: read
 
 on:
+  workflow_dispatch:
+    inputs:
+      service_branch:
+        description: 'Branch to run tests against'
+        required: false
+        default: 'main'
+      skip_wait:
+        description: 'Skip waiting for dev_build.yml to complete (use when images are already built)'
+        required: false
+        type: boolean
+        default: false
   pull_request:
     types: [opened, synchronize, reopened]
     branches: [main]
@@ -26,6 +37,7 @@ on:
 
 jobs:
   Wait-for-images:
+    if: ${{ github.event_name != 'workflow_dispatch' || !inputs.skip_wait }}
     runs-on: ubuntu-latest
     outputs:
       conclusion: ${{ steps.wait.outputs.conclusion }}
@@ -39,9 +51,10 @@ jobs:
           poll-interval: 20
   Consul-Pipeline:
     needs: Wait-for-images
+    if: always() && (needs.Wait-for-images.result == 'success' || needs.Wait-for-images.result == 'skipped')
     uses: Netcracker/qubership-test-pipelines/.github/workflows/consul.yaml@247c69038e00f2a9e283412e902555f84b16dab2 # v1.8.0
     with:
-      service_branch: '${{ github.head_ref || github.ref_name }}'
+      service_branch: '${{ inputs.service_branch || github.head_ref || github.ref_name }}'
       pipeline_branch: '247c69038e00f2a9e283412e902555f84b16dab2' # v1.8.0 renovate: depName=Netcracker/qubership-test-pipelines
     secrets:
       AWS_S3_ACCESS_KEY_ID: ${{secrets.AWS_S3_ACCESS_KEY_ID}}
