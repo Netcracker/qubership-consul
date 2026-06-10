@@ -214,6 +214,19 @@ runAsGroup: 1000
 {{- end -}}
 {{- end -}}
 
+{{- define "backupDaemon.podSecurityContext" -}}
+runAsNonRoot: true
+seccompProfile:
+  type: "RuntimeDefault"
+{{- if eq (default "" .Values.PAAS_PLATFORM) "KUBERNETES" }}
+runAsUser: 100
+runAsGroup: 1000
+{{- end }}
+{{- with .Values.global.securityContext }}
+{{ toYaml . }}
+{{- end -}}
+{{- end -}}
+
 {{- define "consul.globalContainerSecurityContext" -}}
 allowPrivilegeEscalation: false
 readOnlyRootFilesystem: true

@@ -65,7 +65,7 @@ spec:
       {{- end }}
       {{- if not (eq (include "openshift.enabled" .) "true") }}
       securityContext:
-        {{- include "consul.globalPodSecurityContext" . | nindent 8 }}
+        {{- include "backupDaemon.podSecurityContext" . | nindent 8 }}
         {{- with .Values.backupDaemon.securityContext }}
         {{- toYaml . | nindent 8 -}}
         {{- end }}
