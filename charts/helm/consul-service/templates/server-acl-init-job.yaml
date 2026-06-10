@@ -48,6 +48,7 @@ spec:
           {{- toYaml . | nindent 8 -}}
         {{- end }}
         name: {{ template "consul.fullname" . }}-server-acl-init
+        {{- include "consul-service.defaultLabels" . | nindent 8 }}
         app.kubernetes.io/name: {{ template "consul.fullname" . }}-server-acl-init
       annotations:
         "consul.hashicorp.com/connect-inject": "false"

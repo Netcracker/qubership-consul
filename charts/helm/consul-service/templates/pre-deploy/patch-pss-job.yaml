@@ -3,6 +3,8 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   name: {{ template "consul.fullname" . }}-patch-pss
+  labels:
+    {{- include "consul-service.defaultLabels" . | nindent 4 }}
   annotations:
     "helm.sh/hook": pre-install,pre-upgrade
     "helm.sh/hook-weight": "1"
@@ -16,6 +18,7 @@ spec:
         chart: {{ template "consul.chart" . }}
         release: {{ .Release.Name }}
         component: pss-patch-resources
+        {{- include "consul-service.defaultLabels" . | nindent 8 }}
     spec:
       securityContext:
         {{- include "consul.globalPodSecurityContext" . | nindent 8 }}

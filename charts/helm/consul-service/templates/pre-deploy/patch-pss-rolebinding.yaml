@@ -3,6 +3,8 @@ kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: {{ template "consul.fullname" . }}-patch-pss
+  labels:
+    {{- include "consul-service.defaultLabels" . | nindent 4 }}
   annotations:
     "helm.sh/hook": pre-install,pre-upgrade
     "helm.sh/hook-delete-policy": hook-succeeded,before-hook-creation

@@ -42,6 +42,7 @@ spec:
         component: client
         hasDNS: "true"
         restore-policy: restart
+        {{- include "consul-service.defaultLabels" . | nindent 8 }}
       annotations:
         "consul.hashicorp.com/connect-inject": "false"
         "consul.hashicorp.com/config-checksum": {{ include (print $.Template.BasePath "/client-config-configmap.yaml") . | sha256sum }}

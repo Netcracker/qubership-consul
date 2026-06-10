@@ -24,6 +24,7 @@ spec:
         release: {{ .Release.Name }}
         component: status-provisioner-cleanup
         name: {{ template "consul.fullname" . }}-status-provisioner-cleanup
+        {{- include "consul-service.defaultLabels" . | nindent 8 }}
         app.kubernetes.io/name: {{ template "consul.fullname" . }}-status-provisioner-cleanup
     spec:
       {{- if not (eq (include "openshift.enabled" .) "true") }}

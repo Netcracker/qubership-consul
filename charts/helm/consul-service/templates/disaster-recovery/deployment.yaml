@@ -37,6 +37,7 @@ spec:
         app: {{ template "consul.name" . }}
         chart: {{ template "consul.chart" . }}
         release: {{ .Release.Name }}
+        {{- include "consul-service.defaultLabels" . | nindent 8 }}
         app.kubernetes.io/name: {{ template "consul.fullname" . }}-disaster-recovery
         name: {{ template "consul.fullname" . }}-disaster-recovery
         component: disaster-recovery

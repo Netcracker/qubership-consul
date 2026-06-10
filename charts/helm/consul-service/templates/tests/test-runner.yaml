@@ -9,6 +9,7 @@ metadata:
     chart: {{ template "consul.chart" . }}
     heritage: {{ .Release.Service }}
     release: {{ .Release.Name }}
+    {{- include "consul-service.defaultLabels" . | nindent 4 }}
   annotations:
     "helm.sh/hook": test-success
 spec:

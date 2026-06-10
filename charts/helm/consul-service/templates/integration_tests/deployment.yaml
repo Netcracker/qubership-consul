@@ -32,6 +32,7 @@ spec:
         {{- with .Values.integrationTests.extraLabels }}
           {{- toYaml . | nindent 8 -}}
         {{- end }}
+        {{- include "consul-service.defaultLabels" . | nindent 8 }}
         app.kubernetes.io/name: {{ template "consul-integration-tests.name" . }}
         name: {{ template "consul-integration-tests.name" . }}
     spec:

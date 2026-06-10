@@ -2,6 +2,8 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   name: {{ template "consul.fullname" . }}-update-resources
+  labels:
+    {{- include "consul-service.defaultLabels" . | nindent 4 }}
   annotations:
     "helm.sh/hook": pre-upgrade
     "helm.sh/hook-weight": "1"
@@ -15,6 +17,7 @@ spec:
         chart: {{ template "consul.chart" . }}
         release: {{ .Release.Name }}
         component: update-resources
+        {{- include "consul-service.defaultLabels" . | nindent 8 }}
     spec:
       {{- if not (eq (include "openshift.enabled" .) "true") }}
       securityContext:

@@ -44,6 +44,7 @@ spec:
         chart: {{ template "consul.chart" . }}
         release: {{ .Release.Name }}
         name: {{ template "consul.fullname" . }}-backup-daemon
+        {{- include "consul-service.defaultLabels" . | nindent 8 }}
         app.kubernetes.io/name: {{ template "consul.fullname" . }}-backup-daemon
         component: backup-daemon
       annotations:

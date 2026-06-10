@@ -43,6 +43,7 @@ spec:
         component: webhook-cert-manager
         restore-policy: restart
         name: {{ template "consul.fullname" . }}-webhook-cert-manager
+        {{- include "consul-service.defaultLabels" . | nindent 8 }}
         app.kubernetes.io/name: {{ template "consul.fullname" . }}-webhook-cert-manager
       annotations:
         "consul.hashicorp.com/connect-inject": "false"

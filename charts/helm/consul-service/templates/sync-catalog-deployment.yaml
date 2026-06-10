@@ -39,6 +39,7 @@ spec:
         component: sync-catalog
         restore-policy: restart
         name: {{ template "consul.fullname" . }}-sync-catalog
+        {{- include "consul-service.defaultLabels" . | nindent 8 }}
         app.kubernetes.io/name: {{ template "consul.fullname" . }}-sync-catalog
       annotations:
         "consul.hashicorp.com/connect-inject": "false"
