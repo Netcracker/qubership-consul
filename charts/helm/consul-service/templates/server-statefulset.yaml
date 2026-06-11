@@ -200,6 +200,10 @@ spec:
                   fieldPath: metadata.namespace
             - name: CONSUL_DISABLE_PERM_MGMT
               value: "true"
+            # Consul snapshot API creates a temp file before streaming; with readOnlyRootFilesystem
+            # the default /tmp is not writable. data-dir is already a writable mount.
+            - name: TMPDIR
+              value: /consul/data
             {{- if (and .Values.global.gossipEncryption.secretName .Values.global.gossipEncryption.secretKey) }}
             - name: GOSSIP_KEY
               valueFrom:
