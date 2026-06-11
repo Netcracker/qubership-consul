@@ -233,15 +233,6 @@ capabilities:
   drop: ["ALL"]
 {{- end -}}
 
-{{/* Temporary helper for containers whose image still mutates root FS.
-     Replace with globalContainerSecurityContext after image refactor. */}}
-{{- define "consul.globalContainerSecurityContextRWRootFs" -}}
-allowPrivilegeEscalation: false
-readOnlyRootFilesystem: false
-capabilities:
-  drop: ["ALL"]
-{{- end -}}
-
 {{- define "consul.tmpVolume" -}}
 - name: tmp
   emptyDir:
