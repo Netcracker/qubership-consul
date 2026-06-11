@@ -46,8 +46,8 @@ spec:
       {{- if .Values.consulAclConfigurator.priorityClassName }}
       priorityClassName: {{ .Values.consulAclConfigurator.priorityClassName | quote }}
       {{- end }}
-      volumes:
       {{- if .Values.global.tls.enabled }}
+      volumes:
         - name: consul-ca-cert
           secret:
             secretName: {{ template "consul.caCertSecretName" . }}
@@ -102,8 +102,8 @@ spec:
         - name: consul-acl-configurator-operator
           image: {{ template "consul-acl-configurator-operator.image" . }}
           imagePullPolicy: Always
-          volumeMounts:
           {{- if .Values.global.tls.enabled }}
+          volumeMounts:
             - name: consul-ca-cert
               mountPath: /consul/tls/ca/
               readOnly: true

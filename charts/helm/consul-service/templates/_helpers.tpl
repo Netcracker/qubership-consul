@@ -166,7 +166,6 @@ This template is for an init container.
   securityContext:
     {{- include "consul.globalContainerSecurityContext" . | nindent 4 }}
   volumeMounts:
-    {{- include "consul.tmpVolumeMount" . | nindent 4 }}
     {{- if not (and .Values.externalServers.enabled .Values.externalServers.useSystemRoots) }}
     - name: consul-ca-cert
       mountPath: /consul/tls/ca

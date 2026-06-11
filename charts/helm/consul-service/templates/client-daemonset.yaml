@@ -87,7 +87,6 @@ spec:
       {{- end }}
 
       volumes:
-        {{- include "consul.tmpVolume" "8Mi" | nindent 8 }}
         - name: data
         {{- if .Values.client.dataDirectoryHostPath }}
           hostPath:
@@ -307,7 +306,6 @@ spec:
           securityContext:
             {{- include "consul.globalContainerSecurityContext" . | nindent 12 }}
           volumeMounts:
-            {{- include "consul.tmpVolumeMount" . | nindent 12 }}
             - name: data
               mountPath: /consul/data
             - name: config
@@ -452,7 +450,6 @@ spec:
         securityContext:
           {{- include "consul.globalContainerSecurityContext" . | nindent 10 }}
         volumeMounts:
-          {{- include "consul.tmpVolumeMount" . | nindent 10 }}
           - name: aclconfig
             mountPath: /consul/aclconfig
           - mountPath: /consul/login
@@ -503,7 +500,6 @@ spec:
         securityContext:
           {{- include "consul.globalContainerSecurityContext" . | nindent 10 }}
         volumeMounts:
-          {{- include "consul.tmpVolumeMount" . | nindent 10 }}
           - name: consul-client-cert
             mountPath: /consul/tls/client
           - name: consul-ca-cert

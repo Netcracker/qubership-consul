@@ -40,8 +40,6 @@ spec:
         {{ toYaml . | nindent 8  -}}
         {{- end }}
       {{- end }}
-      volumes:
-        {{- include "consul.tmpVolume" "8Mi" | nindent 8 }}
       containers:
         - name: pod-scheduler
           image: {{ template "kubectl.image" . }}
@@ -71,19 +69,12 @@ spec:
           {{- end }}
           securityContext:
           {{- include "consul.globalContainerSecurityContext" . | nindent 12 }}
-          volumeMounts:
-            {{- include "consul.tmpVolumeMount" . | nindent 12 }}
           readinessProbe:
             exec:
               command:
                 - /bin/bash
                 - -ec
-                - |
-                  test -f /tmp/last_beat
-                  now=$(date +%s)
-                  last=$(cat /tmp/last_beat || echo 0)
-                  [[ $(( now - last )) -lt 60 ]]
-                  kubectl --request-timeout=5s -n {{ .Release.Namespace }} auth can-i get pods >/dev/null
+                - kubectl --request-timeout=5s -n {{ .Release.Namespace }} auth can-i get pods >/dev/null
             initialDelaySeconds: 10
             periodSeconds: 10
             timeoutSeconds: 5
@@ -93,11 +84,7 @@ spec:
               command:
                 - /bin/bash
                 - -ec
-                - |
-                  test -f /tmp/last_beat
-                  now=$(date +%s)
-                  last=$(cat /tmp/last_beat || echo 0)
-                  [[ $(( now - last )) -lt 300 ]]
+                - kubectl --request-timeout=5s -n {{ .Release.Namespace }} auth can-i get pods >/dev/null
             initialDelaySeconds: 60
             periodSeconds: 20
             timeoutSeconds: 5

@@ -219,7 +219,6 @@ spec:
             successThreshold: 1
             failureThreshold: 5
           volumeMounts:
-            {{- include "consul.tmpVolumeMount" . | nindent 12 }}
           {{- if and .Values.backupDaemon.enabled .Values.global.tls.enabled .Values.backupDaemon.tls.enabled (include "backupDaemon.tlsSecretName" .) }}
             - name: backup-tls-certs
               mountPath: /consul/tls/backup/
@@ -234,7 +233,6 @@ spec:
           terminationMessagePath: /dev/termination-log
           imagePullPolicy: Always
       volumes:
-        {{- include "consul.tmpVolume" "32Mi" | nindent 8 }}
       {{- if and .Values.backupDaemon.enabled .Values.global.tls.enabled .Values.backupDaemon.tls.enabled (include "backupDaemon.tlsSecretName" .) }}
         - name: backup-tls-certs
           secret:

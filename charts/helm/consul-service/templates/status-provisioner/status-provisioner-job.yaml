@@ -39,8 +39,6 @@ spec:
       {{- end }}
       restartPolicy: Never
       serviceAccountName: {{ template "consul.fullname" . }}-status-provisioner
-      volumes:
-        {{- include "consul.tmpVolume" "16Mi" | nindent 8 }}
       containers:
         - name: status-provisioner
           image: {{ template "deployment-status-provisioner.image" . }}
@@ -77,8 +75,6 @@ spec:
             limits:
               cpu: {{ default "100m" .Values.statusProvisioner.resources.limits.cpu }}
               memory: {{ default "100Mi" .Values.statusProvisioner.resources.limits.memory }}
-          volumeMounts:
-            {{- include "consul.tmpVolumeMount" . | nindent 12 }}
           securityContext:
             {{- include "consul.globalContainerSecurityContext" . | nindent 12 }}
 {{- end }}
