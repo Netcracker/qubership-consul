@@ -40,7 +40,7 @@ jobs:
           poll-interval: 20
   Consul-Pipeline:
     needs: Wait-for-images
-    uses: Netcracker/qubership-test-pipelines/.github/workflows/consul.yaml@feat/consul_hardening# v1.8.0
+    uses: Netcracker/qubership-test-pipelines/.github/workflows/consul.yaml@feat/consul_hardening # v1.8.0
     with:
       service_branch: '${{ github.head_ref || github.ref_name }}'
       pipeline_branch: 'feat/consul_hardening' # v1.8.0 renovate: depName=Netcracker/qubership-test-pipelines
