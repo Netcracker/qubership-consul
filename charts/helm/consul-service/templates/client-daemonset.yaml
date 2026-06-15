@@ -42,6 +42,7 @@ spec:
         component: client
         hasDNS: "true"
         restore-policy: restart
+        {{- include "consul-service.defaultLabels" . | nindent 8 }}
       annotations:
         "consul.hashicorp.com/connect-inject": "false"
         "consul.hashicorp.com/config-checksum": {{ include (print $.Template.BasePath "/client-config-configmap.yaml") . | sha256sum }}
@@ -302,6 +303,8 @@ spec:
                 {{- end }}
                 -config-dir=/consul/extra-config \
                 -domain={{ .Values.global.domain }}
+          securityContext:
+            {{- include "consul.globalContainerSecurityContext" . | nindent 12 }}
           volumeMounts:
             - name: data
               mountPath: /consul/data
@@ -444,6 +447,8 @@ spec:
               -log-level={{ default .Values.global.logLevel .Values.client.logLevel }} \
               -log-json={{ .Values.global.logJSON }} \
               -init-type="client"
+        securityContext:
+          {{- include "consul.globalContainerSecurityContext" . | nindent 10 }}
         volumeMounts:
           - name: aclconfig
             mountPath: /consul/aclconfig
@@ -492,6 +497,8 @@ spec:
             mv {{ .Values.global.datacenter }}-client-{{ .Values.global.domain }}-0.pem tls.crt
             mv {{ .Values.global.datacenter }}-client-{{ .Values.global.domain }}-0-key.pem tls.key
             cat /consul/tls/ca/cert/tls.crt >> tls.crt
+        securityContext:
+          {{- include "consul.globalContainerSecurityContext" . | nindent 10 }}
         volumeMounts:
           - name: consul-client-cert
             mountPath: /consul/tls/client

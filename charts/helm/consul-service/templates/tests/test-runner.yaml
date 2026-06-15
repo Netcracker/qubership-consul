@@ -9,11 +9,16 @@ metadata:
     chart: {{ template "consul.chart" . }}
     heritage: {{ .Release.Service }}
     release: {{ .Release.Name }}
+    {{- include "consul-service.defaultLabels" . | nindent 4 }}
   annotations:
     "helm.sh/hook": test-success
 spec:
-  {{- if .Values.global.tls.enabled }}
+  {{- if not (eq (include "openshift.enabled" .) "true") }}
+  securityContext:
+    {{- include "consul.globalPodSecurityContext" . | nindent 4 }}
+  {{- end }}
   volumes:
+  {{- if .Values.global.tls.enabled }}
     {{- if not (and .Values.externalServers.enabled .Values.externalServers.useSystemRoots) }}
     - name: consul-ca-cert
       secret:
@@ -33,6 +38,8 @@ spec:
   containers:
     - name: consul-test
       image: {{ template "consul.image" . }}
+      securityContext:
+        {{- include "consul.globalContainerSecurityContext" . | nindent 8 }}
       env:
         - name: HOST_IP
           valueFrom:
@@ -47,25 +54,25 @@ spec:
         - name: CONSUL_HTTP_ADDR
           value: http://$(HOST_IP):8500
         {{- end }}
-      {{- if .Values.global.tls.enabled }}
       volumeMounts:
-      {{- if .Values.global.tls.enableAutoEncrypt }}
-      - name: consul-auto-encrypt-ca-cert
-        mountPath: /consul/tls/ca
-        readOnly: true
-      {{- else }}
-      - name: consul-ca-cert
-        mountPath: /consul/tls/ca
-        readOnly: true
-      {{- end }}
-      {{- end }}
+        {{- if .Values.global.tls.enabled }}
+        {{- if .Values.global.tls.enableAutoEncrypt }}
+        - name: consul-auto-encrypt-ca-cert
+          mountPath: /consul/tls/ca
+          readOnly: true
+        {{- else }}
+        - name: consul-ca-cert
+          mountPath: /consul/tls/ca
+          readOnly: true
+        {{- end }}
+        {{- end }}
       command:
         - "/bin/sh"
         - "-ec"
         - |
-            consul members | tee members.txt
-            if [ $(grep -c consul-server members.txt) != $(grep consul-server members.txt | grep -c alive) ]
-            then
+            servers=$(consul members | grep -c consul-server || true)
+            alive=$(consul members | grep consul-server | grep -c alive || true)
+            if [ "${servers}" != "${alive}" ]; then
               echo "Failed because not all consul servers are available"
               exit 1
             fi

@@ -163,6 +163,8 @@ This template is for an init container.
         -server-port=8501 \
         -ca-file=/consul/tls/ca/tls.crt
         {{- end }}
+  securityContext:
+    {{- include "consul.globalContainerSecurityContext" . | nindent 4 }}
   volumeMounts:
     {{- if not (and .Values.externalServers.enabled .Values.externalServers.useSystemRoots) }}
     - name: consul-ca-cert
@@ -202,6 +204,23 @@ Configure Consul service 'replicasForSingleService' property
 runAsNonRoot: true
 seccompProfile:
   type: "RuntimeDefault"
+{{- if eq (default "" .Values.PAAS_PLATFORM) "KUBERNETES" }}
+runAsUser: 1000
+runAsGroup: 1000
+{{- end }}
+{{- with .Values.global.securityContext }}
+{{ toYaml . }}
+{{- end -}}
+{{- end -}}
+
+{{- define "backupDaemon.podSecurityContext" -}}
+runAsNonRoot: true
+seccompProfile:
+  type: "RuntimeDefault"
+{{- if eq (default "" .Values.PAAS_PLATFORM) "KUBERNETES" }}
+runAsUser: 100
+runAsGroup: 1000
+{{- end }}
 {{- with .Values.global.securityContext }}
 {{ toYaml . }}
 {{- end -}}
@@ -209,8 +228,20 @@ seccompProfile:
 
 {{- define "consul.globalContainerSecurityContext" -}}
 allowPrivilegeEscalation: false
+readOnlyRootFilesystem: true
 capabilities:
   drop: ["ALL"]
+{{- end -}}
+
+{{- define "consul.tmpVolume" -}}
+- name: tmp
+  emptyDir:
+    sizeLimit: {{ . }}
+{{- end -}}
+
+{{- define "consul.tmpVolumeMount" -}}
+- name: tmp
+  mountPath: /tmp
 {{- end -}}
 
 {{/*
@@ -959,6 +990,42 @@ Backup Daemon SSL secret name
       {{- printf "" -}}
     {{- end -}}
   {{- end -}}
+{{- end -}}
+
+{{/*
+Effective backup daemon S3 aliases wrapped in a map: { items: [...] }.
+fromYaml cannot parse bare YAML lists, so the output is a map with an "items" key.
+*/}}
+{{- define "backupDaemon.s3Aliases" -}}
+{{- if and .Values.backupDaemon.s3Aliases -}}
+items: {{ toYaml .Values.backupDaemon.s3Aliases | nindent 2 }}
+{{- else -}}
+items: []
+{{- end -}}
+{{- end -}}
+
+{{/*
+Build backup daemon aliases payload as JSON object.
+*/}}
+{{- define "backupDaemon.s3AliasesJson" -}}
+{{- $s3Data := fromYaml (include "backupDaemon.s3Aliases" .) -}}
+{{- $aliases := dict -}}
+{{- range $s3Data.items }}
+  {{- $out := dict -}}
+  {{- if .spec }}
+    {{- $out = merge $out (omit .spec "storageBucket" "storageUsername" "storageRegion" "storageServerUrl") -}}
+    {{- if .spec.storageBucket }}{{- $out = set $out "bucketName" .spec.storageBucket }}{{- end -}}
+    {{- if .spec.storageUsername }}{{- $out = set $out "accessKeyId" .spec.storageUsername }}{{- end -}}
+    {{- $out = set $out "region" (default "us-east-1" .spec.storageRegion) -}}
+    {{- if .spec.storageServerUrl }}{{- $out = set $out "s3Url" .spec.storageServerUrl }}{{- end -}}
+  {{- end }}
+  {{- if .secretContent }}
+    {{- $out = merge $out (omit .secretContent "storagePassword") -}}
+    {{- if .secretContent.storagePassword }}{{- $out = set $out "accessKeySecret" .secretContent.storagePassword }}{{- end -}}
+  {{- end }}
+  {{- $aliases = set $aliases .name $out -}}
+{{- end }}
+{{- $aliases | toPrettyJson -}}
 {{- end -}}
 
 {{/*

@@ -5,4 +5,6 @@ RUN microdnf install --nodocs \
     git \
     && microdnf clean all
 
+USER 1000
+
 ENTRYPOINT ["/bin/bash"]
