@@ -1,4 +1,4 @@
-FROM ghcr.io/netcracker/qubership-backup-daemon-go:0.1.14
+FROM ghcr.io/netcracker/qubership-backup-daemon-go:bugfix_memory_consumption_fix
 
 ENV CONSUL_HOME=/opt/consul \
     CONSUL_BACKUP=/opt/consul/backup-storage
