@@ -1,4 +1,4 @@
-FROM ghcr.io/netcracker/qubership-docker-integration-tests:feat_secrets_evs_reading
+FROM ghcr.io/netcracker/qubership-docker-integration-tests:feat-secrets_evs_readingsecrets_evs_reading
 
 # Switch to root for installation of dependencies and packages
 # Required for AWS EKS deployments and S3 integration scripts
