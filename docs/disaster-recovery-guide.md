@@ -15,7 +15,7 @@ The topics covered in this section are:
 The Disaster Recovery scheme implies two separate Consul clusters, one of which is in the `active` mode, 
 and the other is in the `standby` mode.
 
-![DR Scheme](images/consul_dr_scheme.drawio.png)
+![DR Scheme](docs/images/consul_dr_scheme.drawio.png)
 
 The process includes making backups of Consul data on `active` side before switching and then restoring them on `standby` side. 
 It also performs periodically backups on `active` side.

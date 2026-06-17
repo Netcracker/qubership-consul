@@ -33,7 +33,7 @@ Consul ships with a simple built-in proxy so that everything works out of the bo
 as Consul DataPlane.
 
 Consul is developed by [HashiCorp](https://www.hashicorp.com/products/consul/). 
-The Qubership-Consul delivery provides official images of Consul and Consul k8s 
+The Qubership-Consul delivery provides official docs/images of Consul and Consul k8s 
 with changed deployment procedure. For more information about Consul, refer to the _Consul Introduction_ at 
 [https://www.consul.io/intro/index.html](https://www.consul.io/intro/index.html).
 
@@ -62,7 +62,7 @@ The key features of Consul are:
 Deploying a Consul cluster, servers and clients, in Kubernetes can be done with the [Helm chart](/charts/helm/consul-service)
 in this project. This configuration is useful for managing services within Kubernetes.
 
-![Kubernetes Diagram](images/k8s-consul-simple.png)
+![Kubernetes Diagram](/docs/images/k8s-consul-simple.png)
 
 The Consul datacenter in Kubernetes functions same as a platform independent Consul datacenter, such as Consul clusters deployed on
 bare metal servers or virtual machines.
@@ -75,18 +75,18 @@ with own services and additional features.
 The deployment procedure and additional features include the following:
 
 * Support HA scheme and different configurations.
-  For more detailed information, refer to [Installation Guide](/docs/public/installation.md).
+  For more detailed information, refer to [Installation Guide](/docs/installation-guide/installation.md).
 * Backup and restore data. For more detailed information,
   refer to [Consul Backup Daemon Guide](https://github.com/netcracker/consul-backup-daemon/blob/main/documentation/maintenance-guide/development-guide/README.md).
 * Monitoring integration with Grafana Dashboard and Prometheus Alerts. For more detailed information,
-  refer to [Monitoring Guide](/docs/public/monitoring.md).
+  refer to [Monitoring Guide](/docs/monitoring-guide.md).
 * User Interface (UI) provided by Consul UI.
 * Disaster Recovery scheme with data replication via backup and restore. For more detailed information,
   refer to [Disaster Recovery Guide](/docs/public/disaster-recovery.md).
 
 # Consul Components
 
-![Application Overview](images/consul_components_overview.drawio.png)
+![Application Overview](/docs/images/consul_components_overview.drawio.png)
 
 ## Consul
 
@@ -176,7 +176,7 @@ The deployment schemes for On-Prem are specified in the below sub-sections.
 
 The HA deployment scheme is shown in the following image:
 
-![HA scheme](images/consul_on_prem_deploy.drawio.png)
+![HA scheme](/docs/images/consul_on_prem_deploy.drawio.png)
 
 Following the above pictures, let us describe the main parts of the Consul K8s deployment:
 
@@ -194,7 +194,7 @@ For a non-HA deployment scheme, it is possible to use one pod of Consul cluster.
 
 The HA deployment scheme with clients is described in this section.
 
-![HA Separated Scheme](images/consul_on_prem_deploy_with_clients.drawio.png)
+![HA Separated Scheme](/docs/images/consul_on_prem_deploy_with_clients.drawio.png)
 
 In this scheme, Consul Client pods are deployed for each Kubernetes nodes and expose access via Host Port 8500. 
 When this scheme is applied, every microservice can access consul just using HOST_IP:8500 without discovery of Consul server.
@@ -204,7 +204,7 @@ But this scheme requires specific privileges due to exposing ports and not recom
 
 The DR deployment scheme is described in this section.
 
-![DR Scheme](images/consul_dr_deploy.drawio.png)
+![DR Scheme](/docs/images/consul_dr_deploy.drawio.png)
 
 The Consul provides the one scheme for disaster recovery: it is replication of data via backup and restore operations
 during switchover and failover (blue arrows).

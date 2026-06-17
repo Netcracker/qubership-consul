@@ -17,13 +17,13 @@ For all graph panels, the mean metric value is used in the given interval. For a
 
 An overview of the Consul dashboard is shown in the image below.
 
-![Consul Dashboard](/docs/public/images/consul-monitoring_dashboard.png)
+![Consul Dashboard](/docs/images/consul-monitoring_dashboard.png)
 
 ## Metrics
 
 **Cluster Overview**
 
-![Dashboard](/docs/public/images/consul-monitoring_cluster-overview.png)
+![Dashboard](/docs/images/consul-monitoring_cluster-overview.png)
 
 `Consul Cluster Health` - Displays the overall health of the local server cluster. The following cluster states are displayed:
 
@@ -68,7 +68,7 @@ Raft is a complex protocol, for more information refer to the _Official Consul D
 
 **CPU Metrics**
 
-![Dashboard](/docs/public/images/consul-monitoring_cpu-metrics.png)
+![Dashboard](/docs/images/consul-monitoring_cpu-metrics.png)
 
 `Server Container CPU Usage` - Displays the CPU used by server containers and limits that show the maximum number of CPUs
 the container can use.
@@ -80,7 +80,7 @@ Consul keeps all of its data such as the KV store, the catalog and so on in memo
 If Consul consumes all the available memory, it may crash. 
 You should monitor total available RAM to make sure some RAM is available for other system processes.
 
-![Dashboard](/docs/public/images/consul-monitoring_memory-metrics.png)
+![Dashboard](/docs/images/consul-monitoring_memory-metrics.png)
 
 `Server Container Memory Usage` - Displays the memory used by server containers and limits that show the maximum number
 of memory the container can use.
@@ -90,7 +90,7 @@ Consul servers are running low on memory if the value exceeds 90% of the limit.
 
 **GC Metrics**
 
-![Dashboard](/docs/public/images/consul-monitoring_gc-metrics.png)
+![Dashboard](/docs/images/consul-monitoring_gc-metrics.png)
 
 `GC Pause` - Displays the number of nanoseconds consumed by stop-the-world garbage collection (GC) pauses since Consul started.
 Garbage collection (GC) pauses are a "stop-the-world" event, all runtime threads are blocked until GC completes. 
@@ -106,7 +106,7 @@ If it exceeds 5 seconds per minute, you should consider the cluster to be in a c
   
 **Disk Metrics**
 
-![Dashboard](/docs/public/images/consul-monitoring_disk-metrics.png)
+![Dashboard](/docs/images/consul-monitoring_disk-metrics.png)
 
 `Disk Volume` - Disk Volume stats.
 
@@ -124,7 +124,7 @@ If it exceeds 5 seconds per minute, you should consider the cluster to be in a c
 
 **KV**
 
-![Dashboard](/docs/public/images/consul-monitoring-kv-metrics.png)
+![Dashboard](/docs/images/consul-monitoring-kv-metrics.png)
 
 `KV Applies Rate` - Shows the rate of KV operations in interval buckets. 
 
@@ -136,11 +136,11 @@ If it exceeds 5 seconds per minute, you should consider the cluster to be in a c
 
 **ACL**
 
-![Dashboard](/docs/public/images/consul-monitoring-acl-metrics1.png)
+![Dashboard](/docs/images/consul-monitoring-acl-metrics1.png)
 
-![Dashboard](/docs/public/images/consul-monitoring-acl-metrics2.png)
+![Dashboard](/docs/images/consul-monitoring-acl-metrics2.png)
 
-![Dashboard](/docs/public/images/consul-monitoring-acl-metrics3.png)
+![Dashboard](/docs/images/consul-monitoring-acl-metrics3.png)
 
 `ACL Login Rate` - Counts the number of times we log in with ACL token by 5m. 
 
@@ -172,7 +172,7 @@ If it exceeds 5 seconds per minute, you should consider the cluster to be in a c
 
 **API HTTP**
 
-![Dashboard](/docs/public/images/consul-monitoring-api-http-metrics.png)
+![Dashboard](/docs/images/consul-monitoring-api-http-metrics.png)
 
 `Consul API HTTP Rate By Pod` - Consul API HTTP rate by pod.
 
@@ -180,7 +180,7 @@ If it exceeds 5 seconds per minute, you should consider the cluster to be in a c
 
 **Catalog**
 
-![Dashboard](/docs/public/images/consul-monitoring-catalog-metrics.png)
+![Dashboard](/docs/images/consul-monitoring-catalog-metrics.png)
 
 `Catalog Operations Rate` - This shows the rate of increase for catalog register and deregister operations.
 
