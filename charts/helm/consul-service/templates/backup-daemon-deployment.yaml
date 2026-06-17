@@ -1,5 +1,5 @@
 # The deployment for running the backup-daemon pod
-{{- if (or (and (ne (.Values.backupDaemon.enabled | toString) "-") .Values.backupDaemon.enabled) (and (eq (.Values.backupDaemon.enabled | toString) "-") .Values.global.enabled)) }}
+{{ if (or (and (ne (.Values.backupDaemon.enabled | toString) "-") .Values.backupDaemon.enabled) (and (eq (.Values.backupDaemon.enabled | toString) "-") .Values.global.enabled)) }}
 {{- if and (include "backupDaemon.storageClass" .) (eq .Values.backupDaemon.s3.enabled true) }}
 {{ fail "'.Values.backupDaemon.storageClass' is specified and '.Values.backupDaemon.s3.enabled' is true therefore, it is a conflict configuration. please choose one of the options. " }}
 {{- end }}
