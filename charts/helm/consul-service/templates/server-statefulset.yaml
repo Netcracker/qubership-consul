@@ -5,6 +5,11 @@
 {{- if .Values.server.bootstrapExpect }}{{ if lt (int .Values.server.bootstrapExpect) (int (include "server.replicas" .)) }}{{ fail "server.bootstrapExpect cannot be less than server.replicas" }}{{ end }}{{ end }}
 {{- if .Values.server.telemetry }}{{ fail "server.telemetry has been removed. Please use global.metrics instead." }}{{ end -}}
 {{ $volumesSpecified := (or .Values.server.persistentVolumes (include "server.storageClass" .)) }}
+{{- $serverPodSecretsMount := include "consul.podSecretsMountPath" (dict "service" "consul-server") -}}
+{{- $hasGossipSecret := and .Values.global.gossipEncryption.secretName .Values.global.gossipEncryption.secretKey -}}
+{{- $hasBootstrapSecret := and .Values.global.acls.bootstrapToken.secretName .Values.global.acls.bootstrapToken.secretKey -}}
+{{- $hasReplicationSecret := and .Values.global.acls.replicationToken.secretName .Values.global.acls.replicationToken.secretKey -}}
+{{- $hasServerPodSecrets := or $hasGossipSecret $hasBootstrapSecret $hasReplicationSecret -}}
 # StatefulSet to run the actual Consul server cluster.
 apiVersion: apps/v1
 kind: StatefulSet
@@ -75,6 +80,9 @@ spec:
         "prometheus.io/scrape": "true"
         "prometheus.io/path": "/v1/agent/metrics"
         "prometheus.io/port": "8500"
+        {{- end }}
+        {{- if $hasServerPodSecrets }}
+        checksum/consul-server-pod-secrets: {{ printf "%v-%v-%v" $hasGossipSecret $hasBootstrapSecret $hasReplicationSecret | sha256sum }}
         {{- end }}
     spec:
     {{- if (eq (include "pod-scheduler.enabled" .) "true") }}
@@ -147,6 +155,33 @@ spec:
             {{- end }}
             {{- end }}
         {{- end }}
+        {{- if $hasServerPodSecrets }}
+        - name: consul-server-pod-secrets
+          projected:
+            defaultMode: 420
+            sources:
+              {{- if $hasGossipSecret }}
+              - secret:
+                  name: {{ .Values.global.gossipEncryption.secretName }}
+                  items:
+                    - key: {{ .Values.global.gossipEncryption.secretKey }}
+                      path: GOSSIP_KEY
+              {{- end }}
+              {{- if $hasBootstrapSecret }}
+              - secret:
+                  name: {{ .Values.global.acls.bootstrapToken.secretName }}
+                  items:
+                    - key: {{ .Values.global.acls.bootstrapToken.secretKey }}
+                      path: ACL_BOOTSTRAP_TOKEN
+              {{- end }}
+              {{- if $hasReplicationSecret }}
+              - secret:
+                  name: {{ .Values.global.acls.replicationToken.secretName }}
+                  items:
+                    - key: {{ .Values.global.acls.replicationToken.secretKey }}
+                      path: ACL_REPLICATION_TOKEN
+              {{- end }}
+        {{- end }}
       {{- if .Values.server.priorityClassName }}
       priorityClassName: {{ .Values.server.priorityClassName | quote }}
       {{- end }}
@@ -204,13 +239,6 @@ spec:
             # the default /tmp is not writable. data-dir is already a writable mount.
             - name: TMPDIR
               value: /consul/data
-            {{- if (and .Values.global.gossipEncryption.secretName .Values.global.gossipEncryption.secretKey) }}
-            - name: GOSSIP_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.global.gossipEncryption.secretName }}
-                  key: {{ .Values.global.gossipEncryption.secretKey }}
-            {{- end }}
             {{- if .Values.global.tls.enabled }}
             - name: CONSUL_HTTP_ADDR
               value: https://localhost:8501
@@ -221,26 +249,25 @@ spec:
             - name: CONSUL_LICENSE_PATH
               value: /consul/license/{{ .Values.server.enterpriseLicense.secretKey }}
             {{- end }}
-            {{- if and .Values.global.acls.bootstrapToken.secretName .Values.global.acls.bootstrapToken.secretKey }}
-            - name: ACL_BOOTSTRAP_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.global.acls.bootstrapToken.secretName | quote }}
-                  key: {{ .Values.global.acls.bootstrapToken.secretKey | quote }}
-                    {{- end }}
-            {{- if (and .Values.global.acls.replicationToken.secretName .Values.global.acls.replicationToken.secretKey) }}
-            - name: ACL_REPLICATION_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.global.acls.replicationToken.secretName | quote }}
-                  key: {{ .Values.global.acls.replicationToken.secretKey | quote }}
-            {{- end }}
             {{- include "consul.extraEnvironmentVars" .Values.server | nindent 12 }}
           command:
             - "/bin/sh"
             - "-ec"
             - |
               CONSUL_FULLNAME="{{template "consul.fullname" . }}"
+
+              {{- if $hasServerPodSecrets }}
+              {{ include "consul.resolveSecretShell" (dict "mountPath" $serverPodSecretsMount) | nindent 14 }}
+              {{- if $hasGossipSecret }}
+              GOSSIP_KEY="$(resolve_secret_value "GOSSIP_KEY")"
+              {{- end }}
+              {{- if $hasBootstrapSecret }}
+              ACL_BOOTSTRAP_TOKEN="$(resolve_secret_value "ACL_BOOTSTRAP_TOKEN")"
+              {{- end }}
+              {{- if $hasReplicationSecret }}
+              ACL_REPLICATION_TOKEN="$(resolve_secret_value "ACL_REPLICATION_TOKEN")"
+              {{- end }}
+              {{- end }}
 
               {{ template "consul.extraconfig" }}
 
@@ -276,17 +303,17 @@ spec:
                 -datacenter={{ .Values.global.datacenter }} \
                 -data-dir=/consul/data \
                 -domain={{ .Values.global.domain }} \
-                {{- if (and .Values.global.gossipEncryption.secretName .Values.global.gossipEncryption.secretKey) }}
+                {{- if $hasGossipSecret }}
                 -encrypt="${GOSSIP_KEY}" \
                 {{- end }}
                 -hcl='telemetry { {{ template "consul-telemetry.configuration" . }} }' \
                 {{- if .Values.global.federation.enabled }}
                 -hcl="connect { enable_mesh_gateway_wan_federation = true }" \
                 {{- end }}
-                {{- if (and .Values.global.acls.replicationToken.secretName .Values.global.acls.replicationToken.secretKey) }}
+                {{- if $hasReplicationSecret }}
                 -hcl="acl { tokens { agent = \"${ACL_REPLICATION_TOKEN}\", replication = \"${ACL_REPLICATION_TOKEN}\" } }" \
                 {{- end }}
-                {{- if and .Values.global.acls.bootstrapToken.secretName .Values.global.acls.bootstrapToken.secretKey }}
+                {{- if $hasBootstrapSecret }}
                 -hcl="acl { tokens { initial_management = \"${ACL_BOOTSTRAP_TOKEN}\" } }" \
                 {{- end }}
                 {{- if .Values.ui.enabled }}
@@ -319,6 +346,11 @@ spec:
             {{- if (and .Values.server.enterpriseLicense.secretName .Values.server.enterpriseLicense.secretKey .Values.server.enterpriseLicense.enableLicenseAutoload) }}
             - name: consul-license
               mountPath: /consul/license
+              readOnly: true
+            {{- end }}
+            {{- if $hasServerPodSecrets }}
+            - name: consul-server-pod-secrets
+              mountPath: {{ $serverPodSecretsMount }}
               readOnly: true
             {{- end }}
             {{- range .Values.server.extraVolumes }}

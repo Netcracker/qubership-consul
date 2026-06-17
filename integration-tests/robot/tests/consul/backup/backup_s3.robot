@@ -4,16 +4,14 @@ Library    Collections
 Library    RequestsLibrary
 Library    S3BackupLibrary  url=%{S3_URL}
 ...                         bucket=%{S3_BUCKET}
-...                         key_id=%{S3_KEY_ID}
-...                         key_secret=%{S3_KEY_SECRET}
+...                         key_id=${S3_KEY_ID}
+...                         key_secret=${S3_KEY_SECRET}
 ...                         ssl_verify=false
 Suite Setup  Preparation
 
 *** Variables ***
 ${CONSUL_BACKUP_DAEMON_HOST}      %{CONSUL_BACKUP_DAEMON_HOST}
 ${CONSUL_BACKUP_DAEMON_PORT}      %{CONSUL_BACKUP_DAEMON_PORT}
-${CONSUL_BACKUP_DAEMON_USERNAME}  %{CONSUL_BACKUP_DAEMON_USERNAME=}
-${CONSUL_BACKUP_DAEMON_PASSWORD}  %{CONSUL_BACKUP_DAEMON_PASSWORD=}
 ${CONSUL_BACKUP_DAEMON_PROTOCOL}  %{CONSUL_BACKUP_DAEMON_PROTOCOL}
 ${DATACENTER_NAME}                %{DATACENTER_NAME}
 ${BACKUP_TIMEOUT}                 2min

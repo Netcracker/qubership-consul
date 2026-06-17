@@ -1042,3 +1042,69 @@ Service Account for Site Manager depending on smSecureAuth
     {{- end -}}
   {{- end -}}
 {{- end -}}
+
+{{/*
+Mount path for env→file migrated pod secrets (readOnly projected volume).
+*/}}
+{{- define "consul.podSecretsMountPath" -}}
+{{- printf "/etc/secrets/%s-pod-secrets" .service -}}
+{{- end -}}
+
+{{/*
+Resolve ACL bootstrap / replication token Secret reference used across workloads.
+*/}}
+{{- define "consul.aclBootstrapSecretName" -}}
+{{- if and .Values.global.acls.bootstrapToken.secretName .Values.global.acls.bootstrapToken.secretKey -}}
+{{- .Values.global.acls.bootstrapToken.secretName -}}
+{{- else if and .Values.global.acls.replicationToken.secretName .Values.global.acls.replicationToken.secretKey -}}
+{{- .Values.global.acls.replicationToken.secretName -}}
+{{- else -}}
+{{- printf "%s-bootstrap-acl-token" (include "consul.fullname" .) -}}
+{{- end -}}
+{{- end -}}
+
+{{- define "consul.aclBootstrapSecretKey" -}}
+{{- if and .Values.global.acls.bootstrapToken.secretName .Values.global.acls.bootstrapToken.secretKey -}}
+{{- .Values.global.acls.bootstrapToken.secretKey -}}
+{{- else if and .Values.global.acls.replicationToken.secretName .Values.global.acls.replicationToken.secretKey -}}
+{{- .Values.global.acls.replicationToken.secretKey -}}
+{{- else -}}
+token
+{{- end -}}
+{{- end -}}
+
+{{/*
+Shell file-first secret resolver (inline in container command scripts).
+*/}}
+{{- define "consul.resolveSecretShell" -}}
+SECRETS_DIR="${SECRETS_DIR:-{{ .mountPath }}}"
+resolve_secret_value() {
+  local key="$1"
+  local path="${SECRETS_DIR}/${key}"
+  if [ -r "${path}" ]; then
+    tr -d '\r' < "${path}"
+    return 0
+  fi
+  eval "printf '%s' \"\${${key}:-}\""
+}
+{{- end -}}
+
+{{/*
+Projected pod-secrets volume with defaultMode 420 (0644).
+*/}}
+{{- define "consul.podSecretsProjectedVolume" -}}
+- name: {{ .volumeName }}
+  projected:
+    defaultMode: 420
+    sources:
+{{ .sources | nindent 6 }}
+{{- end -}}
+
+{{/*
+Read-only mount for a pod-secrets projected volume.
+*/}}
+{{- define "consul.podSecretsVolumeMount" -}}
+- name: {{ .volumeName }}
+  mountPath: {{ .mountPath }}
+  readOnly: true
+{{- end -}}
