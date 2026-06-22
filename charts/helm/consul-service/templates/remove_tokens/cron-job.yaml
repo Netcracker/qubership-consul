@@ -19,6 +19,10 @@ spec:
       backoffLimit: 2
       activeDeadlineSeconds: 600
       template:
+        metadata:
+          labels:
+            {{- include "consul-service.defaultLabels" . | nindent 12 }}
+            app.kubernetes.io/name: {{ template "consul.fullname" . }}-remove-tokens
         spec:
           restartPolicy: Never
           serviceAccountName: consul-remove-tokens

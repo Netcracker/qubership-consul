@@ -1,4 +1,11 @@
 {{- if .Values.integrationTests.enabled }}
+{{- $s3AliasesData := fromYaml (include "backupDaemon.s3Aliases" .) }}
+{{- $defaultS3AliasName := "" }}
+{{- range $s3AliasesData.items }}
+  {{- if and .name .spec .spec.default }}
+    {{- $defaultS3AliasName = .name }}
+  {{- end }}
+{{- end }}
 kind: Deployment
 apiVersion: apps/v1
 metadata:
@@ -25,6 +32,7 @@ spec:
         {{- with .Values.integrationTests.extraLabels }}
           {{- toYaml . | nindent 8 -}}
         {{- end }}
+        {{- include "consul-service.defaultLabels" . | nindent 8 }}
         app.kubernetes.io/name: {{ template "consul-integration-tests.name" . }}
         name: {{ template "consul-integration-tests.name" . }}
     spec:
@@ -47,6 +55,8 @@ spec:
             - containerPort: 8080
               protocol: TCP
           env:
+            - name: PYTHONDONTWRITEBYTECODE
+              value: "1"
             - name: TAGS
               value: {{ .Values.integrationTests.tags }}
             {{- if .Values.deployDescriptor -}}
@@ -109,25 +119,27 @@ spec:
                   name: {{ template "consul.fullname" . }}-backup-daemon-secret
                   key: password
             {{- end }}
+            {{- if .Values.backupDaemon.s3.enabled }}
             - name: S3_ENABLED
-              value: {{ .Values.backupDaemon.s3.enabled | quote }}
+              value: "true"
             - name: S3_URL
               value: {{ .Values.backupDaemon.s3.url | quote }}
             - name: S3_BUCKET
               value: {{ .Values.backupDaemon.s3.bucket | quote }}
             - name: S3_KEY_ID
-            {{- if .Values.backupDaemon.s3.enabled }}
               valueFrom:
                 secretKeyRef:
                   name: {{ template "consul.fullname" . }}-s3-secret
                   key: s3-key-id
-            {{- end }}
             - name: S3_KEY_SECRET
-            {{- if .Values.backupDaemon.s3.enabled }}
               valueFrom:
                 secretKeyRef:
                   name: {{ template "consul.fullname" . }}-s3-secret
                   key: s3-key-secret
+            - name: S3_ALIASES_SECRET_NAME
+              value: {{ template "consul.fullname" . }}-backup-daemon-s3-aliases
+            - name: S3_DEFAULT_ALIAS_NAME
+              value: {{ default "default" $defaultS3AliasName | quote }}
             {{- end }}
             - name: DATACENTER_NAME
               value: {{ .Values.global.datacenter }}
@@ -207,6 +219,7 @@ spec:
             successThreshold: 1
             failureThreshold: 5
           volumeMounts:
+            {{- include "consul.tmpVolumeMount" . | nindent 12 }}
           {{- if and .Values.backupDaemon.enabled .Values.global.tls.enabled .Values.backupDaemon.tls.enabled (include "backupDaemon.tlsSecretName" .) }}
             - name: backup-tls-certs
               mountPath: /consul/tls/backup/
@@ -221,6 +234,7 @@ spec:
           terminationMessagePath: /dev/termination-log
           imagePullPolicy: Always
       volumes:
+        {{- include "consul.tmpVolume" "32Mi" | nindent 8 }}
       {{- if and .Values.backupDaemon.enabled .Values.global.tls.enabled .Values.backupDaemon.tls.enabled (include "backupDaemon.tlsSecretName" .) }}
         - name: backup-tls-certs
           secret:

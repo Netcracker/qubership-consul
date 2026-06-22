@@ -26,6 +26,7 @@ spec:
         chart: {{ template "consul.chart" . }}
         release: {{ .Release.Name }}
         component: status-provisioner
+        {{- include "consul-service.defaultLabels" . | nindent 8 }}
         app.kubernetes.io/name: {{ template "consul.fullname" . }}-status-provisioner
         name: {{ template "consul.fullname" . }}-status-provisioner
     spec:
@@ -43,6 +44,8 @@ spec:
           image: {{ template "deployment-status-provisioner.image" . }}
           imagePullPolicy: "Always"
           env:
+            - name: PYTHONDONTWRITEBYTECODE
+              value: "1"
             - name: NAMESPACE
               valueFrom:
                 fieldRef:

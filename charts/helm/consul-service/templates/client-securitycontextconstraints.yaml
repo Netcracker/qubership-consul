@@ -24,6 +24,8 @@ allowHostPID: false
 allowHostPorts: true
 allowPrivilegeEscalation: true
 allowPrivilegedContainer: false
+seccompProfiles:
+  - '*'
 allowedCapabilities: []
 defaultAddCapabilities: []
 fsGroup:

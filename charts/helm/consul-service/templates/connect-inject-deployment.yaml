@@ -44,6 +44,7 @@ spec:
         component: connect-injector
         restore-policy: restart
         name: {{ template "consul.fullname" . }}-connect-injector-webhook-deployment
+        {{- include "consul-service.defaultLabels" . | nindent 8 }}
         app.kubernetes.io/name: {{ template "consul.fullname" . }}-connect-injector-webhook-deployment
       annotations:
         "consul.hashicorp.com/connect-inject": "false"

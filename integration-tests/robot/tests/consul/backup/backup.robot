@@ -33,7 +33,7 @@ Create Unique Key And Value
 
 Convert Json ${json} To Type
     ${json_dictionary}  Evaluate  json.loads('''${json}''')  json
-    [Return]  ${json_dictionary}
+    RETURN  ${json_dictionary}
 
 Create Test Data
     Add Test Data To Consul  ${test_key}  ${test_value}
@@ -45,7 +45,7 @@ Full Backup
     ${backup_id}=  Set Variable  ${response.content}
     Wait Until Keyword Succeeds  ${BACKUP_TIMEOUT}  ${BACKUP_TIME_INTERVAL}
     ...  Check Backup Status  ${backup_id}  ${False}
-    [Return]  ${backup_id}
+    RETURN  ${backup_id}
 
 Check Backup Status
     [Arguments]  ${backup_id}  ${is_granular}
@@ -80,7 +80,7 @@ Granular Backup
     ${backup_id}=  Set Variable  ${response.content}
     Wait Until Keyword Succeeds  ${BACKUP_TIMEOUT}  ${BACKUP_TIME_INTERVAL}
     ...  Check Backup Status  ${backup_id}  ${True}
-    [Return]  ${backup_id}
+    RETURN  ${backup_id}
 
 Delete Backup From Backup Daemon
     [Arguments]  ${backup_id}
