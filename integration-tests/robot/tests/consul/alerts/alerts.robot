@@ -56,7 +56,6 @@ Delete Server Pods
 *** Test Cases ***
 Consul Does Not Exist Alert
     [Tags]  alerts  consul_does_not_exist_alert
-    ${replicas}=  Set Variable  ${None}
     Wait Until Keyword Succeeds  ${ALERT_RETRY_TIME}  ${ALERT_RETRY_INTERVAL}
     ...  Check That Prometheus Alert Is Inactive  ${CONSUL_DOES_NOT_EXIST_ALERT_NAME}
     ${replicas}=  Get Stateful Set Replicas Count  ${CONSUL_HOST}  ${CONSUL_NAMESPACE}
