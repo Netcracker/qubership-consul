@@ -47,7 +47,7 @@ Full Backup
     ${backup_id}=  Set Variable  ${response.content}
     Wait Until Keyword Succeeds  ${BACKUP_TIMEOUT}  ${BACKUP_TIME_INTERVAL}
     ...  Check Backup Status  ${backup_id}  ${False}
-    [Return]  ${response.text}
+    RETURN  ${response.text}
 
 Check Backup Status
     [Arguments]  ${backup_id}  ${is_granular}
@@ -82,7 +82,7 @@ Granular Backup
     ${backup_id}=  Set Variable  ${response.content}
     Wait Until Keyword Succeeds  ${BACKUP_TIMEOUT}  ${BACKUP_TIME_INTERVAL}
     ...  Check Backup Status  ${backup_id}  ${True}
-    [Return]  ${response.text}
+    RETURN  ${response.text}
 
 Delete Backup From Backup Daemon
     [Arguments]  ${backup_id}
