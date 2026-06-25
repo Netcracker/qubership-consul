@@ -24,12 +24,16 @@ metadata:
 spec:
   parentRefs:
   {{- if and .Values.GATEWAY_SYSTEM_NAME .Values.GATEWAY_SYSTEM_NAMESPACE }}
-    - name: {{ .Values.GATEWAY_SYSTEM_NAME }}
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: {{ .Values.GATEWAY_SYSTEM_NAME }}
       namespace: {{ .Values.GATEWAY_SYSTEM_NAMESPACE }}
       port: 443
   {{- else if .Values.ui.envoyGateway.parentRefs }}
   {{- range .Values.ui.envoyGateway.parentRefs }}
-    - name: {{ .name }}
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: {{ .name }}
       namespace: {{ .namespace }}
       port: 443
   {{- end }}
@@ -49,6 +53,9 @@ spec:
             value: /
       backendRefs:
         - name: {{ $serviceName }}
+          group: ""
+          kind: Service
+          weight: 1
           port: {{ if (and $global.tls.enabled $global.tls.httpsOnly) }}{{ $httpsPort }}{{ else }}{{ $httpPort }}{{ end }}
 
 {{- if and $global.tls.enabled $global.tls.httpsOnly }}
