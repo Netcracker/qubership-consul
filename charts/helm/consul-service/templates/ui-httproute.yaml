@@ -95,12 +95,16 @@ metadata:
 spec:
   parentRefs:
   {{- if and .Values.GATEWAY_SYSTEM_NAME .Values.GATEWAY_SYSTEM_NAMESPACE }}
-    - name: {{ .Values.GATEWAY_SYSTEM_NAME }}
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: {{ .Values.GATEWAY_SYSTEM_NAME }}- name: {{ .Values.GATEWAY_SYSTEM_NAME }}
       namespace: {{ .Values.GATEWAY_SYSTEM_NAMESPACE }}
       port: 80
   {{- else if .Values.ui.envoyGateway.parentRefs }}
   {{- range .Values.ui.envoyGateway.parentRefs }}
-    - name: {{ .name }}
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: {{ .name }}}
       namespace: {{ .namespace }}
       port: 80
   {{- end }}
@@ -119,6 +123,10 @@ spec:
           requestRedirect:
             scheme: https
             statusCode: 301
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
 {{- end }}
 {{- end }}
 {{- end }}
