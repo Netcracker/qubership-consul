@@ -2158,21 +2158,6 @@ backupDaemon:
     keyId: ""
     keySecret: ""
 
-  # The list of S3 backup alias definitions. If empty, aliases secret is not rendered
-  # and aliases are not mounted to backup daemon.
-  s3Aliases: []
-  # - name: default
-  #   spec:
-  #     default: true
-  #     storageBucket: backup-restore-bucket
-  #     storageProvider: aws
-  #     storageRegion: us-east-1
-  #     storageServerUrl: "https://s3.example.com"
-  #     storageUsername: name
-  #     storageSecret: storage-location
-  #   secretContent:
-  #     storagePassword: pass
-
   extraLabels: {}
 
   # Credentials for Consul Backup Daemon REST API usage.
@@ -2199,7 +2184,7 @@ backupDaemon:
       memory: "64Mi"
       cpu: "25m"
     limits:
-      memory: "512Mi"
+      memory: "256Mi"
       cpu: "200m"
 
   # Affinity Settings for Backup Daemon pod, formatted as a JSON string.
@@ -2406,7 +2391,7 @@ integrationTests:
     }
   }
   # Test tags to include. Use "OR" to combine multiple tags (e.g. "crud OR ha OR backup")
-  # Available tags: crud, smoke, ha, backup, s3_storage, alerts, consul_images, consul_container_hardening
+  # Available tags: crud, smoke, ha, backup, s3_storage, alerts, consul_images
   # Leave empty ("") to run ALL tests
   tags: "crud"
   statusWritingEnabled: true
