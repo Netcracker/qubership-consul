@@ -1,4 +1,4 @@
-{{- if .Values.ui.envoyGateway.enabled }}
+{{- if and .Values.ui.envoyGateway.enabled .Values.ui.ingress.enabled }}
 {{- if and (.Capabilities.APIVersions.Has "gateway.networking.k8s.io/v1") (eq .Values.PAAS_PLATFORM "KUBERNETES") }}
 {{- if (and (or (and (ne (.Values.server.enabled | toString) "-") .Values.server.enabled) (and (eq (.Values.server.enabled | toString) "-") .Values.global.enabled)) (or (and (ne (.Values.ui.enabled | toString) "-") .Values.ui.enabled) (and (eq (.Values.ui.enabled | toString) "-") .Values.global.enabled))) }}
 {{- $uiService := (or (and (ne (.Values.ui.service.enabled | toString) "-") .Values.ui.service.enabled) (eq (.Values.ui.service.enabled | toString) "-")) }}
