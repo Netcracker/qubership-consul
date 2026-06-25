@@ -118,15 +118,15 @@ spec:
   {{- end }}
   {{- end }}
   rules:
-    - filters:
-        - type: RequestRedirect
-          requestRedirect:
-            scheme: https
-            statusCode: 301
     - matches:
         - path:
             type: PathPrefix
             value: /
+      filters:
+        - type: RequestRedirect
+          requestRedirect:
+            scheme: https
+            statusCode: 301
 {{- end }}
 {{- end }}
 {{- end }}
