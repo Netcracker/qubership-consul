@@ -1,10 +1,12 @@
 # The deployment for running the backup-daemon pod
-{{- if (or (and (ne (.Values.backupDaemon.enabled | toString) "-") .Values.backupDaemon.enabled) (and (eq (.Values.backupDaemon.enabled | toString) "-") .Values.global.enabled)) }}
+{{ if (or (and (ne (.Values.backupDaemon.enabled | toString) "-") .Values.backupDaemon.enabled) (and (eq (.Values.backupDaemon.enabled | toString) "-") .Values.global.enabled)) }}
 {{- if and (include "backupDaemon.storageClass" .) (eq .Values.backupDaemon.s3.enabled true) }}
 {{ fail "'.Values.backupDaemon.storageClass' is specified and '.Values.backupDaemon.s3.enabled' is true therefore, it is a conflict configuration. please choose one of the options. " }}
 {{- end }}
 {{- $s3AliasesData := fromYaml (include "backupDaemon.s3Aliases" .) }}
 {{- $hasS3Aliases := not (empty $s3AliasesData.items) }}
+{{- $backupDaemonPodSecretsMount := include "consul.podSecretsMountPath" (dict "service" "backup-daemon") -}}
+{{- $aclBootstrapSecretKey := include "consul.aclBootstrapSecretKey" . -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -52,6 +54,10 @@ spec:
         {{- if .Values.global.velero.postHookRestoreEnabled }}
         "post.hook.restore.velero.io/command": '["/bin/sh", "-c", "python3 scripts/velero_utils.py post_restore"]'
         "post.hook.restore.velero.io/exec-timeout": "150s"
+        {{- end }}
+        checksum/backup-daemon-secret: {{ include (print $.Template.BasePath "/backup-daemon-secret.yaml") . | sha256sum }}
+        {{- if .Values.backupDaemon.s3.enabled }}
+        checksum/backup-daemon-s3-secret: {{ include (print $.Template.BasePath "/backup-daemon-s3-secret.yaml") . | sha256sum }}
         {{- end }}
     spec:
       serviceAccountName: {{ template "consul.fullname" . }}-snapshot-agent
@@ -113,6 +119,33 @@ spec:
           secret:
             secretName: {{ template "consul.fullname" . }}-backup-daemon-s3-aliases
         {{- end }}
+        - name: backup-daemon-pod-secrets
+          projected:
+            defaultMode: 420
+            sources:
+              - secret:
+                  name: {{ template "consul.fullname" . }}-backup-daemon-secret
+                  items:
+                    - key: username
+                      path: BACKUP_DAEMON_API_CREDENTIALS_USERNAME
+                    - key: password
+                      path: BACKUP_DAEMON_API_CREDENTIALS_PASSWORD
+              {{- if .Values.backupDaemon.s3.enabled }}
+              - secret:
+                  name: {{ template "consul.fullname" . }}-s3-secret
+                  items:
+                    - key: s3-key-id
+                      path: S3_KEY_ID
+                    - key: s3-key-secret
+                      path: S3_KEY_SECRET
+              {{- end }}
+              {{- if .Values.global.acls.manageSystemACLs }}
+              - secret:
+                  name: {{ include "consul.aclBootstrapSecretName" . }}
+                  items:
+                    - key: {{ $aclBootstrapSecretKey }}
+                      path: CONSUL_HTTP_TOKEN
+              {{- end }}
       containers:
         - name: consul-backup-daemon
           image: {{ template "consul-backup-daemon.image" . }}
@@ -147,9 +180,14 @@ spec:
               mountPath: /consul/tls/ca/
               readOnly: true
             {{- end }}
+            - name: backup-daemon-pod-secrets
+              mountPath: {{ $backupDaemonPodSecretsMount }}
+              readOnly: true
           env:
             - name: PYTHONDONTWRITEBYTECODE
               value: "1"
+            - name: BACKUP_DAEMON_SECRETS_DIR
+              value: {{ $backupDaemonPodSecretsMount | quote }}
             - name: CONSUL_FULLNAME
               value: {{ template "consul.fullname" . }}
             - name: CONSUL_HOST
@@ -173,16 +211,6 @@ spec:
               value: {{ .Values.backupDaemon.s3.bucket }}
             - name: S3_SSL_VERIFY
               value: {{ .Values.backupDaemon.s3.sslVerify | quote }}
-            - name: S3_KEY_ID
-              valueFrom:
-                secretKeyRef:
-                  key: "s3-key-id"
-                  name: "{{ template "consul.fullname" . }}-s3-secret"
-            - name: S3_KEY_SECRET
-              valueFrom:
-                secretKeyRef:
-                  key: "s3-key-secret"
-                  name: "{{ template "consul.fullname" . }}-s3-secret"
             {{- end }}
             {{- if and (include "backupDaemon.s3.tlsSecretName" .) .Values.backupDaemon.s3.sslVerify .Values.backupDaemon.s3.enabled }}
             - name: S3_CERTS_PATH
@@ -194,37 +222,12 @@ spec:
             - name: CERTS_PATH
               value: "/consul/tls/backup"
             {{- end }}
-            - name: BACKUP_DAEMON_API_CREDENTIALS_USERNAME
-              valueFrom:
-                secretKeyRef:
-                  name: "{{ template "consul.fullname" . }}-backup-daemon-secret"
-                  key: "username"
-            - name: BACKUP_DAEMON_API_CREDENTIALS_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: "{{ template "consul.fullname" . }}-backup-daemon-secret"
-                  key: "password"
             - name: BACKUP_SCHEDULE
               value: "{{ default "0 0 * * *" .Values.backupDaemon.backupSchedule }}"
             - name: EVICTION_POLICY
               value: "{{ default "0/1d,7d/delete" .Values.backupDaemon.evictionPolicy }}"
             - name: BROADCAST_ADDRESS
               value: {{- if .Values.global.ipv6 }} "::" {{- else }} "0.0.0.0" {{- end }}
-            {{- if .Values.global.acls.manageSystemACLs }}
-            - name: CONSUL_HTTP_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  {{- if (and .Values.global.acls.bootstrapToken.secretName .Values.global.acls.bootstrapToken.secretKey) }}
-                  name: "{{ .Values.global.acls.bootstrapToken.secretName }}"
-                  key: "{{ .Values.global.acls.bootstrapToken.secretKey }}"
-                  {{- else if (and .Values.global.acls.replicationToken.secretName .Values.global.acls.replicationToken.secretKey) }}
-                  name: "{{ .Values.global.acls.replicationToken.secretName }}"
-                  key: "{{ .Values.global.acls.replicationToken.secretKey }}"
-                  {{- else }}
-                  name: "{{ template "consul.fullname" . }}-bootstrap-acl-token"
-                  key: "token"
-                  {{- end }}
-            {{- end }}
             {{- if and (eq (include "consul.enableDisasterRecovery" .) "true") .Values.global.disasterRecovery.region }}
             - name: REGION
               value: {{ .Values.global.disasterRecovery.region }}

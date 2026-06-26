@@ -1,4 +1,6 @@
 {{- if eq (.Values.client.enabled | toString) "true" }}
+{{- $hasGossipSecret := and .Values.global.gossipEncryption.secretName .Values.global.gossipEncryption.secretKey -}}
+{{- $clientPodSecretsMount := include "consul.podSecretsMountPath" (dict "service" "consul-client") -}}
 # DaemonSet to run the Consul clients on every node.
 apiVersion: apps/v1
 kind: DaemonSet
@@ -53,6 +55,9 @@ spec:
         "prometheus.io/scrape": "true"
         "prometheus.io/path": "/v1/agent/metrics"
         "prometheus.io/port": "8500"
+        {{- end }}
+        {{- if $hasGossipSecret }}
+        checksum/consul-client-pod-secrets: {{ printf "%s/%s" .Values.global.gossipEncryption.secretName .Values.global.gossipEncryption.secretKey | sha256sum }}
         {{- end }}
     spec:
     {{- if .Values.client.affinity }}
@@ -155,6 +160,15 @@ spec:
             secretName: {{ .Values.server.enterpriseLicense.secretName }}
         {{- end }}
         {{- end }}
+        {{- if $hasGossipSecret }}
+        - name: consul-client-pod-secrets
+          secret:
+            secretName: {{ .Values.global.gossipEncryption.secretName }}
+            defaultMode: 420
+            items:
+              - key: {{ .Values.global.gossipEncryption.secretKey }}
+                path: GOSSIP_KEY
+        {{- end }}
       containers:
         - name: consul
           image: {{ template "consul.image" . }}
@@ -199,13 +213,6 @@ spec:
                   fieldPath: status.podIP
             - name: CONSUL_DISABLE_PERM_MGMT
               value: "true"
-            {{- if (and .Values.global.gossipEncryption.secretName .Values.global.gossipEncryption.secretKey) }}
-            - name: GOSSIP_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.global.gossipEncryption.secretName }}
-                  key: {{ .Values.global.gossipEncryption.secretKey }}
-            {{- end }}
             {{- if (and .Values.server.enterpriseLicense.secretName .Values.server.enterpriseLicense.secretKey .Values.server.enterpriseLicense.enableLicenseAutoload (not .Values.global.acls.manageSystemACLs)) }}
             - name: CONSUL_LICENSE_PATH
               value: /consul/license/{{ .Values.server.enterpriseLicense.secretKey }}
@@ -227,6 +234,11 @@ spec:
             - "-ec"
             - |
               CONSUL_FULLNAME="{{template "consul.fullname" . }}"
+
+              {{- if $hasGossipSecret }}
+              {{ include "consul.resolveSecretShell" (dict "mountPath" $clientPodSecretsMount) | nindent 14 }}
+              GOSSIP_KEY="$(resolve_secret_value "GOSSIP_KEY")"
+              {{- end }}
 
               {{ template "consul.extraconfig" }}
 
@@ -283,7 +295,7 @@ spec:
                 {{- end }}
                 -datacenter={{ .Values.global.datacenter }} \
                 -data-dir=/consul/data \
-                {{- if (and .Values.global.gossipEncryption.secretName .Values.global.gossipEncryption.secretKey) }}
+                {{- if $hasGossipSecret }}
                 -encrypt="${GOSSIP_KEY}" \
                 {{- end }}
                 {{- if .Values.client.join }}
@@ -314,6 +326,11 @@ spec:
               mountPath: /consul/extra-config
             - name: tmp-extra-config
               mountPath: /consul/tmp/extra-config
+            {{- if $hasGossipSecret }}
+            - name: consul-client-pod-secrets
+              mountPath: {{ $clientPodSecretsMount }}
+              readOnly: true
+            {{- end }}
             - mountPath: /consul/login
               name: consul-data
               readOnly: true

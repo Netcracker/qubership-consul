@@ -3,12 +3,12 @@ ${CONSUL_NAMESPACE}                 %{CONSUL_NAMESPACE}
 ${CONSUL_HOST}                      %{CONSUL_HOST}
 ${CONSUL_PORT}                      %{CONSUL_PORT}
 ${CONSUL_SCHEME}                    %{CONSUL_SCHEME}
-${CONSUL_TOKEN}                     %{CONSUL_TOKEN=}
 ${MANAGED_BY_OPERATOR}              true
 
 
 *** Settings ***
 Library  String
+Variables  %{ROBOT_HOME}/SecretData.py
 Library  PlatformLibrary  managed_by_operator=${MANAGED_BY_OPERATOR}
 Library  lib/ConsulLibrary.py  consul_namespace=${CONSUL_NAMESPACE}
 ...                                         consul_host=${CONSUL_HOST}

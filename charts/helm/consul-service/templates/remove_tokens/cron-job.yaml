@@ -1,4 +1,6 @@
 {{- if (eq (include "remove-tokens.enabled" .) "true") }}
+{{- $removeTokensPodSecretsMount := include "consul.podSecretsMountPath" (dict "service" "remove-tokens") -}}
+{{- $aclBootstrapSecretKey := include "consul.aclBootstrapSecretKey" . -}}
 apiVersion: batch/v1
 kind: CronJob
 metadata:
@@ -32,6 +34,14 @@ spec:
 {{- with .Values.consulAclConfigurator.removeTokens.securityContext }}
 {{ toYaml . | nindent 12 }}
 {{- end }}
+          volumes:
+            - name: remove-tokens-pod-secrets
+              secret:
+                secretName: {{ include "consul.aclBootstrapSecretName" . }}
+                defaultMode: 420
+                items:
+                  - key: {{ $aclBootstrapSecretKey }}
+                    path: CONSUL_HTTP_TOKEN
           containers:
             - name: remove-tokens
               image: {{ template "remove-tokens.image" . }}
@@ -50,21 +60,10 @@ spec:
                   valueFrom:
                     fieldRef:
                       fieldPath: metadata.namespace
-                {{- if .Values.global.acls.manageSystemACLs }}
-                - name: CONSUL_HTTP_TOKEN
-                  valueFrom:
-                    secretKeyRef:
-                      {{- if (and .Values.global.acls.bootstrapToken.secretName .Values.global.acls.bootstrapToken.secretKey) }}
-                      name: "{{ .Values.global.acls.bootstrapToken.secretName }}"
-                      key: "{{ .Values.global.acls.bootstrapToken.secretKey }}"
-                      {{- else if (and .Values.global.acls.replicationToken.secretName .Values.global.acls.replicationToken.secretKey) }}
-                      name: "{{ .Values.global.acls.replicationToken.secretName }}"
-                      key: "{{ .Values.global.acls.replicationToken.secretKey }}"
-                      {{- else }}
-                      name: "{{ template "consul.fullname" . }}-bootstrap-acl-token"
-                      key: "token"
-                      {{- end}}
-                    {{- end}}
+              volumeMounts:
+                - name: remove-tokens-pod-secrets
+                  mountPath: {{ $removeTokensPodSecretsMount }}
+                  readOnly: true
               securityContext:
                 {{- include "consul.globalContainerSecurityContext" . | nindent 16 }}
 {{- end }}

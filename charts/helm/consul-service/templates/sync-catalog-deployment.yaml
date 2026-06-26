@@ -1,4 +1,6 @@
 {{- $clientEnabled := (eq (.Values.client.enabled | toString) "true") }}
+{{- $hasAclSyncToken := and .Values.syncCatalog.aclSyncToken.secretName .Values.syncCatalog.aclSyncToken.secretKey -}}
+{{- $syncCatalogPodSecretsMount := include "consul.podSecretsMountPath" (dict "service" "sync-catalog") -}}
 {{- if (or (and (ne (.Values.syncCatalog.enabled | toString) "-") .Values.syncCatalog.enabled) (and (eq (.Values.syncCatalog.enabled | toString) "-") .Values.global.enabled)) }}
 # The deployment for running the sync-catalog pod
 apiVersion: apps/v1
@@ -43,6 +45,9 @@ spec:
         app.kubernetes.io/name: {{ template "consul.fullname" . }}-sync-catalog
       annotations:
         "consul.hashicorp.com/connect-inject": "false"
+        {{- if $hasAclSyncToken }}
+        checksum/sync-catalog-pod-secrets: {{ printf "%s/%s" .Values.syncCatalog.aclSyncToken.secretName .Values.syncCatalog.aclSyncToken.secretKey | sha256sum }}
+        {{- end }}
     spec:
       serviceAccountName: {{ template "consul.fullname" . }}-sync-catalog
       {{- if not (eq (include "openshift.enabled" .) "true") }}
@@ -71,6 +76,15 @@ spec:
           medium: "Memory"
       {{- end }}
       {{- end }}
+      {{- if $hasAclSyncToken }}
+      - name: sync-catalog-pod-secrets
+        secret:
+          secretName: {{ .Values.syncCatalog.aclSyncToken.secretName }}
+          defaultMode: 420
+          items:
+            - key: {{ .Values.syncCatalog.aclSyncToken.secretKey }}
+              path: CONSUL_HTTP_TOKEN
+      {{- end }}
       containers:
         - name: sync-catalog
           image: {{ template "consul-k8s.image" . }}
@@ -78,6 +92,9 @@ spec:
             {{- if .Values.global.acls.manageSystemACLs }}
             - name: CONSUL_HTTP_TOKEN_FILE
               value: "/consul/login/acl-token"
+            {{- else if $hasAclSyncToken }}
+            - name: CONSUL_HTTP_TOKEN_FILE
+              value: "{{ $syncCatalogPodSecretsMount }}/CONSUL_HTTP_TOKEN"
             {{- end }}
             - name: HOST_IP
               valueFrom:
@@ -87,13 +104,6 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
-            {{- if (and .Values.syncCatalog.aclSyncToken.secretName .Values.syncCatalog.aclSyncToken.secretKey) }}
-            - name: CONSUL_HTTP_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.syncCatalog.aclSyncToken.secretName }}
-                  key: {{ .Values.syncCatalog.aclSyncToken.secretKey }}
-            {{- end }}
             {{- if .Values.global.tls.enabled }}
             {{- if .Values.client.enabled }}
             - name: CONSUL_HTTP_ADDR
@@ -117,6 +127,11 @@ spec:
             - mountPath: /consul/login
               name: consul-data
               readOnly: true
+            {{- if $hasAclSyncToken }}
+            - name: sync-catalog-pod-secrets
+              mountPath: {{ $syncCatalogPodSecretsMount }}
+              readOnly: true
+            {{- end }}
             {{- if .Values.global.tls.enabled }}
             {{- if and .Values.global.tls.enableAutoEncrypt $clientEnabled }}
             - name: consul-auto-encrypt-ca-cert

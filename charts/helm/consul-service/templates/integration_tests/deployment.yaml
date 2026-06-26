@@ -6,6 +6,9 @@
     {{- $defaultS3AliasName = .name }}
   {{- end }}
 {{- end }}
+{{- $integrationTestsPodSecretsMount := include "consul.podSecretsMountPath" (dict "service" "consul-integration-tests") -}}
+{{- $aclBootstrapSecretKey := include "consul.aclBootstrapSecretKey" . -}}
+{{- $hasIntegrationTestsPodSecrets := or .Values.global.acls.manageSystemACLs .Values.backupDaemon.enabled .Values.backupDaemon.s3.enabled .Values.integrationTests.atpReport.enabled .Values.monitoring.enabled -}}
 kind: Deployment
 apiVersion: apps/v1
 metadata:
@@ -35,6 +38,8 @@ spec:
         {{- include "consul-service.defaultLabels" . | nindent 8 }}
         app.kubernetes.io/name: {{ template "consul-integration-tests.name" . }}
         name: {{ template "consul-integration-tests.name" . }}
+      annotations:
+        checksum/consul-integration-tests-pod-secrets: {{ printf "%v-%v-%v-%v-%v" .Values.global.acls.manageSystemACLs .Values.backupDaemon.enabled .Values.backupDaemon.s3.enabled .Values.integrationTests.atpReport.enabled .Values.monitoring.enabled | sha256sum }}
     spec:
       serviceAccountName: {{ template "consul.fullname" . }}-integration-tests
       {{- if .Values.integrationTests.affinity }}
@@ -57,6 +62,10 @@ spec:
           env:
             - name: PYTHONDONTWRITEBYTECODE
               value: "1"
+            {{- if $hasIntegrationTestsPodSecrets }}
+            - name: INTEGRATION_TESTS_SECRETS_DIR
+              value: {{ $integrationTestsPodSecretsMount | quote }}
+            {{- end }}
             - name: TAGS
               value: {{ .Values.integrationTests.tags }}
             {{- if .Values.deployDescriptor -}}
@@ -64,18 +73,6 @@ spec:
             - name: MONITORED_IMAGES
               value: {{ include "consul.monitoredImages" . }}
             {{- end }}
-            {{- end }}
-            {{- if .Values.global.acls.manageSystemACLs }}
-            - name: CONSUL_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  {{- if .Values.integrationTests.secret.aclToken }}
-                  name: {{ template "consul-integration-tests.name" . }}-secret
-                  key: acl-token
-                  {{- else }}
-                  name: "{{ template "consul.fullname" . }}-bootstrap-acl-token"
-                  key: "token"
-                  {{- end }}
             {{- end }}
             - name: CONSUL_NAMESPACE
               valueFrom:
@@ -108,16 +105,6 @@ spec:
               value: {{ include "backupDaemon.port" . | quote }}
             - name: CONSUL_BACKUP_DAEMON_PROTOCOL
               value:  {{ template "backupDaemon.protocol" . }}
-            - name: CONSUL_BACKUP_DAEMON_USERNAME
-              valueFrom:
-                secretKeyRef:
-                  name: {{ template "consul.fullname" . }}-backup-daemon-secret
-                  key: username
-            - name: CONSUL_BACKUP_DAEMON_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: {{ template "consul.fullname" . }}-backup-daemon-secret
-                  key: password
             {{- end }}
             {{- if .Values.backupDaemon.s3.enabled }}
             - name: S3_ENABLED
@@ -126,16 +113,6 @@ spec:
               value: {{ .Values.backupDaemon.s3.url | quote }}
             - name: S3_BUCKET
               value: {{ .Values.backupDaemon.s3.bucket | quote }}
-            - name: S3_KEY_ID
-              valueFrom:
-                secretKeyRef:
-                  name: {{ template "consul.fullname" . }}-s3-secret
-                  key: s3-key-id
-            - name: S3_KEY_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: {{ template "consul.fullname" . }}-s3-secret
-                  key: s3-key-secret
             - name: S3_ALIASES_SECRET_NAME
               value: {{ template "consul.fullname" . }}-backup-daemon-s3-aliases
             - name: S3_DEFAULT_ALIAS_NAME
@@ -159,16 +136,6 @@ spec:
               value: {{ .Values.integrationTests.atpReport.atpStorage.bucket | quote }}
             - name: ATP_STORAGE_REGION
               value: {{ .Values.integrationTests.atpReport.atpStorage.region | quote }}
-            - name: ATP_STORAGE_USERNAME
-              valueFrom:
-                secretKeyRef:
-                  name: {{ template "consul-integration-tests.name" . }}-atp-storage-secret
-                  key: atp-storage-username
-            - name: ATP_STORAGE_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: {{ template "consul-integration-tests.name" . }}-atp-storage-secret
-                  key: atp-storage-password
             - name: ATP_REPORT_VIEW_UI_URL
               value: {{ .Values.integrationTests.atpReportViewUiUrl | quote }}
             {{- end }}
@@ -179,16 +146,6 @@ spec:
             {{- if .Values.monitoring.enabled }}
             - name: PROMETHEUS_URL
               value: {{ .Values.integrationTests.prometheusUrl }}
-            - name: PROMETHEUS_USER
-              valueFrom:
-                secretKeyRef:
-                  name: {{ template "consul-integration-tests.name" . }}-monitoring-secret
-                  key: prometheus-user
-            - name: PROMETHEUS_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: {{ template "consul-integration-tests.name" . }}-monitoring-secret
-                  key: prometheus-password
             {{- end }}
           resources:
             requests:
@@ -220,6 +177,11 @@ spec:
             failureThreshold: 5
           volumeMounts:
             {{- include "consul.tmpVolumeMount" . | nindent 12 }}
+            {{- if $hasIntegrationTestsPodSecrets }}
+            - name: consul-integration-tests-pod-secrets
+              mountPath: {{ $integrationTestsPodSecretsMount }}
+              readOnly: true
+            {{- end }}
           {{- if and .Values.backupDaemon.enabled .Values.global.tls.enabled .Values.backupDaemon.tls.enabled (include "backupDaemon.tlsSecretName" .) }}
             - name: backup-tls-certs
               mountPath: /consul/tls/backup/
@@ -235,6 +197,63 @@ spec:
           imagePullPolicy: Always
       volumes:
         {{- include "consul.tmpVolume" "32Mi" | nindent 8 }}
+        {{- if $hasIntegrationTestsPodSecrets }}
+        - name: consul-integration-tests-pod-secrets
+          projected:
+            defaultMode: 420
+            sources:
+              {{- if .Values.global.acls.manageSystemACLs }}
+              {{- if .Values.integrationTests.secret.aclToken }}
+              - secret:
+                  name: {{ template "consul-integration-tests.name" . }}-secret
+                  items:
+                    - key: acl-token
+                      path: CONSUL_TOKEN
+              {{- else }}
+              - secret:
+                  name: {{ include "consul.aclBootstrapSecretName" . }}
+                  items:
+                    - key: {{ $aclBootstrapSecretKey }}
+                      path: CONSUL_TOKEN
+              {{- end }}
+              {{- end }}
+              {{- if .Values.backupDaemon.enabled }}
+              - secret:
+                  name: {{ template "consul.fullname" . }}-backup-daemon-secret
+                  items:
+                    - key: username
+                      path: CONSUL_BACKUP_DAEMON_USERNAME
+                    - key: password
+                      path: CONSUL_BACKUP_DAEMON_PASSWORD
+              {{- end }}
+              {{- if .Values.backupDaemon.s3.enabled }}
+              - secret:
+                  name: {{ template "consul.fullname" . }}-s3-secret
+                  items:
+                    - key: s3-key-id
+                      path: S3_KEY_ID
+                    - key: s3-key-secret
+                      path: S3_KEY_SECRET
+              {{- end }}
+              {{- if .Values.integrationTests.atpReport.enabled }}
+              - secret:
+                  name: {{ template "consul-integration-tests.name" . }}-atp-storage-secret
+                  items:
+                    - key: atp-storage-username
+                      path: ATP_STORAGE_USERNAME
+                    - key: atp-storage-password
+                      path: ATP_STORAGE_PASSWORD
+              {{- end }}
+              {{- if .Values.monitoring.enabled }}
+              - secret:
+                  name: {{ template "consul-integration-tests.name" . }}-monitoring-secret
+                  items:
+                    - key: prometheus-user
+                      path: PROMETHEUS_USER
+                    - key: prometheus-password
+                      path: PROMETHEUS_PASSWORD
+              {{- end }}
+        {{- end }}
       {{- if and .Values.backupDaemon.enabled .Values.global.tls.enabled .Values.backupDaemon.tls.enabled (include "backupDaemon.tlsSecretName" .) }}
         - name: backup-tls-certs
           secret:

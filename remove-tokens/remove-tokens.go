@@ -78,13 +78,25 @@ func main() {
 func loadEnv() (host, port, token, ns string) {
 	host = strings.TrimSpace(os.Getenv("CONSUL_HOST"))
 	port = "8500"
-	token = strings.TrimSpace(os.Getenv("CONSUL_HTTP_TOKEN"))
+	token = readConsulToken()
 	ns = strings.TrimSpace(os.Getenv("CONSUL_NAMESPACE"))
 
 	if host == "" || token == "" {
-		log.Fatal("[ERROR] Missing CONSUL_HOST / CONSUL_HTTP_TOKEN env variables")
+		log.Fatal("[ERROR] Missing CONSUL_HOST / Consul ACL token (mounted secret file)")
 	}
 	return
+}
+
+const removeTokensPodSecretsDir = "/etc/secrets/remove-tokens-pod-secrets"
+
+func readConsulToken() string {
+	tokenPath := filepath.Join(removeTokensPodSecretsDir, "CONSUL_HTTP_TOKEN")
+	if data, err := os.ReadFile(tokenPath); err == nil {
+		if token := strings.TrimSpace(string(data)); token != "" {
+			return token
+		}
+	}
+	return strings.TrimSpace(os.Getenv("CONSUL_HTTP_TOKEN"))
 }
 
 // ----------------- K8S -----------------

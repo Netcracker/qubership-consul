@@ -23,7 +23,7 @@ import time
 
 import requests
 
-from library import KubernetesLibrary
+from library import KubernetesLibrary, read_acl_token_from_file
 
 REQUEST_HEADERS = {
     'Accept': 'application/json',
@@ -51,7 +51,8 @@ class Restore:
             logging.error("Consul service name or port isn't specified.")
             sys.exit(1)
 
-        self._acl_enabled = True if os.getenv('CONSUL_HTTP_TOKEN') else False
+        self._acl_token = read_acl_token_from_file()
+        self._acl_enabled = self._acl_token is not None
         self._consul_fullname = os.getenv("CONSUL_FULLNAME")
         self._consul_url = f'{consul_scheme}://{consul_host}:{consul_port}'
         self._storage_folder = storage_folder
@@ -61,9 +62,7 @@ class Restore:
         self.library = KubernetesLibrary(consul_namespace)
 
         if self._acl_enabled:
-            secret = self.library.get_secret(f'{self._consul_fullname}-bootstrap-acl-token')
-            data = secret.data.get("token")
-            REQUEST_HEADERS['X-Consul-Token'] = base64.decodebytes(data.encode()).decode()
+            REQUEST_HEADERS['X-Consul-Token'] = self._acl_token
 
     def restore(self, folder, datacenters=None, skip_acl_recovery=False):
         snapshot_token_exists = os.path.exists(f'{folder}/.token')

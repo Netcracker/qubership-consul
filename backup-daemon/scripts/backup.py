@@ -22,7 +22,7 @@ import sys
 
 import requests
 
-from library import KubernetesLibrary
+from library import KubernetesLibrary, acl_token_path, read_acl_token_from_file
 
 REQUEST_HEADERS = {
     'Accept': 'application/json',
@@ -50,7 +50,8 @@ class Backup:
             logging.error("Consul service name or port isn't specified.")
             sys.exit(1)
 
-        self._acl_enabled = True if os.getenv('CONSUL_HTTP_TOKEN') else False
+        self._acl_token = read_acl_token_from_file()
+        self._acl_enabled = self._acl_token is not None
         self._consul_fullname = os.getenv("CONSUL_FULLNAME")
         self._consul_url = f'{consul_scheme}://{consul_host}:{consul_port}'
         self._storage_folder = storage_folder
@@ -59,9 +60,7 @@ class Backup:
         self.library = KubernetesLibrary(consul_namespace)
 
         if self._acl_enabled:
-            secret = self.library.get_secret(f'{self._consul_fullname}-bootstrap-acl-token')
-            data = secret.data.get("token")
-            REQUEST_HEADERS['X-Consul-Token'] = base64.decodebytes(data.encode()).decode()
+            REQUEST_HEADERS['X-Consul-Token'] = self._acl_token
 
     def __get_datacenters(self):
         dc_response = requests.get(f'{self._consul_url}/v1/catalog/datacenters', headers=REQUEST_HEADERS,
@@ -93,15 +92,13 @@ class Backup:
             logging.info(f'Snapshot for datacenter "{datacenter}" completed successfully.')
 
         if self._acl_enabled:
-            self.backup_secret_data(f'{self._consul_fullname}-bootstrap-acl-token', 'token', f'{folder}/.token')
+            self.backup_acl_token(f'{folder}/.token')
         logging.info(f'Snapshot for datacenters {datacenters} completed successfully.')
 
-    def backup_secret_data(self, secret_name, secret_key, file_path):
-        logging.info(f'Backup "{secret_name}" secret data')
-        secret = self.library.get_secret(secret_name)
-        data = secret.data.get(secret_key)
+    def backup_acl_token(self, file_path):
+        logging.info(f'Backup ACL token from {acl_token_path()}')
         with open(file_path, 'w') as secret_data_file:
-            secret_data_file.write(data)
+            secret_data_file.write(base64.b64encode(self._acl_token.encode()).decode())
 
 
 if __name__ == "__main__":

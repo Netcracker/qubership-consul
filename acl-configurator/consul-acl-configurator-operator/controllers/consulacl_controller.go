@@ -23,6 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"net"
 	"os"
+	"path/filepath"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -42,6 +43,9 @@ import (
 
 const errNotFound = "ACL not found"
 
+const podSecretsDir = "/etc/secrets/consul-acl-configurator-pod-secrets"
+const bootstrapTokenEnv = "CONSUL_ACL_BOOTSTRAP_TOKEN"
+
 var consulAclFinalizer = consulacl.GroupVersion.Group + "/consulaclconfigurator-controller"
 
 var log = logf.Log.WithName("controller_consulacl")
@@ -49,7 +53,10 @@ var log = logf.Log.WithName("controller_consulacl")
 var ConsulClientService = os.Getenv("CONSUL_HOST")
 var ConsulClientPort = os.Getenv("CONSUL_PORT")
 var ConsulClientScheme = os.Getenv("CONSUL_SCHEME")
-var bootstrapToken = os.Getenv("CONSUL_ACL_BOOTSTRAP_TOKEN")
+var bootstrapToken = util.GetSecretFromFileOrEnv(
+	filepath.Join(podSecretsDir, bootstrapTokenEnv),
+	bootstrapTokenEnv,
+)
 var authMethod = os.Getenv("CONSUL_AUTH_METHOD_NAME")
 var periodTime, _ = strconv.Atoi(os.Getenv("RECONCILE_PERIOD_SECONDS"))
 var aclClient = makeAclClient()

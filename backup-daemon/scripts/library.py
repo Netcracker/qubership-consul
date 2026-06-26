@@ -13,9 +13,34 @@
 # limitations under the License.
 
 import kubernetes
+import os
 import urllib3
 from kubernetes.client import ApiException
 from kubernetes.stream import stream
+
+POD_SECRETS_DIR = '/etc/secrets/backup-daemon-pod-secrets'
+ACL_TOKEN_FILE = 'CONSUL_HTTP_TOKEN'
+
+
+def get_secret_value(key: str):
+    secrets_dir = os.getenv('BACKUP_DAEMON_SECRETS_DIR', POD_SECRETS_DIR)
+    if secrets_dir:
+        path = os.path.join(secrets_dir, key)
+        if os.path.isfile(path):
+            with open(path, encoding='utf-8') as handle:
+                value = handle.read().strip()
+                if value:
+                    return value
+    return os.getenv(key)
+
+
+def acl_token_path():
+    return os.path.join(os.getenv('BACKUP_DAEMON_SECRETS_DIR', POD_SECRETS_DIR), ACL_TOKEN_FILE)
+
+
+def read_acl_token_from_file():
+    token = get_secret_value(ACL_TOKEN_FILE)
+    return token or None
 
 
 def get_kubernetes_api_client(config_file=None, context=None, persist_config=True):

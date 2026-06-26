@@ -1,4 +1,6 @@
 {{- if .Values.consulAclConfigurator.enabled }}
+{{- $aclConfiguratorPodSecretsMount := include "consul.podSecretsMountPath" (dict "service" "consul-acl-configurator") -}}
+{{- $aclBootstrapSecretKey := include "consul.aclBootstrapSecretKey" . -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -29,6 +31,7 @@ spec:
         restore-policy: restart
       annotations:
         'consul.hashicorp.com/connect-inject': 'false'
+        checksum/consul-acl-configurator-pod-secrets: {{ printf "%s/%s" (include "consul.aclBootstrapSecretName" .) $aclBootstrapSecretKey | sha256sum }}
     spec:
       {{- if .Values.consulAclConfigurator.affinity }}
       affinity:
@@ -46,15 +49,22 @@ spec:
       {{- if .Values.consulAclConfigurator.priorityClassName }}
       priorityClassName: {{ .Values.consulAclConfigurator.priorityClassName | quote }}
       {{- end }}
-      {{- if .Values.global.tls.enabled }}
       volumes:
+        {{- if .Values.global.tls.enabled }}
         - name: consul-ca-cert
           secret:
             secretName: {{ template "consul.caCertSecretName" . }}
             items:
               - key: {{ default "tls.crt" .Values.global.tls.caCert.secretKey }}
                 path: tls.crt
-      {{- end }}
+        {{- end }}
+        - name: consul-acl-configurator-pod-secrets
+          secret:
+            secretName: {{ include "consul.aclBootstrapSecretName" . }}
+            defaultMode: 420
+            items:
+              - key: {{ $aclBootstrapSecretKey }}
+                path: CONSUL_ACL_BOOTSTRAP_TOKEN
       {{- if not (eq (include "openshift.enabled" .) "true") }}
       securityContext:
         {{- include "consul.globalPodSecurityContext" . | nindent 8 }}
@@ -102,12 +112,15 @@ spec:
         - name: consul-acl-configurator-operator
           image: {{ template "consul-acl-configurator-operator.image" . }}
           imagePullPolicy: Always
-          {{- if .Values.global.tls.enabled }}
           volumeMounts:
+            {{- if .Values.global.tls.enabled }}
             - name: consul-ca-cert
               mountPath: /consul/tls/ca/
               readOnly: true
-          {{- end }}
+            {{- end }}
+            - name: consul-acl-configurator-pod-secrets
+              mountPath: {{ $aclConfiguratorPodSecretsMount }}
+              readOnly: true
           env:
             - name: WATCH_NAMESPACE
               value: {{ default "" .Values.consulAclConfigurator.namespaces }}
@@ -129,19 +142,6 @@ spec:
               value: "{{ template "consul.scheme" . }}"
             - name: CONSUL_AUTH_METHOD_NAME
               value: {{ template "consul.fullname" . }}-k8s-auth-method
-            - name: CONSUL_ACL_BOOTSTRAP_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  {{- if (and .Values.global.acls.bootstrapToken.secretName .Values.global.acls.bootstrapToken.secretKey) }}
-                  name: "{{ .Values.global.acls.bootstrapToken.secretName }}"
-                  key: "{{ .Values.global.acls.bootstrapToken.secretKey }}"
-                  {{- else if (and .Values.global.acls.replicationToken.secretName .Values.global.acls.replicationToken.secretKey) }}
-                  name: "{{ .Values.global.acls.replicationToken.secretName }}"
-                  key: "{{ .Values.global.acls.replicationToken.secretKey }}"
-                  {{- else }}
-                  name: {{ template "consul.fullname" . }}-bootstrap-acl-token
-                  key: token
-                  {{- end }}
             - name: RECONCILE_PERIOD_SECONDS
               value: {{ default "100" .Values.consulAclConfigurator.reconcilePeriod | quote }}
             - name: API_GROUP

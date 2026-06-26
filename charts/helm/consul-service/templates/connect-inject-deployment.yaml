@@ -1,4 +1,6 @@
 {{- if (or (and (ne (.Values.connectInject.enabled | toString) "-") .Values.connectInject.enabled) (and (eq (.Values.connectInject.enabled | toString) "-") .Values.global.enabled)) }}
+{{- $hasAclInjectToken := and .Values.connectInject.aclInjectToken.secretName .Values.connectInject.aclInjectToken.secretKey -}}
+{{- $connectInjectPodSecretsMount := include "consul.podSecretsMountPath" (dict "service" "connect-inject") -}}
 {{- if and .Values.externalServers.enabled (not .Values.externalServers.hosts) }}{{ fail "externalServers.hosts must be set if externalServers.enabled is true" }}{{ end -}}
 {{- if and .Values.externalServers.skipServerWatch (not .Values.externalServers.enabled) }}{{ fail "externalServers.enabled must be set if externalServers.skipServerWatch is true" }}{{ end -}}
 # The deployment for running the Connect sidecar injector
@@ -48,6 +50,9 @@ spec:
         app.kubernetes.io/name: {{ template "consul.fullname" . }}-connect-injector-webhook-deployment
       annotations:
         "consul.hashicorp.com/connect-inject": "false"
+        {{- if $hasAclInjectToken }}
+        checksum/connect-inject-pod-secrets: {{ printf "%s/%s" .Values.connectInject.aclInjectToken.secretName .Values.connectInject.aclInjectToken.secretKey | sha256sum }}
+        {{- end }}
     spec:
       serviceAccountName: {{ template "consul.fullname" . }}-connect-injector
       {{- if not (eq (include "openshift.enabled" .) "true") }}
@@ -56,6 +61,16 @@ spec:
         {{- with .Values.connectInject.securityContext }}
         {{- toYaml . | nindent 8 -}}
         {{- end }}
+      {{- end }}
+      {{- if $hasAclInjectToken }}
+      volumes:
+        - name: connect-inject-pod-secrets
+          secret:
+            secretName: {{ .Values.connectInject.aclInjectToken.secretName }}
+            defaultMode: 420
+            items:
+              - key: {{ .Values.connectInject.aclInjectToken.secretKey }}
+                path: CONSUL_ACL_TOKEN
       {{- end }}
       containers:
         - name: sidecar-injector
@@ -90,17 +105,21 @@ spec:
             - name: CONSUL_LOGIN_META
               value: "component=connect-injector,pod=$(NAMESPACE)/$(POD_NAME)"
             {{- end }}
-            {{- if (and .Values.connectInject.aclInjectToken.secretName .Values.connectInject.aclInjectToken.secretKey) }}
-            - name: CONSUL_ACL_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.connectInject.aclInjectToken.secretName }}
-                  key: {{ .Values.connectInject.aclInjectToken.secretKey }}
-            {{- end }}
+          {{- if $hasAclInjectToken }}
+          volumeMounts:
+            - name: connect-inject-pod-secrets
+              mountPath: {{ $connectInjectPodSecretsMount }}
+              readOnly: true
+          {{- end }}
           command:
             - "/bin/sh"
             - "-ec"
             - |
+              {{- if $hasAclInjectToken }}
+              {{ include "consul.resolveSecretShell" (dict "mountPath" $connectInjectPodSecretsMount) | nindent 14 }}
+              CONSUL_ACL_TOKEN="$(resolve_secret_value "CONSUL_ACL_TOKEN")"
+              export CONSUL_ACL_TOKEN
+              {{- end }}
               consul-k8s-control-plane inject-connect \
                 {{- if .Values.global.federation.enabled }}
                 -enable-federation \
