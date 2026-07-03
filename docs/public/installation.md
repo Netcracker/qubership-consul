@@ -369,7 +369,7 @@ enabled PSP admission control you need to prepare Consul service **before** Kube
 1. Upgrade Consul to `0.2.0+` version with enabled `privileged` PSS for namespace.
    Refer to [Deployment to Kubernetes 1.25](#kubernetes-125) guide.
 2. Enable PSS for Kubernetes `rbac.admission: pss`.
-   [KubeMarine:RBAC Admission](https://github.com/Netcracker/KubeMarine/blob/main/documentation/Installation.md#configuring-default-profiles)
+   [KubeMarine:RBAC Admission](https://github.com/Netcracker/KubeMarine/blob/main/docs/public/Installation.md#configuring-default-profiles)
   .
 3. Upgrade Consul with disabled PSP `global.enablePodSecurityPolicies: false`.
 4. Upgrade Kubernetes to 1.25.
