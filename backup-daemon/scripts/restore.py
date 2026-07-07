@@ -76,7 +76,13 @@ class Restore:
 
         if not datacenters:
             logging.debug("Datacenters are not specified, full restore for each datacenter will be performed")
-            datacenters = [f.name for f in os.scandir(folder) if f.is_dir()]
+            datacenters = [
+                f.name for f in os.scandir(folder)
+                if f.is_dir() and os.path.isfile(f'{folder}/{f.name}/snapshot.gz')
+            ]
+            if not datacenters:
+                logging.error(f'No datacenter snapshots found in backup folder: {folder}')
+                sys.exit(1)
 
         logging.info(f'Perform restore of snapshot for datacenters {datacenters}')
         for datacenter in datacenters:
