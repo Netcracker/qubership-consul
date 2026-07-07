@@ -1,10 +1,10 @@
-FROM ghcr.io/netcracker/qubership-backup-daemon-go:0.1.17
+FROM ghcr.io/netcracker/qubership-backup-daemon-go:0.1.19
 
 ENV CONSUL_HOME=/opt/consul \
     CONSUL_BACKUP=/opt/consul/backup-storage
 
-RUN echo "https://dl-cdn.alpinelinux.org/alpine/v3.23/main" > /etc/apk/repositories && \
-    echo "https://dl-cdn.alpinelinux.org/alpine/v3.23/community" >> /etc/apk/repositories
+RUN echo "https://dl-cdn.alpinelinux.org/alpine/v3.24/main" > /etc/apk/repositories && \
+    echo "https://dl-cdn.alpinelinux.org/alpine/v3.24/community" >> /etc/apk/repositories
 
 COPY backup-daemon.conf /etc/backup-daemon.conf
 COPY docker/requirements.txt ${CONSUL_HOME}/requirements.txt
