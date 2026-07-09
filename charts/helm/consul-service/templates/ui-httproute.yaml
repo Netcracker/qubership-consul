@@ -39,7 +39,7 @@ spec:
       kind: Gateway
       name: {{ .name }}
       namespace: {{ .namespace }}
-      {{- $port := .redirectPort | default $gatewayHttpPort }}
+      {{- $port := .port | default $gatewayHttpsPort }}
       {{- if $port }}
       port: {{ $port }}
       {{- end }}
@@ -106,14 +106,19 @@ spec:
       kind: Gateway
       name: {{ .Values.GATEWAY_SYSTEM_NAME }}
       namespace: {{ .Values.GATEWAY_SYSTEM_NAMESPACE }}
-      port: 80
+      {{- if $gatewayHttpPort }}
+      port: {{ $gatewayHttpPort }}
+      {{- end }}
   {{- else if .Values.ui.envoyGateway.parentRefs }}
   {{- range .Values.ui.envoyGateway.parentRefs }}
     - group: gateway.networking.k8s.io
       kind: Gateway
       name: {{ .name }}
       namespace: {{ .namespace }}
-      port: 80
+      {{- $port := .redirectPort | default $gatewayHttpPort }}
+      {{- if $port }}
+      port: {{ $port }}
+      {{- end }}
   {{- end }}
   {{- end }}
   hostnames:
