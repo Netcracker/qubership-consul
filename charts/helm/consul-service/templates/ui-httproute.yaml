@@ -5,8 +5,6 @@
 {{- $serviceName := ternary (printf "%s-%s" (include "consul.fullname" .) "ui") (printf "%s-%s" (include "consul.fullname" .) "server") $uiService }}
 {{- $httpPort := ternary 80 8500 $uiService }}
 {{- $httpsPort := ternary 443 8501 $uiService }}
-{{- $gatewayHttpsPort := .Values.ui.envoyGateway.port }}
-{{- $gatewayHttpPort := .Values.ui.envoyGateway.redirectPort }}
 {{- $global := .Values.global }}
 
 apiVersion: gateway.networking.k8s.io/v1
@@ -30,19 +28,14 @@ spec:
       kind: Gateway
       name: {{ .Values.GATEWAY_SYSTEM_NAME }}
       namespace: {{ .Values.GATEWAY_SYSTEM_NAMESPACE }}
-      {{- if $gatewayHttpsPort }}
-      port: {{ $gatewayHttpsPort }}
-      {{- end }}
+      port: {{ if (and $global.tls.enabled $global.tls.httpsOnly) }}{{ $httpsPort }}{{ else }}{{ $httpPort }}{{ end }}
   {{- else if .Values.ui.envoyGateway.parentRefs }}
   {{- range .Values.ui.envoyGateway.parentRefs }}
     - group: gateway.networking.k8s.io
       kind: Gateway
       name: {{ .name }}
       namespace: {{ .namespace }}
-      {{- $port := .port | default $gatewayHttpsPort }}
-      {{- if $port }}
-      port: {{ $port }}
-      {{- end }}
+      port: {{ if (and $global.tls.enabled $global.tls.httpsOnly) }}{{ $httpsPort }}{{ else }}{{ $httpPort }}{{ end }}
   {{- end }}
   {{- end }}
   hostnames:
@@ -106,19 +99,14 @@ spec:
       kind: Gateway
       name: {{ .Values.GATEWAY_SYSTEM_NAME }}
       namespace: {{ .Values.GATEWAY_SYSTEM_NAMESPACE }}
-      {{- if $gatewayHttpPort }}
-      port: {{ $gatewayHttpPort }}
-      {{- end }}
+      port: {{ $httpPort }}
   {{- else if .Values.ui.envoyGateway.parentRefs }}
   {{- range .Values.ui.envoyGateway.parentRefs }}
     - group: gateway.networking.k8s.io
       kind: Gateway
       name: {{ .name }}
       namespace: {{ .namespace }}
-      {{- $port := .redirectPort | default $gatewayHttpPort }}
-      {{- if $port }}
-      port: {{ $port }}
-      {{- end }}
+      port: {{ $httpPort }}
   {{- end }}
   {{- end }}
   hostnames:
