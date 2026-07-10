@@ -6,6 +6,7 @@ Designed for creating resilient and secure Consul clusters in a cloud-native env
 
 ![Application Overview](/docs/public/images/consul_components_overview.drawio.png)
 
+
 ## Documentation
 
 * [Architecture guide](/docs/public/architecture.md).
