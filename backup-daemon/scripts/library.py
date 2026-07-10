@@ -71,12 +71,15 @@ def _patch_api_client_ssl(api_client):
         'cert_reqs': ssl.CERT_REQUIRED,
         'ssl_context': ssl_context,
     }
-    if configuration.retries is not None:
-        pool_kwargs['retries'] = configuration.retries
-    if configuration.assert_hostname is not None:
-        pool_kwargs['assert_hostname'] = configuration.assert_hostname
-    if configuration.tls_server_name:
-        pool_kwargs['server_hostname'] = configuration.tls_server_name
+    retries = getattr(configuration, 'retries', None)
+    if retries is not None:
+        pool_kwargs['retries'] = retries
+    assert_hostname = getattr(configuration, 'assert_hostname', None)
+    if assert_hostname is not None:
+        pool_kwargs['assert_hostname'] = assert_hostname
+    tls_server_name = getattr(configuration, 'tls_server_name', None)
+    if tls_server_name:
+        pool_kwargs['server_hostname'] = tls_server_name
 
     api_client.rest_client.pool_manager = urllib3.PoolManager(**pool_kwargs)
     return api_client
