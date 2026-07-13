@@ -14,9 +14,12 @@
 
 import kubernetes
 import os
+import ssl
 import urllib3
 from kubernetes.client import ApiException
 from kubernetes.stream import stream
+
+SERVICE_ACCOUNT_CA = '/var/run/secrets/kubernetes.io/serviceaccount/ca.crt'
 
 POD_SECRETS_DIR = '/etc/secrets/backup-daemon-pod-secrets'
 ACL_TOKEN_FILE = 'CONSUL_HTTP_TOKEN'
@@ -43,14 +46,54 @@ def read_acl_token_from_file():
     return token or None
 
 
+def _create_ssl_context(configuration):
+    if not configuration.verify_ssl or not hasattr(ssl, 'VERIFY_X509_STRICT'):
+        return None
+    ca_file = configuration.ssl_ca_cert
+    if not ca_file or not os.path.isfile(ca_file):
+        ca_file = SERVICE_ACCOUNT_CA if os.path.isfile(SERVICE_ACCOUNT_CA) else None
+    if not ca_file:
+        return None
+    ssl_context = ssl.create_default_context(cafile=ca_file)
+    ssl_context.verify_flags &= ~ssl.VERIFY_X509_STRICT
+    if configuration.cert_file and configuration.key_file:
+        ssl_context.load_cert_chain(configuration.cert_file, configuration.key_file)
+    return ssl_context
+
+
+def _patch_api_client_ssl(api_client):
+    configuration = api_client.configuration
+    ssl_context = _create_ssl_context(configuration)
+    if ssl_context is None:
+        return api_client
+
+    pool_kwargs = {
+        'cert_reqs': ssl.CERT_REQUIRED,
+        'ssl_context': ssl_context,
+    }
+    retries = getattr(configuration, 'retries', None)
+    if retries is not None:
+        pool_kwargs['retries'] = retries
+    assert_hostname = getattr(configuration, 'assert_hostname', None)
+    if assert_hostname is not None:
+        pool_kwargs['assert_hostname'] = assert_hostname
+    tls_server_name = getattr(configuration, 'tls_server_name', None)
+    if tls_server_name:
+        pool_kwargs['server_hostname'] = tls_server_name
+
+    api_client.rest_client.pool_manager = urllib3.PoolManager(**pool_kwargs)
+    return api_client
+
+
 def get_kubernetes_api_client(config_file=None, context=None, persist_config=True):
     try:
         kubernetes.config.load_incluster_config()
-        return kubernetes.client.ApiClient()
+        return _patch_api_client_ssl(kubernetes.client.ApiClient())
     except kubernetes.config.ConfigException:
-        return kubernetes.config.new_client_from_config(config_file=config_file,
-                                                        context=context,
-                                                        persist_config=persist_config)
+        return _patch_api_client_ssl(kubernetes.config.new_client_from_config(
+            config_file=config_file,
+            context=context,
+            persist_config=persist_config))
 
 
 class KubernetesLibrary(object):
