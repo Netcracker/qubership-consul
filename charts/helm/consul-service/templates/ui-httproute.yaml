@@ -28,14 +28,14 @@ spec:
       kind: Gateway
       name: {{ .Values.GATEWAY_SYSTEM_NAME }}
       namespace: {{ .Values.GATEWAY_SYSTEM_NAMESPACE }}
-      port: 443
+      port: {{ if (and $global.tls.enabled $global.tls.httpsOnly) }}{{ $httpsPort }}{{ else }}{{ $httpPort }}{{ end }}
   {{- else if .Values.ui.envoyGateway.parentRefs }}
   {{- range .Values.ui.envoyGateway.parentRefs }}
     - group: gateway.networking.k8s.io
       kind: Gateway
       name: {{ .name }}
       namespace: {{ .namespace }}
-      port: 443
+      port: {{ if (and $global.tls.enabled $global.tls.httpsOnly) }}{{ $httpsPort }}{{ else }}{{ $httpPort }}{{ end }}
   {{- end }}
   {{- end }}
   hostnames:
@@ -99,14 +99,14 @@ spec:
       kind: Gateway
       name: {{ .Values.GATEWAY_SYSTEM_NAME }}
       namespace: {{ .Values.GATEWAY_SYSTEM_NAMESPACE }}
-      port: 80
+      port: {{ $httpPort }}
   {{- else if .Values.ui.envoyGateway.parentRefs }}
   {{- range .Values.ui.envoyGateway.parentRefs }}
     - group: gateway.networking.k8s.io
       kind: Gateway
       name: {{ .name }}
       namespace: {{ .namespace }}
-      port: 80
+      port: {{ $httpPort }}
   {{- end }}
   {{- end }}
   hostnames:
