@@ -4,15 +4,14 @@ permissions:
   contents: read
 
 on:
-  schedule:
-    - cron: '0 0 * * *'
+  push
 
 jobs:
   Nightly-Consul-Pipeline:
-    uses: Netcracker/qubership-test-pipelines/.github/workflows/consul.yaml@9fcb2de51b4d510b52ffca883515bdb388cbc16f # v1.14.0
+    uses: Netcracker/qubership-test-pipelines/.github/workflows/consul.yaml@fix_monitoring_manddatory # v1.14.0
     with:
       service_branch: 'main'
-      pipeline_branch: '9fcb2de51b4d510b52ffca883515bdb388cbc16f' # v1.14.0 renovate: depName=Netcracker/qubership-test-pipelines
+      pipeline_branch: 'fix_monitoring_manddatory' # v1.14.0 renovate: depName=Netcracker/qubership-test-pipelines
       scope: 'nightly'
       allure: true
       verify_timeout_minutes: 30
