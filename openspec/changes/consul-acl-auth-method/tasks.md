@@ -1,7 +1,7 @@
 ## 1. ConsulACL — API Type: explicitName field
 
-- [ ] 1.1 Add `ExplicitName bool` field to the `ACL` struct in `api/v1alpha1/consulacl_types.go` with `json:"explicitName,omitempty"` tag
-- [ ] 1.2 Use the project's `controller-gen` tooling to regenerate all generated Kubernetes API artifacts after adding the `ExplicitName` field. Do not edit generated files manually.
+- [x] 1.1 Add `ExplicitName bool` field to the `ACL` struct in `api/v1alpha1/consulacl_types.go` with `json:"explicitName,omitempty"` tag
+- [x] 1.2 Use the project's `controller-gen` tooling to regenerate all generated Kubernetes API artifacts after adding the `ExplicitName` field. Do not edit generated files manually.
 
 > Covers: Role Naming — Default Prefixed, Role Naming — Explicit, BindingRule BindName — Default Prefixed, BindingRule BindName — Explicit, spec.acl.explicitName Is Optional and Backward Compatible
 

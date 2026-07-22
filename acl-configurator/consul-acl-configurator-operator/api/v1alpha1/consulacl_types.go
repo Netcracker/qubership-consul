@@ -22,6 +22,7 @@ type ACL struct {
 	Json            string `json:"json"`
 	Name            string `json:"name"`
 	CommonReconcile string `json:"commonReconcile,omitempty"`
+	ExplicitName    bool   `json:"explicitName,omitempty"`
 }
 
 // ConsulACLSpec defines the desired state of ConsulACL
