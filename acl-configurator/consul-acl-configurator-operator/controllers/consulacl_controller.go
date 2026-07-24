@@ -59,7 +59,7 @@ var bootstrapToken = util.GetSecretFromFileOrEnv(
 )
 var authMethod = os.Getenv("CONSUL_AUTH_METHOD_NAME")
 var periodTime, _ = strconv.Atoi(os.Getenv("RECONCILE_PERIOD_SECONDS"))
-var aclClient = makeAclClient()
+var aclClient consulACLClient = makeAclClient()
 
 // ConsulACLReconciler reconciles a ConsulACL object
 type ConsulACLReconciler struct {
@@ -256,11 +256,11 @@ func (r *ConsulACLReconciler) applyACL(cr *consulacl.ConsulACL) (string, string,
 	if err != nil {
 		return "", "", "", err
 	}
-	rolesStatus, err := processRoles(aclConfig.Roles, processedPolicies, customResourceName, customResourceNamespace)
+	rolesStatus, err := processRoles(aclConfig.Roles, processedPolicies, customResourceName, customResourceNamespace, cr.Spec.ACL.ExplicitName)
 	if err != nil {
 		return "", "", "", err
 	}
-	bindRulesStatus, err := processBindRules(aclConfig.BindRules, customResourceName, customResourceNamespace)
+	bindRulesStatus, err := processBindRules(aclConfig.BindRules, customResourceName, customResourceNamespace, cr.Spec.ACL.ExplicitName)
 	if err != nil {
 		return "", "", "", err
 	}
@@ -324,7 +324,7 @@ func processPolicies(policies []consulApi.ACLPolicy, customResourceName string, 
 	return &statusMap, processedPolicies, err
 }
 
-func processRoles(roles []ACLRoleAdapter, policies map[string]string, customResourceName string, customResourceNamespace string) (*StatusHolder, error) {
+func processRoles(roles []ACLRoleAdapter, policies map[string]string, customResourceName string, customResourceNamespace string, explicitName bool) (*StatusHolder, error) {
 	statusMap := StatusHolder{}
 	var err error
 	for _, roleAdapter := range roles {
@@ -334,7 +334,7 @@ func processRoles(roles []ACLRoleAdapter, policies map[string]string, customReso
 		}
 		var resRole *consulApi.ACLRole
 		var action string
-		role := convertRoleAdapterToRole(roleAdapter, policies, customResourceName, customResourceNamespace)
+		role := convertRoleAdapterToRole(roleAdapter, policies, customResourceName, customResourceNamespace, explicitName)
 
 		if role.ID == "" {
 			resRole, err = readRole(role.Name)
@@ -367,10 +367,14 @@ func processRoles(roles []ACLRoleAdapter, policies map[string]string, customReso
 	return &statusMap, err
 }
 
-func convertRoleAdapterToRole(roleAdapter ACLRoleAdapter, policies map[string]string, customResourceName string, customResourceNamespace string) consulApi.ACLRole {
+func convertRoleAdapterToRole(roleAdapter ACLRoleAdapter, policies map[string]string, customResourceName string, customResourceNamespace string, explicitName bool) consulApi.ACLRole {
 	role := consulApi.ACLRole{}
 	role.ID = roleAdapter.ID
-	role.Name = fmt.Sprintf("%s_%s_%s", customResourceName, customResourceNamespace, roleAdapter.Name)
+	if explicitName {
+		role.Name = roleAdapter.Name
+	} else {
+		role.Name = convertEntityName(roleAdapter.Name, customResourceName, customResourceNamespace)
+	}
 	role.Description = roleAdapter.Description
 	role.Policies = getPolicyLinks(roleAdapter, policies, customResourceName, customResourceNamespace)
 	return role
@@ -389,16 +393,15 @@ func getPolicyLinks(roleAdapter ACLRoleAdapter, policies map[string]string, cust
 	return resLinks
 }
 
-func processBindRules(bindRules []ACLBindingRuleAdapter, customResourceName string, customResourceNamespace string) (*StatusHolder, error) {
+func processBindRules(bindRules []ACLBindingRuleAdapter, customResourceName string, customResourceNamespace string, explicitName bool) (*StatusHolder, error) {
 	statusMap := StatusHolder{}
 	var err error
-	//TODO: bind rule created every time with new id and maybe similar other fields
 	for _, bindRuleAdapter := range bindRules {
 		if bindRuleAdapter.BindName == "" {
 			statusMap["innerErrorHandlingItem"] = "Some binding rules have not got a name"
 			continue
 		}
-		bindRuleDemand := convertBindRuleAdapterToBindRule(bindRuleAdapter, customResourceName, customResourceNamespace)
+		bindRuleDemand := convertBindRuleAdapterToBindRule(bindRuleAdapter, customResourceName, customResourceNamespace, explicitName)
 		var action string
 		if bindRuleDemand.ID == "" {
 			_, _, err = aclClient.BindingRuleCreate(&bindRuleDemand, &consulApi.WriteOptions{})
@@ -422,10 +425,14 @@ func processBindRules(bindRules []ACLBindingRuleAdapter, customResourceName stri
 	return &statusMap, err
 }
 
-func convertBindRuleAdapterToBindRule(bindRuleAdapter ACLBindingRuleAdapter, customResourceName string, customResourceNamespace string) consulApi.ACLBindingRule {
+func convertBindRuleAdapterToBindRule(bindRuleAdapter ACLBindingRuleAdapter, customResourceName string, customResourceNamespace string, explicitName bool) consulApi.ACLBindingRule {
 	bindingRule := consulApi.ACLBindingRule{}
 	bindingRule.ID = bindRuleAdapter.ID
-	bindingRule.BindName = fmt.Sprintf("%s_%s_%s", customResourceName, customResourceNamespace, bindRuleAdapter.BindName)
+	if explicitName {
+		bindingRule.BindName = bindRuleAdapter.BindName
+	} else {
+		bindingRule.BindName = convertEntityName(bindRuleAdapter.BindName, customResourceName, customResourceNamespace)
+	}
 	bindingRule.BindType = "role"
 	bindingRule.AuthMethod = authMethod
 	bindingRule.Description = bindRuleAdapter.Description
