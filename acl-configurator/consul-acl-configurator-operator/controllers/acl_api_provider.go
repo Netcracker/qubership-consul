@@ -38,6 +38,21 @@ type ACLBindingRuleAdapter struct {
 	BindName           string
 }
 
+type consulACLClient interface {
+	PolicyCreate(*consulApi.ACLPolicy, *consulApi.WriteOptions) (*consulApi.ACLPolicy, *consulApi.WriteMeta, error)
+	PolicyUpdate(*consulApi.ACLPolicy, *consulApi.WriteOptions) (*consulApi.ACLPolicy, *consulApi.WriteMeta, error)
+	PolicyReadByName(string, *consulApi.QueryOptions) (*consulApi.ACLPolicy, *consulApi.QueryMeta, error)
+	PolicyDelete(string, *consulApi.WriteOptions) (*consulApi.WriteMeta, error)
+	RoleCreate(*consulApi.ACLRole, *consulApi.WriteOptions) (*consulApi.ACLRole, *consulApi.WriteMeta, error)
+	RoleUpdate(*consulApi.ACLRole, *consulApi.WriteOptions) (*consulApi.ACLRole, *consulApi.WriteMeta, error)
+	RoleReadByName(string, *consulApi.QueryOptions) (*consulApi.ACLRole, *consulApi.QueryMeta, error)
+	RoleDelete(string, *consulApi.WriteOptions) (*consulApi.WriteMeta, error)
+	BindingRuleCreate(*consulApi.ACLBindingRule, *consulApi.WriteOptions) (*consulApi.ACLBindingRule, *consulApi.WriteMeta, error)
+	BindingRuleUpdate(*consulApi.ACLBindingRule, *consulApi.WriteOptions) (*consulApi.ACLBindingRule, *consulApi.WriteMeta, error)
+	BindingRuleList(string, *consulApi.QueryOptions) ([]*consulApi.ACLBindingRule, *consulApi.QueryMeta, error)
+	BindingRuleDelete(string, *consulApi.WriteOptions) (*consulApi.WriteMeta, error)
+}
+
 type ACLConfig struct {
 	Policies  []consulApi.ACLPolicy   `json:"policies,omitempty"`
 	Roles     []ACLRoleAdapter        `json:"roles,omitempty"`
@@ -75,7 +90,7 @@ func (sh StatusHolder) GetStatus() string {
 	return resString
 }
 
-func makeAclClient() *consulApi.ACL {
+func makeAclClient() consulACLClient {
 	consulConfig := consulApi.DefaultConfig()
 	consulConfig.Address = fmt.Sprintf("%s:%s", ConsulClientService, ConsulClientPort)
 	consulConfig.Scheme = ConsulClientScheme

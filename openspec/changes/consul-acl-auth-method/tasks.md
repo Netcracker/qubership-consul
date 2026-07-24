@@ -9,9 +9,9 @@
 
 ## 2. ConsulACL — Role naming logic
 
-- [ ] 2.1 Update `convertRoleAdapterToRole` in `consulacl_controller.go` to check `cr.Spec.ACL.ExplicitName`; when `true`, use `roleAdapter.Name` verbatim instead of calling `convertEntityName`
-- [ ] 2.2 Propagate the `explicitName` flag through `processRoles` so the flag is available when constructing the Consul role name
-- [ ] 2.3 Write unit tests for `convertRoleAdapterToRole` covering: (a) `ExplicitName: false` produces prefixed name, (b) `ExplicitName: true` produces verbatim name, (c) pre-existing role found by verbatim name triggers update not create
+- [x] 2.1 Update `convertRoleAdapterToRole` in `consulacl_controller.go` to check `cr.Spec.ACL.ExplicitName`; when `true`, use `roleAdapter.Name` verbatim instead of calling `convertEntityName`
+- [x] 2.2 Propagate the `explicitName` flag through `processRoles` so the flag is available when constructing the Consul role name
+- [x] 2.3 Write unit tests for `convertRoleAdapterToRole` covering: (a) `ExplicitName: false` produces prefixed name, (b) `ExplicitName: true` produces verbatim name, (c) pre-existing role found by verbatim name triggers update not create
 
 > Covers: Role Naming — Default Prefixed, Role Naming — Explicit
 
