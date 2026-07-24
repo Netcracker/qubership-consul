@@ -19,9 +19,9 @@
 
 ## 3. ConsulACL — BindingRule BindName naming logic
 
-- [ ] 3.1 Update `convertBindRuleAdapterToBindRule` in `consulacl_controller.go` to check `explicitName`; when `true`, use `bindRuleAdapter.BindName` verbatim instead of calling `convertEntityName`
-- [ ] 3.2 Propagate the `explicitName` flag through `processBindRules` so the flag is available when constructing `BindName`
-- [ ] 3.3 Write unit tests for `convertBindRuleAdapterToBindRule` covering: (a) `ExplicitName: false` produces prefixed `BindName`, (b) `ExplicitName: true` produces verbatim `BindName`
+- [x] 3.1 Update `convertBindRuleAdapterToBindRule` in `consulacl_controller.go` to check `explicitName`; when `true`, use `bindRuleAdapter.BindName` verbatim instead of calling `convertEntityName`
+- [x] 3.2 Propagate the `explicitName` flag through `processBindRules` so the flag is available when constructing `BindName`
+- [x] 3.3 Write unit tests for `convertBindRuleAdapterToBindRule` covering: (a) `ExplicitName: false` produces prefixed `BindName`, (b) `ExplicitName: true` produces verbatim `BindName`
 
 > Covers: BindingRule BindName — Default Prefixed, BindingRule BindName — Explicit
 

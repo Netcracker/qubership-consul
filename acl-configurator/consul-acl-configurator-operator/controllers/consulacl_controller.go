@@ -260,7 +260,7 @@ func (r *ConsulACLReconciler) applyACL(cr *consulacl.ConsulACL) (string, string,
 	if err != nil {
 		return "", "", "", err
 	}
-	bindRulesStatus, err := processBindRules(aclConfig.BindRules, customResourceName, customResourceNamespace)
+	bindRulesStatus, err := processBindRules(aclConfig.BindRules, customResourceName, customResourceNamespace, cr.Spec.ACL.ExplicitName)
 	if err != nil {
 		return "", "", "", err
 	}
@@ -393,16 +393,15 @@ func getPolicyLinks(roleAdapter ACLRoleAdapter, policies map[string]string, cust
 	return resLinks
 }
 
-func processBindRules(bindRules []ACLBindingRuleAdapter, customResourceName string, customResourceNamespace string) (*StatusHolder, error) {
+func processBindRules(bindRules []ACLBindingRuleAdapter, customResourceName string, customResourceNamespace string, explicitName bool) (*StatusHolder, error) {
 	statusMap := StatusHolder{}
 	var err error
-	//TODO: bind rule created every time with new id and maybe similar other fields
 	for _, bindRuleAdapter := range bindRules {
 		if bindRuleAdapter.BindName == "" {
 			statusMap["innerErrorHandlingItem"] = "Some binding rules have not got a name"
 			continue
 		}
-		bindRuleDemand := convertBindRuleAdapterToBindRule(bindRuleAdapter, customResourceName, customResourceNamespace)
+		bindRuleDemand := convertBindRuleAdapterToBindRule(bindRuleAdapter, customResourceName, customResourceNamespace, explicitName)
 		var action string
 		if bindRuleDemand.ID == "" {
 			_, _, err = aclClient.BindingRuleCreate(&bindRuleDemand, &consulApi.WriteOptions{})
@@ -426,10 +425,14 @@ func processBindRules(bindRules []ACLBindingRuleAdapter, customResourceName stri
 	return &statusMap, err
 }
 
-func convertBindRuleAdapterToBindRule(bindRuleAdapter ACLBindingRuleAdapter, customResourceName string, customResourceNamespace string) consulApi.ACLBindingRule {
+func convertBindRuleAdapterToBindRule(bindRuleAdapter ACLBindingRuleAdapter, customResourceName string, customResourceNamespace string, explicitName bool) consulApi.ACLBindingRule {
 	bindingRule := consulApi.ACLBindingRule{}
 	bindingRule.ID = bindRuleAdapter.ID
-	bindingRule.BindName = fmt.Sprintf("%s_%s_%s", customResourceName, customResourceNamespace, bindRuleAdapter.BindName)
+	if explicitName {
+		bindingRule.BindName = bindRuleAdapter.BindName
+	} else {
+		bindingRule.BindName = convertEntityName(bindRuleAdapter.BindName, customResourceName, customResourceNamespace)
+	}
 	bindingRule.BindType = "role"
 	bindingRule.AuthMethod = authMethod
 	bindingRule.Description = bindRuleAdapter.Description

@@ -103,6 +103,28 @@ func TestConvertRoleAdapterToRole_Explicit(t *testing.T) {
 	}
 }
 
+// --- Tests for convertBindRuleAdapterToBindRule ---
+
+// 3.3a: ExplicitName false → prefixed BindName
+func TestConvertBindRuleAdapterToBindRule_Prefixed(t *testing.T) {
+	adapter := ACLBindingRuleAdapter{BindName: "reader"}
+	rule := convertBindRuleAdapterToBindRule(adapter, "myapp", "staging", false)
+	want := "myapp_staging_reader"
+	if rule.BindName != want {
+		t.Errorf("got %q, want %q", rule.BindName, want)
+	}
+}
+
+// 3.3b: ExplicitName true → verbatim BindName
+func TestConvertBindRuleAdapterToBindRule_Explicit(t *testing.T) {
+	adapter := ACLBindingRuleAdapter{BindName: "${serviceaccount.namespace}_${serviceaccount.name}"}
+	rule := convertBindRuleAdapterToBindRule(adapter, "myapp", "staging", true)
+	want := "${serviceaccount.namespace}_${serviceaccount.name}"
+	if rule.BindName != want {
+		t.Errorf("got %q, want %q", rule.BindName, want)
+	}
+}
+
 // 2.3c: pre-existing role found by verbatim name → update called, not create
 func TestProcessRoles_ExplicitName_ExistingRoleTriggersUpdate(t *testing.T) {
 	existingID := "existing-role-uuid"
