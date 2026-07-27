@@ -1,0 +1,13 @@
+apiVersion: netcracker.com/v1alpha1
+kind: ConsulKV
+metadata:
+  name: test-consulkv-partial
+spec:
+  kv:
+    entries:
+      - key: ""
+        value: "this entry has an empty key and must produce an error status"
+      - key: "data/integration/partial/valid1"
+        value: "v1"
+      - key: "data/integration/partial/valid2"
+        value: "v2"

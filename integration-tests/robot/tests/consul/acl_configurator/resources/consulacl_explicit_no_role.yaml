@@ -1,0 +1,25 @@
+apiVersion: netcracker.com/v1alpha1
+kind: ConsulACL
+metadata:
+  name: test-explicit-acl
+spec:
+  acl:
+    name: test-explicit-acl
+    explicitName: true
+    json: >
+      {
+        "policies": [
+          {
+            "Name": "integration_explicit_policy",
+            "Description": "Integration test explicit policy",
+            "Rules": "key_prefix \"integration/\" { policy = \"read\" }"
+          }
+        ],
+        "roles": [],
+        "bind_rules": [
+          {
+            "BindName": "integration_explicit_bind",
+            "ServiceAccountName": "integration-sa"
+          }
+        ]
+      }

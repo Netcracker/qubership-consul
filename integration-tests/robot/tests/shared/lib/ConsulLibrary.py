@@ -68,3 +68,94 @@ class ConsulLibrary(object):
         url = f'{self.consul_scheme}://{self.consul_host}:{self.consul_port}/v1/status/leader'
         leader_response = requests.get(url, verify=self.consul_cafile)
         return leader_response.status_code == 200 and str(leader_response.content) != ""
+
+    # --- ACL helpers ---
+
+    def _acl_get(self, path):
+        url = f'{self.consul_scheme}://{self.consul_host}:{self.consul_port}/v1/acl/{path}'
+        headers = {'X-Consul-Token': self.consul_token} if self.consul_token else {}
+        response = requests.get(url, headers=headers, verify=self.consul_cafile)
+        response.raise_for_status()
+        return response.json()
+
+    def _acl_delete(self, path):
+        url = f'{self.consul_scheme}://{self.consul_host}:{self.consul_port}/v1/acl/{path}'
+        headers = {'X-Consul-Token': self.consul_token} if self.consul_token else {}
+        response = requests.delete(url, headers=headers, verify=self.consul_cafile)
+        response.raise_for_status()
+
+    def get_acl_policy_by_name(self, name):
+        """Return the policy object with the given name, or None if not found."""
+        try:
+            return self._acl_get(f'policy/name/{name}')
+        except requests.HTTPError as e:
+            if e.response.status_code == 403:
+                return None
+            raise
+
+    def get_acl_role_by_name(self, name):
+        """Return the role object with the given name, or None if not found."""
+        try:
+            return self._acl_get(f'role/name/{name}')
+        except requests.HTTPError as e:
+            if e.response.status_code == 403:
+                return None
+            raise
+
+    def acl_policy_should_exist(self, name):
+        """Fail if no ACL policy with the given name exists in Consul."""
+        result = self.get_acl_policy_by_name(name)
+        assert result is not None, f'ACL policy "{name}" not found in Consul'
+
+    def acl_policy_should_not_exist(self, name):
+        """Fail if an ACL policy with the given name exists in Consul."""
+        result = self.get_acl_policy_by_name(name)
+        assert result is None, f'ACL policy "{name}" should not exist in Consul but was found'
+
+    def acl_role_should_exist(self, name):
+        """Fail if no ACL role with the given name exists in Consul."""
+        result = self.get_acl_role_by_name(name)
+        assert result is not None, f'ACL role "{name}" not found in Consul'
+
+    def acl_role_should_not_exist(self, name):
+        """Fail if an ACL role with the given name exists in Consul."""
+        result = self.get_acl_role_by_name(name)
+        assert result is None, f'ACL role "{name}" should not exist in Consul but was found'
+
+    def list_acl_binding_rules(self, auth_method):
+        """Return list of binding rules for the given auth method."""
+        try:
+            return self._acl_get(f'binding-rules?authmethod={auth_method}')
+        except requests.HTTPError as e:
+            if e.response.status_code == 403:
+                return []
+            raise
+
+    def acl_binding_rule_should_exist(self, bind_name, auth_method):
+        """Fail if no binding rule with bind_name exists under auth_method."""
+        rules = self.list_acl_binding_rules(auth_method)
+        for rule in rules:
+            if rule.get('BindName') == bind_name:
+                return
+        raise AssertionError(
+            f'Binding rule with BindName "{bind_name}" under auth method "{auth_method}" not found in Consul'
+        )
+
+    def acl_binding_rule_should_not_exist(self, bind_name, auth_method):
+        """Fail if a binding rule with bind_name exists under auth_method."""
+        rules = self.list_acl_binding_rules(auth_method)
+        for rule in rules:
+            if rule.get('BindName') == bind_name:
+                raise AssertionError(
+                    f'Binding rule with BindName "{bind_name}" under auth method "{auth_method}" should not exist but was found'
+                )
+
+    def kv_key_should_exist(self, key):
+        """Fail if the KV key does not exist in Consul."""
+        index, data = self.connect.kv.get(key)
+        assert data is not None, f'KV key "{key}" not found in Consul'
+
+    def kv_key_should_not_exist(self, key):
+        """Fail if the KV key exists in Consul."""
+        index, data = self.connect.kv.get(key)
+        assert data is None, f'KV key "{key}" should not exist in Consul but was found'

@@ -163,7 +163,7 @@
 
 ## 17. Helm: RBAC for ConsulKV
 
-- [ ] 17.1 Verify that the existing `acl-configurator-clusterrole.yaml` wildcard on `consulAclConfigurator.apiGroup` covers `consulkvs`; if not, add explicit rules for `consulkvs`, `consulkvs/status`, `consulkvs/finalizers`
+- [x] 17.1 Verify that the existing `acl-configurator-clusterrole.yaml` wildcard on `consulAclConfigurator.apiGroup` covers `consulkvs`; if not, add explicit rules for `consulkvs`, `consulkvs/status`, `consulkvs/finalizers`
 
 > Covers: Operator RBAC Covers consulkvs Resources
 
@@ -171,12 +171,12 @@
 
 ## 18. Integration tests
 
-- [ ] 18.1 Write an integration test for `ConsulACL` with `explicitName: true`: apply CR, verify Consul role and binding-rule names are verbatim, update CR to remove one entity, verify it is deleted from Consul
-- [ ] 18.2 Write an integration test for `ConsulACL` with per-rule `AuthMethod`: apply CR, verify binding rule is registered under the overridden auth method
-- [ ] 18.3 Write an integration test for `ConsulACL` delete: apply and then delete a CR, verify all policies, roles, and binding rules are removed from Consul
-- [ ] 18.4 Write an integration test for `ConsulKV` apply: apply a CR with multiple entries, verify all keys exist in Consul verbatim; re-apply, verify idempotency
-- [ ] 18.5 Write an integration test for `ConsulKV` delete: apply then delete a CR, verify all keys are removed from Consul
-- [ ] 18.6 Write an integration test for `ConsulKV` partial failure: apply a CR with one empty-key entry and two valid entries, verify valid keys are written and the error entry is recorded in `.status`
+- [x] 18.1 Write an integration test for `ConsulACL` with `explicitName: true`: apply CR, verify Consul role and binding-rule names are verbatim, update CR to remove one entity, verify it is deleted from Consul
+- [x] 18.2 Write an integration test for `ConsulACL` with per-rule `AuthMethod`: apply CR, verify binding rule is registered under the overridden auth method
+- [x] 18.3 Write an integration test for `ConsulACL` delete: apply and then delete a CR, verify all policies, roles, and binding rules are removed from Consul
+- [x] 18.4 Write an integration test for `ConsulKV` apply: apply a CR with multiple entries, verify all keys exist in Consul verbatim; re-apply, verify idempotency
+- [x] 18.5 Write an integration test for `ConsulKV` delete: apply then delete a CR, verify all keys are removed from Consul
+- [x] 18.6 Write an integration test for `ConsulKV` partial failure: apply a CR with one empty-key entry and two valid entries, verify valid keys are written and the error entry is recorded in `.status`
 
 > Covers: all specification acceptance criteria
  

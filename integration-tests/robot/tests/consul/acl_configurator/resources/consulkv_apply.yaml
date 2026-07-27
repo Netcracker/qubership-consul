@@ -1,0 +1,10 @@
+apiVersion: netcracker.com/v1alpha1
+kind: ConsulKV
+metadata:
+  name: test-consulkv-apply
+spec:
+  kv:
+    entries:
+      - key: "config/integration/test-app/"
+      - key: "logging/integration/test-app/LOG_LEVEL"
+        value: "INFO"

@@ -1,0 +1,11 @@
+apiVersion: netcracker.com/v1alpha1
+kind: ConsulKV
+metadata:
+  name: test-consulkv-delete
+spec:
+  kv:
+    entries:
+      - key: "data/integration/delete-test/key1"
+        value: "val1"
+      - key: "data/integration/delete-test/key2"
+        value: "val2"
