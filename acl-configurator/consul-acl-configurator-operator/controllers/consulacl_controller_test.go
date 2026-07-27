@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"testing"
 
+	consulacl "github.com/Netcracker/consul-acl-configurator/consul-acl-configurator-operator/api/v1alpha1"
 	consulApi "github.com/hashicorp/consul/api"
 )
 
@@ -483,6 +484,114 @@ func TestDeleteBindingRules_MixedAuthMethods_AllDeleted(t *testing.T) {
 	}
 	if !deleted["br-global"] || !deleted["br-custom"] {
 		t.Errorf("expected both br-global and br-custom deleted, got %v", mock.bindingRuleDeletedIDs)
+	}
+}
+
+// --- mockKVClient ---
+
+type mockKVClient struct {
+	deletedKeys []string
+	deleteFunc  func(key string) error
+	putFunc     func(p *consulApi.KVPair) error
+}
+
+func (m *mockKVClient) Put(p *consulApi.KVPair, q *consulApi.WriteOptions) (*consulApi.WriteMeta, error) {
+	if m.putFunc != nil {
+		return nil, m.putFunc(p)
+	}
+	return nil, nil
+}
+
+func (m *mockKVClient) Delete(key string, q *consulApi.WriteOptions) (*consulApi.WriteMeta, error) {
+	m.deletedKeys = append(m.deletedKeys, key)
+	if m.deleteFunc != nil {
+		return nil, m.deleteFunc(key)
+	}
+	return nil, nil
+}
+
+// 14.1: deleteKVEntries calls Delete for every entry
+func TestDeleteKVEntries_CallsDeleteForEachEntry(t *testing.T) {
+	mock := &mockKVClient{}
+	origKV := kvClient
+	kvClient = mock
+	defer func() { kvClient = origKV }()
+
+	entries := []consulacl.ConsulKVEntry{
+		{Key: "config/ns/svc/"},
+		{Key: "logging/ns/svc/LOG_LEVEL"},
+	}
+	if err := deleteKVEntries(entries); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(mock.deletedKeys) != 2 {
+		t.Fatalf("expected 2 Delete calls, got %d", len(mock.deletedKeys))
+	}
+	if mock.deletedKeys[0] != "config/ns/svc/" {
+		t.Errorf("first key: got %q, want %q", mock.deletedKeys[0], "config/ns/svc/")
+	}
+	if mock.deletedKeys[1] != "logging/ns/svc/LOG_LEVEL" {
+		t.Errorf("second key: got %q, want %q", mock.deletedKeys[1], "logging/ns/svc/LOG_LEVEL")
+	}
+}
+
+// 14.2: absent key (Delete returns nil — Consul 200 for missing key) is treated as
+// success; remaining entries are still processed.
+func TestDeleteKVEntries_AbsentKey_TreatedAsSuccess(t *testing.T) {
+	mock := &mockKVClient{
+		// first key is "absent": mock returns nil (Consul returns HTTP 200 for DELETEs of
+		// missing keys, so the client returns nil error — not a 404).
+		deleteFunc: func(key string) error {
+			return nil
+		},
+	}
+	origKV := kvClient
+	kvClient = mock
+	defer func() { kvClient = origKV }()
+
+	entries := []consulacl.ConsulKVEntry{
+		{Key: "missing/key"},
+		{Key: "present/key"},
+	}
+	if err := deleteKVEntries(entries); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(mock.deletedKeys) != 2 {
+		t.Errorf("both entries must be attempted; got %d Delete calls", len(mock.deletedKeys))
+	}
+}
+
+// 14.3: network error from Delete is returned to the caller immediately.
+func TestDeleteKVEntries_NetworkError_Returned(t *testing.T) {
+	netErr := fmt.Errorf("dial tcp: connection refused")
+	callCount := 0
+	mock := &mockKVClient{
+		deleteFunc: func(key string) error {
+			callCount++
+			if callCount == 1 {
+				return netErr
+			}
+			return nil
+		},
+	}
+	origKV := kvClient
+	kvClient = mock
+	defer func() { kvClient = origKV }()
+
+	entries := []consulacl.ConsulKVEntry{
+		{Key: "key/one"},
+		{Key: "key/two"},
+	}
+	err := deleteKVEntries(entries)
+	if err == nil {
+		t.Fatal("expected error to be returned, got nil")
+	}
+	if err.Error() != netErr.Error() {
+		t.Errorf("got error %q, want %q", err.Error(), netErr.Error())
+	}
+	// loop must stop after first error — second key must not be attempted
+	if callCount != 1 {
+		t.Errorf("expected 1 Delete call before returning error, got %d", callCount)
 	}
 }
 

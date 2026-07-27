@@ -111,11 +111,11 @@
 
 ## 12. ConsulKV — Controller: reconcile loop
 
-- [ ] 12.1 Implement the `Reconcile` method: fetch the `ConsulKV` instance; return nil if NotFound (do not requeue)
-- [ ] 12.2 When `DeletionTimestamp` is zero and finalizer is absent: add the finalizer via `CustomResourceUpdater.UpdateWithRetry` and return
-- [ ] 12.3 When `DeletionTimestamp` is non-zero and finalizer is present: call `deleteKVEntries`, then remove the finalizer via `UpdateWithRetry`
-- [ ] 12.4 When active: call `applyKVEntries`, then update per-key status via `UpdateStatusWithRetry`
-- [ ] 12.5 Install a `predicate.GenerationChangedPredicate` (or equivalent `UpdateFunc` checking generation) in `SetupWithManager` so status-only updates do not trigger reconcile
+- [x] 12.1 Implement the `Reconcile` method: fetch the `ConsulKV` instance; return nil if NotFound (do not requeue)
+- [x] 12.2 When `DeletionTimestamp` is zero and finalizer is absent: add the finalizer via `CustomResourceUpdater.UpdateWithRetry` and return
+- [x] 12.3 When `DeletionTimestamp` is non-zero and finalizer is present: call `deleteKVEntries`, then remove the finalizer via `UpdateWithRetry`
+- [x] 12.4 When active: call `applyKVEntries`, then update per-key status via `UpdateStatusWithRetry`
+- [x] 12.5 Install a `predicate.GenerationChangedPredicate` (or equivalent `UpdateFunc` checking generation) in `SetupWithManager` so status-only updates do not trigger reconcile
 
 > Covers: Finalizer on Creation, Finalizer Removed After Cleanup, Apply on Generation Change, Generation-Based Reconcile Trigger, Not-Found Does Not Requeue
 
@@ -123,10 +123,10 @@
 
 ## 13. ConsulKV — Controller: applyKVEntries
 
-- [ ] 13.1 Implement `applyKVEntries`: iterate over `spec.kv.entries`; for each entry with a non-empty key, call `kvClient.Put(&consulApi.KVPair{Key: entry.Key, Value: []byte(entry.Value)}, nil)`
-- [ ] 13.2 For each entry with an empty key, record an error status for that entry and continue (do not abort the loop)
-- [ ] 13.3 Return per-key status results (success or error message per key) to the caller for status persistence
-- [ ] 13.4 On network error from any `Put` call, return the error to `Reconcile` so it can requeue after `RECONCILE_PERIOD_SECONDS`
+- [x] 13.1 Implement `applyKVEntries`: iterate over `spec.kv.entries`; for each entry with a non-empty key, call `kvClient.Put(&consulApi.KVPair{Key: entry.Key, Value: []byte(entry.Value)}, nil)`
+- [x] 13.2 For each entry with an empty key, record an error status for that entry and continue (do not abort the loop)
+- [x] 13.3 Return per-key status results (success or error message per key) to the caller for status persistence
+- [x] 13.4 On network error from any `Put` call, return the error to `Reconcile` so it can requeue after `RECONCILE_PERIOD_SECONDS`
 
 > Covers: KVPut per Entry on Apply, Verbatim Keys — No Automatic Prefix, Idempotent KVPut, Entry Key Must Not Be Empty, Network Error Causes Requeue
 
@@ -134,9 +134,9 @@
 
 ## 14. ConsulKV — Controller: deleteKVEntries
 
-- [ ] 14.1 Implement `deleteKVEntries`: iterate over `spec.kv.entries`; for each entry, call `kvClient.Delete(entry.Key, nil)`
-- [ ] 14.2 Treat a "key not found" response from Consul as success for that entry and continue processing remaining entries
-- [ ] 14.3 On network error, return the error to `Reconcile` (deletion will be retried on next reconcile via requeue)
+- [x] 14.1 Implement `deleteKVEntries`: iterate over `spec.kv.entries`; for each entry, call `kvClient.Delete(entry.Key, nil)`
+- [x] 14.2 Treat a "key not found" response from Consul as success for that entry and continue processing remaining entries
+- [x] 14.3 On network error, return the error to `Reconcile` (deletion will be retried on next reconcile via requeue)
 
 > Covers: KVDelete per Entry on Delete, Absent KV Entry Does Not Block Deletion
 
