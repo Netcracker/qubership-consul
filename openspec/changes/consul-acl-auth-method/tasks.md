@@ -90,8 +90,8 @@
 
 ## 10. ConsulKV — CRD manifest
 
-- [ ] 10.1 Generate the ConsulKV CRD using the project's standard `controller-gen` workflow and verify it matches the Go API types.
-- [ ] 10.2 Copy the generated CRD YAML into `charts/helm/consul-service/crds/consulkv_crd.yaml`
+- [x] 10.1 Generate the ConsulKV CRD using the project's standard `controller-gen` workflow and verify it matches the Go API types.
+- [x] 10.2 Copy the generated CRD YAML into `charts/helm/consul-service/crds/consulkv_crd.yaml`
 
 > Covers: Helm Chart Packages the ConsulKV CRD, Resource Structure
 
