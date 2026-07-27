@@ -93,7 +93,12 @@ func (sh StatusHolder) GetStatus() string {
 	return resString
 }
 
-func makeAclClient() consulACLClient {
+type consulKVClient interface {
+	Put(p *consulApi.KVPair, q *consulApi.WriteOptions) (*consulApi.WriteMeta, error)
+	Delete(key string, q *consulApi.WriteOptions) (*consulApi.WriteMeta, error)
+}
+
+func makeConsulClient() *consulApi.Client {
 	consulConfig := consulApi.DefaultConfig()
 	consulConfig.Address = fmt.Sprintf("%s:%s", ConsulClientService, ConsulClientPort)
 	consulConfig.Scheme = ConsulClientScheme
@@ -101,9 +106,17 @@ func makeAclClient() consulACLClient {
 		consulConfig.TLSConfig.CAFile = tlsCaCertPath
 	}
 	consulConfig.Token = bootstrapToken
-	client, err := consulApi.NewClient(consulConfig)
+	c, err := consulApi.NewClient(consulConfig)
 	if err != nil {
 		log.Error(err, "Can not create a Consul client configuration")
 	}
-	return client.ACL()
+	return c
+}
+
+func makeAclClient() consulACLClient {
+	return makeConsulClient().ACL()
+}
+
+func makeKVClient() consulKVClient {
+	return makeConsulClient().KV()
 }

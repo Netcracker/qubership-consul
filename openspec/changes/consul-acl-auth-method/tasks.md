@@ -99,11 +99,11 @@
 
 ## 11. ConsulKV — Controller: scaffold and client setup
 
-- [ ] 11.1 Create `controllers/consulkv_controller.go` with `ConsulKVReconciler` struct holding `client.Client` and `*runtime.Scheme`
-- [ ] 11.2 Reuse the existing `makeAclClient()` Consul client (or its parent `consulApi.Client`) for the KV API — `client.KV()` — so host, port, scheme, TLS, and token are shared
-- [ ] 11.3 Define the finalizer constant as `{apiGroup}/consulkvconfigurator-controller`, consistent with the ACL finalizer pattern
-- [ ] 11.4 Add `+kubebuilder:rbac` markers for `consulkvs`, `consulkvs/status`, and `consulkvs/finalizers` (get, list, watch, create, update, patch, delete)
-- [ ] 11.5 Register `ConsulKVReconciler` with the manager in `main.go` alongside the existing `ConsulACLReconciler`
+- [x] 11.1 Create `controllers/consulkv_controller.go` with `ConsulKVReconciler` struct holding `client.Client` and `*runtime.Scheme`
+- [x] 11.2 Reuse the existing `makeAclClient()` Consul client (or its parent `consulApi.Client`) for the KV API — `client.KV()` — so host, port, scheme, TLS, and token are shared
+- [x] 11.3 Define the finalizer constant as `{apiGroup}/consulkvconfigurator-controller`, consistent with the ACL finalizer pattern
+- [x] 11.4 Add `+kubebuilder:rbac` markers for `consulkvs`, `consulkvs/status`, and `consulkvs/finalizers` (get, list, watch, create, update, patch, delete)
+- [x] 11.5 Register `ConsulKVReconciler` with the manager in `main.go` alongside the existing `ConsulACLReconciler`
 
 > Covers: Finalizer on Creation, Operator RBAC Covers consulkvs Resources
 
