@@ -144,8 +144,8 @@
 
 ## 15. ConsulKV — Controller: status
 
-- [ ] 15.1 Define the `ConsulKVStatus` shape to record per-key outcomes (map or slice of key+status pairs)
-- [ ] 15.2 After `applyKVEntries`, write per-key results into `ConsulKVStatus` and persist via `UpdateStatusWithRetry`; on status update failure after retries, requeue after `RECONCILE_PERIOD_SECONDS`
+- [x] 15.1 Define the `ConsulKVStatus` shape to record per-key outcomes (map or slice of key+status pairs)
+- [x] 15.2 After `applyKVEntries`, write per-key results into `ConsulKVStatus` and persist via `UpdateStatusWithRetry`; on status update failure after retries, requeue after `RECONCILE_PERIOD_SECONDS`
 
 > Covers: Per-Key Status, Status Update Failure Causes Requeue
 
@@ -153,9 +153,9 @@
 
 ## 16. ConsulKV — Unit tests
 
-- [ ] 16.1 Test `applyKVEntries`: (a) all entries written verbatim, (b) empty-key entry skipped with error status, (c) idempotent re-apply succeeds, (d) network error returned
-- [ ] 16.2 Test `deleteKVEntries`: (a) all entries deleted, (b) absent key treated as success, (c) network error returned
-- [ ] 16.3 Test reconcile loop: (a) finalizer added on first reconcile, (b) active reconcile calls apply and writes status, (c) deletion reconcile calls delete and removes finalizer, (d) status-only generation change does not trigger KV write, (e) not-found returns without error
+- [x] 16.1 Test `applyKVEntries`: (a) all entries written verbatim, (b) empty-key entry skipped with error status, (c) idempotent re-apply succeeds, (d) network error returned
+- [x] 16.2 Test `deleteKVEntries`: (a) all entries deleted, (b) absent key treated as success, (c) network error returned
+- [x] 16.3 Test reconcile loop: (a) finalizer added on first reconcile, (b) active reconcile calls apply and writes status, (c) deletion reconcile calls delete and removes finalizer, (d) status-only generation change does not trigger KV write, (e) not-found returns without error
 
 > Covers: all ConsulKV requirements
 
