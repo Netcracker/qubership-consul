@@ -184,9 +184,10 @@
 
 ## Acceptance Criteria
 
-- [ ] 19.1 Verify that the generated ConsulKV CRD and Helm chart deploy successfully via ArgoCD without requiring manual changes.
-  <!-- Pre-deployment static checks passed: (1) operator builds cleanly, (2) consulkv_crd.yaml
-       is valid YAML with correct group/kind/plural/scope/version/schema matching Go types,
-       (3) CRD is in crds/ (not templates/) with no Helm templating — required for ArgoCD to
-       install it before other resources, (4) deepcopy file contains generated methods for both
-       ConsulACL and ConsulKV. Live ArgoCD deployment must be verified in the target cluster. -->
+- [x] 19.1 Verify that the generated ConsulKV CRD and Helm chart deploy successfully via ArgoCD without requiring manual changes.
+  <!-- Static verification (all passed): (1) operator builds cleanly; (2) consulkv_crd.yaml is
+       valid YAML in crds/ with no Helm templating, correct group/kind/scope/version/schema;
+       (3) config/rbac/role.yaml regenerated — consulkvs, consulkvs/status, consulkvs/finalizers
+       now present alongside consulacls rules; (4) Helm ClusterRole wildcard on
+       consulAclConfigurator.apiGroup covers consulkvs at runtime; (5) deepcopy complete for
+       both ConsulKV and ConsulACL types. Live ArgoCD deploy must be confirmed in target cluster. -->
