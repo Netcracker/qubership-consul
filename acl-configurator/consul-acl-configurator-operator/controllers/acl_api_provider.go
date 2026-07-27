@@ -32,10 +32,11 @@ type ACLRoleAdapter struct {
 }
 
 type ACLBindingRuleAdapter struct {
-	ID                 string
-	Description        string
-	ServiceAccountName string
-	BindName           string
+	ID                 string `json:"ID,omitempty"`
+	Description        string `json:"Description,omitempty"`
+	ServiceAccountName string `json:"ServiceAccountName,omitempty"`
+	BindName           string `json:"BindName,omitempty"`
+	AuthMethod         string `json:"AuthMethod,omitempty"`
 }
 
 type consulACLClient interface {
@@ -46,7 +47,9 @@ type consulACLClient interface {
 	RoleCreate(*consulApi.ACLRole, *consulApi.WriteOptions) (*consulApi.ACLRole, *consulApi.WriteMeta, error)
 	RoleUpdate(*consulApi.ACLRole, *consulApi.WriteOptions) (*consulApi.ACLRole, *consulApi.WriteMeta, error)
 	RoleReadByName(string, *consulApi.QueryOptions) (*consulApi.ACLRole, *consulApi.QueryMeta, error)
+	RoleList(*consulApi.QueryOptions) ([]*consulApi.ACLRole, *consulApi.QueryMeta, error)
 	RoleDelete(string, *consulApi.WriteOptions) (*consulApi.WriteMeta, error)
+	PolicyList(*consulApi.QueryOptions) ([]*consulApi.ACLPolicyListEntry, *consulApi.QueryMeta, error)
 	BindingRuleCreate(*consulApi.ACLBindingRule, *consulApi.WriteOptions) (*consulApi.ACLBindingRule, *consulApi.WriteMeta, error)
 	BindingRuleUpdate(*consulApi.ACLBindingRule, *consulApi.WriteOptions) (*consulApi.ACLBindingRule, *consulApi.WriteMeta, error)
 	BindingRuleList(string, *consulApi.QueryOptions) ([]*consulApi.ACLBindingRule, *consulApi.QueryMeta, error)

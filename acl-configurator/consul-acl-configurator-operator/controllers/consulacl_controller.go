@@ -154,7 +154,7 @@ func (r *ConsulACLReconciler) deleteACL(instance *consulacl.ConsulACL, crUpdater
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-	err = r.deleteAclEntities(aclConfig, instance.Name, instance.Namespace)
+	err = r.deleteAclEntities(aclConfig, instance.Name, instance.Namespace, instance.Spec.ACL.ExplicitName)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -165,8 +165,8 @@ func (r *ConsulACLReconciler) deleteACL(instance *consulacl.ConsulACL, crUpdater
 	return ctrl.Result{}, err
 }
 
-func (r *ConsulACLReconciler) deleteAclEntities(aclConfig *ACLConfig, name string, namespace string) error {
-	if err := deleteBindingRules(aclConfig, name, namespace); err != nil {
+func (r *ConsulACLReconciler) deleteAclEntities(aclConfig *ACLConfig, name string, namespace string, explicitName bool) error {
+	if err := deleteBindingRules(aclConfig, name, namespace, explicitName); err != nil {
 		return err
 	}
 	if err := deleteRoles(aclConfig, name, namespace); err != nil {
@@ -180,14 +180,34 @@ func (r *ConsulACLReconciler) deleteAclEntities(aclConfig *ACLConfig, name strin
 	return nil
 }
 
-func deleteBindingRules(aclConfig *ACLConfig, name string, namespace string) error {
-	existedBindingRules, _, err := aclClient.BindingRuleList(authMethod, &consulApi.QueryOptions{})
-	if err != nil {
-		return err
-	}
+func deleteBindingRules(aclConfig *ACLConfig, name string, namespace string, explicitName bool) error {
+	// Collect all distinct auth methods referenced in this CR (global + any per-rule overrides).
+	authMethods := map[string]struct{}{authMethod: {}}
 	for _, br := range aclConfig.BindRules {
-		for _, ebr := range existedBindingRules {
-			if convertEntityName(br.BindName, name, namespace) == ebr.BindName {
+		if br.AuthMethod != "" {
+			authMethods[br.AuthMethod] = struct{}{}
+		}
+	}
+
+	// Build the set of bind names declared by this CR.
+	declaredBindNames := map[string]struct{}{}
+	for _, br := range aclConfig.BindRules {
+		var bindName string
+		if explicitName {
+			bindName = br.BindName
+		} else {
+			bindName = convertEntityName(br.BindName, name, namespace)
+		}
+		declaredBindNames[bindName] = struct{}{}
+	}
+
+	for am := range authMethods {
+		existingRules, _, err := aclClient.BindingRuleList(am, &consulApi.QueryOptions{})
+		if err != nil {
+			return err
+		}
+		for _, ebr := range existingRules {
+			if _, declared := declaredBindNames[ebr.BindName]; declared {
 				_, err = aclClient.BindingRuleDelete(ebr.ID, &consulApi.WriteOptions{})
 				if err != nil {
 					log.Error(err, fmt.Sprintf("Error occurred during binding rule deleting operation, binding rule id is [%s]", ebr.ID))
@@ -264,7 +284,111 @@ func (r *ConsulACLReconciler) applyACL(cr *consulacl.ConsulACL) (string, string,
 	if err != nil {
 		return "", "", "", err
 	}
+	if err := removeStaleEntities(aclConfig, customResourceName, customResourceNamespace, cr.Spec.ACL.ExplicitName); err != nil {
+		return "", "", "", err
+	}
 	return policiesStatus.GetStatus(), rolesStatus.GetStatus(), bindRulesStatus.GetStatus(), nil
+}
+
+// removeStaleEntities deletes Consul entities that were present under this CR's naming
+// pattern but are no longer declared in the current spec. Deletion order mirrors
+// deleteAclEntities: binding rules → roles → policies.
+func removeStaleEntities(aclConfig *ACLConfig, name string, namespace string, explicitName bool) error {
+	namePrefix := fmt.Sprintf("%s_%s_", name, namespace)
+	isOwned := func(entityName string) bool {
+		if explicitName {
+			return true // explicit names: we own whatever is in the spec
+		}
+		return strings.HasPrefix(entityName, namePrefix)
+	}
+
+	// --- binding rules ---
+	// Collect all auth methods referenced in the current spec (global + per-rule overrides).
+	authMethods := map[string]struct{}{authMethod: {}}
+	for _, br := range aclConfig.BindRules {
+		if br.AuthMethod != "" {
+			authMethods[br.AuthMethod] = struct{}{}
+		}
+	}
+	// Build the set of declared BindNames for this CR.
+	declaredBindNames := map[string]struct{}{}
+	for _, br := range aclConfig.BindRules {
+		var bindName string
+		if explicitName {
+			bindName = br.BindName
+		} else {
+			bindName = convertEntityName(br.BindName, name, namespace)
+		}
+		declaredBindNames[bindName] = struct{}{}
+	}
+	for am := range authMethods {
+		existingRules, _, err := aclClient.BindingRuleList(am, &consulApi.QueryOptions{})
+		if err != nil {
+			return err
+		}
+		for _, ebr := range existingRules {
+			if !isOwned(ebr.BindName) {
+				continue
+			}
+			if _, declared := declaredBindNames[ebr.BindName]; !declared {
+				if _, err := aclClient.BindingRuleDelete(ebr.ID, &consulApi.WriteOptions{}); err != nil {
+					log.Error(err, fmt.Sprintf("Error deleting stale binding rule [%s]", ebr.ID))
+					return err
+				}
+			}
+		}
+	}
+
+	// --- roles ---
+	declaredRoleNames := map[string]struct{}{}
+	for _, r := range aclConfig.Roles {
+		var roleName string
+		if explicitName {
+			roleName = r.Name
+		} else {
+			roleName = convertEntityName(r.Name, name, namespace)
+		}
+		declaredRoleNames[roleName] = struct{}{}
+	}
+	existingRoles, _, err := aclClient.RoleList(&consulApi.QueryOptions{})
+	if err != nil {
+		return err
+	}
+	for _, er := range existingRoles {
+		if !isOwned(er.Name) {
+			continue
+		}
+		if _, declared := declaredRoleNames[er.Name]; !declared {
+			if _, err := aclClient.RoleDelete(er.ID, &consulApi.WriteOptions{}); err != nil {
+				log.Error(err, fmt.Sprintf("Error deleting stale role [%s]", er.ID))
+				return err
+			}
+		}
+	}
+
+	// --- policies ---
+	declaredPolicyNames := map[string]struct{}{}
+	for _, p := range aclConfig.Policies {
+		// policies always use prefixed names (explicit naming does not apply to policies per design)
+		declaredPolicyNames[convertEntityName(p.Name, name, namespace)] = struct{}{}
+	}
+	existingPolicies, _, err := aclClient.PolicyList(&consulApi.QueryOptions{})
+	if err != nil {
+		return err
+	}
+	for _, ep := range existingPolicies {
+		if !strings.HasPrefix(ep.Name, namePrefix) {
+			continue
+		}
+		if _, declared := declaredPolicyNames[ep.Name]; !declared {
+			if _, err := aclClient.PolicyDelete(ep.ID, &consulApi.WriteOptions{}); err != nil {
+				log.Error(err, fmt.Sprintf("Error deleting stale policy [%s]", ep.ID))
+				return err
+			}
+		}
+	}
+
+	return nil
 }
 
 func getAclConfig(cr *consulacl.ConsulACL) (*ACLConfig, error) {
@@ -402,6 +526,17 @@ func processBindRules(bindRules []ACLBindingRuleAdapter, customResourceName stri
 			continue
 		}
 		bindRuleDemand := convertBindRuleAdapterToBindRule(bindRuleAdapter, customResourceName, customResourceNamespace, explicitName)
+		applicableAuthMethod := bindRuleDemand.AuthMethod
+		existingRules, _, err := aclClient.BindingRuleList(applicableAuthMethod, &consulApi.QueryOptions{})
+		if err != nil {
+			return &statusMap, err
+		}
+		for _, existing := range existingRules {
+			if existing.BindName == bindRuleDemand.BindName {
+				bindRuleDemand.ID = existing.ID
+				break
+			}
+		}
 		var action string
 		if bindRuleDemand.ID == "" {
 			_, _, err = aclClient.BindingRuleCreate(&bindRuleDemand, &consulApi.WriteOptions{})
@@ -434,7 +569,11 @@ func convertBindRuleAdapterToBindRule(bindRuleAdapter ACLBindingRuleAdapter, cus
 		bindingRule.BindName = convertEntityName(bindRuleAdapter.BindName, customResourceName, customResourceNamespace)
 	}
 	bindingRule.BindType = "role"
-	bindingRule.AuthMethod = authMethod
+	if bindRuleAdapter.AuthMethod != "" {
+		bindingRule.AuthMethod = bindRuleAdapter.AuthMethod
+	} else {
+		bindingRule.AuthMethod = authMethod
+	}
 	bindingRule.Description = bindRuleAdapter.Description
 	bindingRule.Selector = fmt.Sprintf("serviceaccount.namespace==\"%s\" and serviceaccount.name==\"%s\"",
 		customResourceNamespace,

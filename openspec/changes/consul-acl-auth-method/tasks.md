@@ -29,9 +29,9 @@
 
 ## 4. ConsulACL — AuthMethod per binding rule
 
-- [ ] 4.1 Add `AuthMethod string` field to `ACLBindingRuleAdapter` in `acl_api_provider.go` with `json:"AuthMethod,omitempty"` tag
-- [ ] 4.2 Update `convertBindRuleAdapterToBindRule` to set `bindingRule.AuthMethod` to `bindRuleAdapter.AuthMethod` when non-empty, falling back to the global `authMethod` variable otherwise
-- [ ] 4.3 Write unit tests covering: (a) empty `AuthMethod` falls back to global, (b) non-empty `AuthMethod` overrides global, (c) two rules in one CR each use their respective auth methods
+- [x] 4.1 Add `AuthMethod string` field to `ACLBindingRuleAdapter` in `acl_api_provider.go` with `json:"AuthMethod,omitempty"` tag
+- [x] 4.2 Update `convertBindRuleAdapterToBindRule` to set `bindingRule.AuthMethod` to `bindRuleAdapter.AuthMethod` when non-empty, falling back to the global `authMethod` variable otherwise
+- [x] 4.3 Write unit tests covering: (a) empty `AuthMethod` falls back to global, (b) non-empty `AuthMethod` overrides global, (c) two rules in one CR each use their respective auth methods
 
 > Covers: AuthMethod per Binding Rule — Default, AuthMethod per Binding Rule — Per-Rule Override
 
@@ -39,9 +39,9 @@
 
 ## 5. ConsulACL — Idempotent binding-rule reconciliation
 
-- [ ] 5.1 Update `processBindRules` to call `aclClient.BindingRuleList(applicableAuthMethod, ...)` before creating a rule, using the per-rule `AuthMethod` (or global fallback) as the list scope
-- [ ] 5.2 Scan the returned list for a matching `BindName`; if found, populate the rule's `ID` and call `BindingRuleUpdate`; if not found, call `BindingRuleCreate`
-- [ ] 5.3 Write unit tests covering: (a) rule absent → create called, (b) rule present under same auth method → update called with existing ID, (c) rule present under different auth method → not matched, new rule created
+- [x] 5.1 Update `processBindRules` to call `aclClient.BindingRuleList(applicableAuthMethod, ...)` before creating a rule, using the per-rule `AuthMethod` (or global fallback) as the list scope
+- [x] 5.2 Scan the returned list for a matching `BindName`; if found, populate the rule's `ID` and call `BindingRuleUpdate`; if not found, call `BindingRuleCreate`
+- [x] 5.3 Write unit tests covering: (a) rule absent → create called, (b) rule present under same auth method → update called with existing ID, (c) rule present under different auth method → not matched, new rule created
 
 > Covers: Idempotent Binding-Rule Reconciliation — Lookup Before Create, Idempotent Binding-Rule Reconciliation — AuthMethod-Scoped Lookup
 
@@ -49,9 +49,9 @@
 
 ## 6. ConsulACL — Update: handle removed entities
 
-- [ ] 6.1 Design and implement a strategy to detect entities removed from `spec.acl.json` on update: fetch the current spec's entity names, compare with Consul entities whose names match the CR's naming pattern (prefixed or explicit), and delete entities no longer declared
-- [ ] 6.2 Apply removal in order: binding rules first, then roles, then policies — consistent with the deletion order in `deleteAclEntities`
-- [ ] 6.3 Write unit tests covering: (a) policy removed from spec is deleted from Consul on next reconcile, (b) role removed from spec is deleted, (c) binding rule removed from spec is deleted, (d) entities still in spec are not deleted
+- [x] 6.1 Design and implement a strategy to detect entities removed from `spec.acl.json` on update: fetch the current spec's entity names, compare with Consul entities whose names match the CR's naming pattern (prefixed or explicit), and delete entities no longer declared
+- [x] 6.2 Apply removal in order: binding rules first, then roles, then policies — consistent with the deletion order in `deleteAclEntities`
+- [x] 6.3 Write unit tests covering: (a) policy removed from spec is deleted from Consul on next reconcile, (b) role removed from spec is deleted, (c) binding rule removed from spec is deleted, (d) entities still in spec are not deleted
 
 > Covers: Apply on Generation Change (removed entity scenario)
 
@@ -69,9 +69,9 @@
 
 ## 8. ConsulACL — Deletion: per-rule AuthMethod binding-rule cleanup
 
-- [ ] 8.1 Update `deleteBindingRules` to collect all distinct `AuthMethod` values from the binding-rule entries (both the global AuthMethod and any per-rule overrides)
-- [ ] 8.2 For each distinct AuthMethod, call `aclClient.BindingRuleList(authMethod, ...)` and remove matching rules
-- [ ] 8.3 Write unit tests covering: (a) all rules deleted when all use global AuthMethod, (b) rules deleted under both global and override AuthMethod when CR uses mixed methods
+- [x] 8.1 Update `deleteBindingRules` to collect all distinct `AuthMethod` values from the binding-rule entries (both the global AuthMethod and any per-rule overrides)
+- [x] 8.2 For each distinct AuthMethod, call `aclClient.BindingRuleList(authMethod, ...)` and remove matching rules
+- [x] 8.3 Write unit tests covering: (a) all rules deleted when all use global AuthMethod, (b) rules deleted under both global and override AuthMethod when CR uses mixed methods
 
 > Covers: Deletion with Per-Rule AuthMethod
 
@@ -79,10 +79,10 @@
 
 ## 9. ConsulKV — API types
 
-- [ ] 9.1 Create `api/v1alpha1/consulkv_types.go` with `ConsulKVEntry`, `ConsulKVConfig`, `ConsulKVSpec`, `ConsulKVStatus`, `ConsulKV`, and `ConsulKVList` types matching the structure defined in the spec
-- [ ] 9.2 Add `+kubebuilder:object:root=true` and `+kubebuilder:subresource:status` markers to `ConsulKV`
-- [ ] 9.3 Register `ConsulKV` and `ConsulKVList` with `SchemeBuilder.Register` in `groupversion_info.go` (or in the new types file's `init()`)
-- [ ] 9.4 Regenerate or manually update `zz_generated.deepcopy.go` to include `DeepCopyInto` and `DeepCopyObject` for all new ConsulKV types
+- [x] 9.1 Create `api/v1alpha1/consulkv_types.go` with `ConsulKVEntry`, `ConsulKVConfig`, `ConsulKVSpec`, `ConsulKVStatus`, `ConsulKV`, and `ConsulKVList` types matching the structure defined in the spec
+- [x] 9.2 Add `+kubebuilder:object:root=true` and `+kubebuilder:subresource:status` markers to `ConsulKV`
+- [x] 9.3 Register `ConsulKV` and `ConsulKVList` with `SchemeBuilder.Register` in `groupversion_info.go` (or in the new types file's `init()`)
+- [x] 9.4 Regenerate or manually update `zz_generated.deepcopy.go` to include `DeepCopyInto` and `DeepCopyObject` for all new ConsulKV types
 
 > Covers: Resource Structure
 
