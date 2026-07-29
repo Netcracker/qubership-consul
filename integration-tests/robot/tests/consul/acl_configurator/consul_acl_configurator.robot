@@ -1,41 +1,32 @@
 *** Settings ***
 Resource    ../../shared/keywords.robot
 Library     PlatformLibrary  managed_by_operator=true
+Library     Collections
 
 *** Variables ***
 ${TEST_NAMESPACE}        %{CONSUL_NAMESPACE}
-${AUTH_METHOD}           %{CONSUL_AUTH_METHOD_NAME}
+${AUTH_METHOD}           consul-k8s-auth-method
 ${RECONCILE_TIMEOUT}     60s
 ${RECONCILE_INTERVAL}    2s
+${GROUP}                 netcracker.com
+${VERSION}               v1alpha1
 
 
 *** Keywords ***
 Apply ConsulACL CR
-    [Arguments]    ${cr_yaml}
-    Apply Custom Resource    ${cr_yaml}    ${TEST_NAMESPACE}
+    [Arguments]    ${name}    ${body}
+    ${existing}=    Run Keyword And Ignore Error
+    ...    Get Namespaced Custom Object    ${GROUP}    ${VERSION}    ${TEST_NAMESPACE}    consulacls    ${name}
+    ${status}=    Get From List    ${existing}    0
+    IF    '${status}' == 'PASS'
+        Replace Namespaced Custom Object    ${GROUP}    ${VERSION}    ${TEST_NAMESPACE}    consulacls    ${name}    ${body}
+    ELSE
+        Create Namespaced Custom Object    ${GROUP}    ${VERSION}    ${TEST_NAMESPACE}    consulacls    ${body}
+    END
 
 Delete ConsulACL CR
     [Arguments]    ${name}
-    Delete Custom Resource    consulacls    ${name}    ${TEST_NAMESPACE}
-
-Wait For ConsulACL Reconcile
-    Sleep    ${RECONCILE_INTERVAL}
-    Wait Until Keyword Succeeds    ${RECONCILE_TIMEOUT}    ${RECONCILE_INTERVAL}
-    ...    ConsulACL Status Should Be Synced
-
-ConsulACL Status Should Be Synced
-    [Arguments]    ${name}=test-explicit-acl
-    ${status}=    Get Custom Resource Status    consulacls    ${name}    ${TEST_NAMESPACE}
-    Should Not Be Empty    ${status}
-
-
-# ---- 18.1: ConsulACL with explicitName: true ----
-
-Apply Explicit Name ACL CR With Both Entities
-    Apply ConsulACL CR    ${EXECDIR}/resources/consulacl_explicit_full.yaml
-
-Apply Explicit Name ACL CR With Role Removed
-    Apply ConsulACL CR    ${EXECDIR}/resources/consulacl_explicit_no_role.yaml
+    Delete Namespaced Custom Object    ${GROUP}    ${VERSION}    ${TEST_NAMESPACE}    consulacls    ${name}
 
 
 *** Test Cases ***
@@ -43,14 +34,24 @@ Apply Explicit Name ACL CR With Role Removed
 # 18.1 — explicitName: true — verbatim names and stale entity removal on update
 Test ConsulACL ExplicitName Verbatim Names
     [Tags]    acl-configurator    explicit-name
-    Apply ConsulACL CR    ${EXECDIR}/resources/consulacl_explicit_full.yaml
+    ${body}=    Create Dictionary
+    ...    apiVersion=netcracker.com/v1alpha1
+    ...    kind=ConsulACL
+    ...    metadata=${{"name": "test-explicit-acl", "namespace": "${TEST_NAMESPACE}"}}
+    ...    spec=${{"acl": {"name": "test-explicit-acl", "explicitName": True, "json": "{\"policies\":[{\"Name\":\"integration_explicit_policy\",\"Description\":\"Integration test explicit policy\",\"Rules\":\"key_prefix \\\"integration/\\\" { policy = \\\"read\\\" }\"}],\"roles\":[{\"Name\":\"integration_explicit_role\",\"Description\":\"Integration test explicit role\",\"policy_names\":[\"integration_explicit_policy\"]}],\"bind_rules\":[{\"BindName\":\"integration_explicit_bind\",\"ServiceAccountName\":\"integration-sa\"}]}"}}}
+    Apply ConsulACL CR    test-explicit-acl    ${body}
     Sleep    ${RECONCILE_INTERVAL}
     Wait Until Keyword Succeeds    ${RECONCILE_TIMEOUT}    ${RECONCILE_INTERVAL}
     ...    ACL Explicit Full Entities Should Exist
 
 Test ConsulACL ExplicitName Removed Entity Deleted On Update
     [Tags]    acl-configurator    explicit-name
-    Apply ConsulACL CR    ${EXECDIR}/resources/consulacl_explicit_no_role.yaml
+    ${body}=    Create Dictionary
+    ...    apiVersion=netcracker.com/v1alpha1
+    ...    kind=ConsulACL
+    ...    metadata=${{"name": "test-explicit-acl", "namespace": "${TEST_NAMESPACE}"}}
+    ...    spec=${{"acl": {"name": "test-explicit-acl", "explicitName": True, "json": "{\"policies\":[{\"Name\":\"integration_explicit_policy\",\"Description\":\"Integration test explicit policy\",\"Rules\":\"key_prefix \\\"integration/\\\" { policy = \\\"read\\\" }\"}],\"roles\":[],\"bind_rules\":[]}"}}}
+    Apply ConsulACL CR    test-explicit-acl    ${body}
     Sleep    ${RECONCILE_INTERVAL}
     Wait Until Keyword Succeeds    ${RECONCILE_TIMEOUT}    ${RECONCILE_INTERVAL}
     ...    ACL Explicit Role Should Be Gone
@@ -69,7 +70,12 @@ ACL Explicit Role Should Be Gone
 # 18.2 — per-rule AuthMethod override
 Test ConsulACL PerRule AuthMethod Binding Rule Under Override Method
     [Tags]    acl-configurator    per-rule-auth-method
-    Apply ConsulACL CR    ${EXECDIR}/resources/consulacl_perrule_authmethod.yaml
+    ${body}=    Create Dictionary
+    ...    apiVersion=netcracker.com/v1alpha1
+    ...    kind=ConsulACL
+    ...    metadata=${{"name": "test-perrule-auth", "namespace": "${TEST_NAMESPACE}"}}
+    ...    spec=${{"acl": {"name": "test-perrule-auth", "explicitName": True, "json": "{\"policies\":[],\"roles\":[],\"bind_rules\":[{\"BindName\":\"integration_perrule_bind\",\"AuthMethod\":\"integration-override-auth-method\",\"ServiceAccountName\":\"integration-sa\"}]}"}}}
+    Apply ConsulACL CR    test-perrule-auth    ${body}
     Sleep    ${RECONCILE_INTERVAL}
     Wait Until Keyword Succeeds    ${RECONCILE_TIMEOUT}    ${RECONCILE_INTERVAL}
     ...    ACL PerRule AuthMethod Entities Should Exist
@@ -82,7 +88,12 @@ ACL PerRule AuthMethod Entities Should Exist
 # 18.3 — delete: all entities removed
 Test ConsulACL Delete Removes All Entities
     [Tags]    acl-configurator    delete
-    Apply ConsulACL CR    ${EXECDIR}/resources/consulacl_delete_test.yaml
+    ${body}=    Create Dictionary
+    ...    apiVersion=netcracker.com/v1alpha1
+    ...    kind=ConsulACL
+    ...    metadata=${{"name": "test-delete-acl", "namespace": "${TEST_NAMESPACE}"}}
+    ...    spec=${{"acl": {"name": "test-delete-acl", "explicitName": False, "json": "{\"policies\":[{\"Name\":\"delete_policy\",\"Description\":\"Policy to be deleted\",\"Rules\":\"key_prefix \\\"delete/\\\" { policy = \\\"read\\\" }\"}],\"roles\":[{\"Name\":\"delete_role\",\"Description\":\"Role to be deleted\",\"policy_names\":[\"delete_policy\"]}],\"bind_rules\":[{\"BindName\":\"delete_bind\",\"ServiceAccountName\":\"integration-sa\"}]}"}}}
+    Apply ConsulACL CR    test-delete-acl    ${body}
     Sleep    ${RECONCILE_INTERVAL}
     Wait Until Keyword Succeeds    ${RECONCILE_TIMEOUT}    ${RECONCILE_INTERVAL}
     ...    ACL Delete Test Entities Should Exist
