@@ -14,10 +14,9 @@ ${VERSION}               v1alpha1
 *** Keywords ***
 Apply ConsulKV CR
     [Arguments]    ${name}    ${body}
-    ${existing}=    Run Keyword And Ignore Error
+    ${result}    ${value}=    Run Keyword And Ignore Error
     ...    Get Namespaced Custom Object    ${GROUP}    ${VERSION}    ${TEST_NAMESPACE}    consulkvs    ${name}
-    ${status}=    Get From List    ${existing}    0
-    IF    '${status}' == 'PASS'
+    IF    '${result}' == 'PASS'
         Replace Namespaced Custom Object    ${GROUP}    ${VERSION}    ${TEST_NAMESPACE}    consulkvs    ${name}    ${body}
     ELSE
         Create Namespaced Custom Object    ${GROUP}    ${VERSION}    ${TEST_NAMESPACE}    consulkvs    ${body}
@@ -27,17 +26,32 @@ Delete ConsulKV CR
     [Arguments]    ${name}
     Delete Namespaced Custom Object    ${GROUP}    ${VERSION}    ${TEST_NAMESPACE}    consulkvs    ${name}
 
+Build KV Entry
+    [Arguments]    ${key}    ${value}=${EMPTY}
+    IF    '${value}' != '${EMPTY}'
+        &{entry}=    Create Dictionary    key=${key}    value=${value}
+    ELSE
+        &{entry}=    Create Dictionary    key=${key}
+    END
+    RETURN    &{entry}
+
+Build ConsulKV Body
+    [Arguments]    ${name}    @{entries}
+    &{metadata}=    Create Dictionary    name=${name}    namespace=${TEST_NAMESPACE}
+    &{kv}=          Create Dictionary    entries=@{entries}
+    &{spec}=        Create Dictionary    kv=&{kv}
+    &{body}=        Create Dictionary    apiVersion=netcracker.com/v1alpha1    kind=ConsulKV    metadata=&{metadata}    spec=&{spec}
+    RETURN    &{body}
+
 
 *** Test Cases ***
 
 # 18.4 — apply: verbatim keys exist; re-apply is idempotent
 Test ConsulKV Apply Creates Keys Verbatim
     [Tags]    kv-configurator    apply
-    ${body}=    Create Dictionary
-    ...    apiVersion=netcracker.com/v1alpha1
-    ...    kind=ConsulKV
-    ...    metadata=${{"name": "test-consulkv-apply", "namespace": "${TEST_NAMESPACE}"}}
-    ...    spec=${{"kv": {"entries": [{"key": "config/integration/test-app/"}, {"key": "logging/integration/test-app/LOG_LEVEL", "value": "INFO"}]}}}
+    &{e1}=    Build KV Entry    config/integration/test-app/
+    &{e2}=    Build KV Entry    logging/integration/test-app/LOG_LEVEL    INFO
+    &{body}=    Build ConsulKV Body    test-consulkv-apply    ${e1}    ${e2}
     Apply ConsulKV CR    test-consulkv-apply    ${body}
     Sleep    ${RECONCILE_INTERVAL}
     Wait Until Keyword Succeeds    ${RECONCILE_TIMEOUT}    ${RECONCILE_INTERVAL}
@@ -45,11 +59,9 @@ Test ConsulKV Apply Creates Keys Verbatim
 
 Test ConsulKV Reapply Is Idempotent
     [Tags]    kv-configurator    apply
-    ${body}=    Create Dictionary
-    ...    apiVersion=netcracker.com/v1alpha1
-    ...    kind=ConsulKV
-    ...    metadata=${{"name": "test-consulkv-apply", "namespace": "${TEST_NAMESPACE}"}}
-    ...    spec=${{"kv": {"entries": [{"key": "config/integration/test-app/"}, {"key": "logging/integration/test-app/LOG_LEVEL", "value": "INFO"}]}}}
+    &{e1}=    Build KV Entry    config/integration/test-app/
+    &{e2}=    Build KV Entry    logging/integration/test-app/LOG_LEVEL    INFO
+    &{body}=    Build ConsulKV Body    test-consulkv-apply    ${e1}    ${e2}
     Apply ConsulKV CR    test-consulkv-apply    ${body}
     Sleep    ${RECONCILE_INTERVAL}
     Wait Until Keyword Succeeds    ${RECONCILE_TIMEOUT}    ${RECONCILE_INTERVAL}
@@ -64,11 +76,9 @@ ConsulKV Apply Keys Should Exist
 # 18.5 — delete: all keys removed
 Test ConsulKV Delete Removes All Keys
     [Tags]    kv-configurator    delete
-    ${body}=    Create Dictionary
-    ...    apiVersion=netcracker.com/v1alpha1
-    ...    kind=ConsulKV
-    ...    metadata=${{"name": "test-consulkv-delete", "namespace": "${TEST_NAMESPACE}"}}
-    ...    spec=${{"kv": {"entries": [{"key": "data/integration/delete-test/key1", "value": "val1"}, {"key": "data/integration/delete-test/key2", "value": "val2"}]}}}
+    &{e1}=    Build KV Entry    data/integration/delete-test/key1    val1
+    &{e2}=    Build KV Entry    data/integration/delete-test/key2    val2
+    &{body}=    Build ConsulKV Body    test-consulkv-delete    ${e1}    ${e2}
     Apply ConsulKV CR    test-consulkv-delete    ${body}
     Sleep    ${RECONCILE_INTERVAL}
     Wait Until Keyword Succeeds    ${RECONCILE_TIMEOUT}    ${RECONCILE_INTERVAL}
@@ -90,11 +100,10 @@ ConsulKV Delete Keys Should Not Exist
 # 18.6 — partial failure: valid keys written, empty-key error in .status
 Test ConsulKV Partial Failure Valid Keys Written Error Status Recorded
     [Tags]    kv-configurator    partial-failure
-    ${body}=    Create Dictionary
-    ...    apiVersion=netcracker.com/v1alpha1
-    ...    kind=ConsulKV
-    ...    metadata=${{"name": "test-consulkv-partial", "namespace": "${TEST_NAMESPACE}"}}
-    ...    spec=${{"kv": {"entries": [{"key": "", "value": "this entry has an empty key and must produce an error status"}, {"key": "data/integration/partial/valid1", "value": "v1"}, {"key": "data/integration/partial/valid2", "value": "v2"}]}}}
+    &{e_empty}=    Build KV Entry    ${EMPTY}    this entry has an empty key and must produce an error status
+    &{e1}=         Build KV Entry    data/integration/partial/valid1    v1
+    &{e2}=         Build KV Entry    data/integration/partial/valid2    v2
+    &{body}=    Build ConsulKV Body    test-consulkv-partial    ${e_empty}    ${e1}    ${e2}
     Apply ConsulKV CR    test-consulkv-partial    ${body}
     Sleep    ${RECONCILE_INTERVAL}
     Wait Until Keyword Succeeds    ${RECONCILE_TIMEOUT}    ${RECONCILE_INTERVAL}
@@ -104,9 +113,9 @@ Test ConsulKV Partial Failure Valid Keys Written Error Status Recorded
 ConsulKV Partial Failure Assertions
     Kv Key Should Exist    data/integration/partial/valid1
     Kv Key Should Exist    data/integration/partial/valid2
-    ${cr}=    Get Namespaced Custom Object Status    ${GROUP}    ${VERSION}    ${TEST_NAMESPACE}    consulkvs    test-consulkv-partial
-    ${cr_status}=    Get From Dictionary    ${cr}    status
-    ${entries}=    Get From Dictionary    ${cr_status}    entries
+    ${cr}=          Get Namespaced Custom Object Status    ${GROUP}    ${VERSION}    ${TEST_NAMESPACE}    consulkvs    test-consulkv-partial
+    ${cr_status}=   Get From Dictionary    ${cr}    status
+    ${entries}=     Get From Dictionary    ${cr_status}    entries
     ${error_found}=    Set Variable    ${FALSE}
     FOR    ${entry}    IN    @{entries}
         ${key}=    Get From Dictionary    ${entry}    key

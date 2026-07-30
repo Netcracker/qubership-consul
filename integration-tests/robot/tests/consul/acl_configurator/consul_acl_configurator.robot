@@ -15,10 +15,9 @@ ${VERSION}               v1alpha1
 *** Keywords ***
 Apply ConsulACL CR
     [Arguments]    ${name}    ${body}
-    ${existing}=    Run Keyword And Ignore Error
+    ${result}    ${value}=    Run Keyword And Ignore Error
     ...    Get Namespaced Custom Object    ${GROUP}    ${VERSION}    ${TEST_NAMESPACE}    consulacls    ${name}
-    ${status}=    Get From List    ${existing}    0
-    IF    '${status}' == 'PASS'
+    IF    '${result}' == 'PASS'
         Replace Namespaced Custom Object    ${GROUP}    ${VERSION}    ${TEST_NAMESPACE}    consulacls    ${name}    ${body}
     ELSE
         Create Namespaced Custom Object    ${GROUP}    ${VERSION}    ${TEST_NAMESPACE}    consulacls    ${body}
@@ -28,17 +27,22 @@ Delete ConsulACL CR
     [Arguments]    ${name}
     Delete Namespaced Custom Object    ${GROUP}    ${VERSION}    ${TEST_NAMESPACE}    consulacls    ${name}
 
+Build ConsulACL Body
+    [Arguments]    ${name}    ${explicit}    ${json}
+    &{metadata}=    Create Dictionary    name=${name}    namespace=${TEST_NAMESPACE}
+    &{acl}=         Create Dictionary    name=${name}    explicitName=${explicit}    json=${json}
+    &{spec}=        Create Dictionary    acl=&{acl}
+    &{body}=        Create Dictionary    apiVersion=netcracker.com/v1alpha1    kind=ConsulACL    metadata=&{metadata}    spec=&{spec}
+    RETURN    &{body}
+
 
 *** Test Cases ***
 
 # 18.1 — explicitName: true — verbatim names and stale entity removal on update
 Test ConsulACL ExplicitName Verbatim Names
     [Tags]    acl-configurator    explicit-name
-    ${body}=    Create Dictionary
-    ...    apiVersion=netcracker.com/v1alpha1
-    ...    kind=ConsulACL
-    ...    metadata=${{"name": "test-explicit-acl", "namespace": "${TEST_NAMESPACE}"}}
-    ...    spec=${{"acl": {"name": "test-explicit-acl", "explicitName": True, "json": "{\"policies\":[{\"Name\":\"integration_explicit_policy\",\"Description\":\"Integration test explicit policy\",\"Rules\":\"key_prefix \\\"integration/\\\" { policy = \\\"read\\\" }\"}],\"roles\":[{\"Name\":\"integration_explicit_role\",\"Description\":\"Integration test explicit role\",\"policy_names\":[\"integration_explicit_policy\"]}],\"bind_rules\":[{\"BindName\":\"integration_explicit_bind\",\"ServiceAccountName\":\"integration-sa\"}]}"}}}
+    ${json}=    Set Variable    {"policies":[{"Name":"integration_explicit_policy","Description":"Integration test explicit policy","Rules":"key_prefix \"integration/\" { policy = \"read\" }"}],"roles":[{"Name":"integration_explicit_role","Description":"Integration test explicit role","policy_names":["integration_explicit_policy"]}],"bind_rules":[{"BindName":"integration_explicit_bind","ServiceAccountName":"integration-sa"}]}
+    &{body}=    Build ConsulACL Body    test-explicit-acl    ${TRUE}    ${json}
     Apply ConsulACL CR    test-explicit-acl    ${body}
     Sleep    ${RECONCILE_INTERVAL}
     Wait Until Keyword Succeeds    ${RECONCILE_TIMEOUT}    ${RECONCILE_INTERVAL}
@@ -46,11 +50,8 @@ Test ConsulACL ExplicitName Verbatim Names
 
 Test ConsulACL ExplicitName Removed Entity Deleted On Update
     [Tags]    acl-configurator    explicit-name
-    ${body}=    Create Dictionary
-    ...    apiVersion=netcracker.com/v1alpha1
-    ...    kind=ConsulACL
-    ...    metadata=${{"name": "test-explicit-acl", "namespace": "${TEST_NAMESPACE}"}}
-    ...    spec=${{"acl": {"name": "test-explicit-acl", "explicitName": True, "json": "{\"policies\":[{\"Name\":\"integration_explicit_policy\",\"Description\":\"Integration test explicit policy\",\"Rules\":\"key_prefix \\\"integration/\\\" { policy = \\\"read\\\" }\"}],\"roles\":[],\"bind_rules\":[]}"}}}
+    ${json}=    Set Variable    {"policies":[{"Name":"integration_explicit_policy","Description":"Integration test explicit policy","Rules":"key_prefix \"integration/\" { policy = \"read\" }"}],"roles":[],"bind_rules":[]}
+    &{body}=    Build ConsulACL Body    test-explicit-acl    ${TRUE}    ${json}
     Apply ConsulACL CR    test-explicit-acl    ${body}
     Sleep    ${RECONCILE_INTERVAL}
     Wait Until Keyword Succeeds    ${RECONCILE_TIMEOUT}    ${RECONCILE_INTERVAL}
@@ -70,11 +71,8 @@ ACL Explicit Role Should Be Gone
 # 18.2 — per-rule AuthMethod override
 Test ConsulACL PerRule AuthMethod Binding Rule Under Override Method
     [Tags]    acl-configurator    per-rule-auth-method
-    ${body}=    Create Dictionary
-    ...    apiVersion=netcracker.com/v1alpha1
-    ...    kind=ConsulACL
-    ...    metadata=${{"name": "test-perrule-auth", "namespace": "${TEST_NAMESPACE}"}}
-    ...    spec=${{"acl": {"name": "test-perrule-auth", "explicitName": True, "json": "{\"policies\":[],\"roles\":[],\"bind_rules\":[{\"BindName\":\"integration_perrule_bind\",\"AuthMethod\":\"integration-override-auth-method\",\"ServiceAccountName\":\"integration-sa\"}]}"}}}
+    ${json}=    Set Variable    {"policies":[],"roles":[],"bind_rules":[{"BindName":"integration_perrule_bind","AuthMethod":"integration-override-auth-method","ServiceAccountName":"integration-sa"}]}
+    &{body}=    Build ConsulACL Body    test-perrule-auth    ${TRUE}    ${json}
     Apply ConsulACL CR    test-perrule-auth    ${body}
     Sleep    ${RECONCILE_INTERVAL}
     Wait Until Keyword Succeeds    ${RECONCILE_TIMEOUT}    ${RECONCILE_INTERVAL}
@@ -88,11 +86,8 @@ ACL PerRule AuthMethod Entities Should Exist
 # 18.3 — delete: all entities removed
 Test ConsulACL Delete Removes All Entities
     [Tags]    acl-configurator    delete
-    ${body}=    Create Dictionary
-    ...    apiVersion=netcracker.com/v1alpha1
-    ...    kind=ConsulACL
-    ...    metadata=${{"name": "test-delete-acl", "namespace": "${TEST_NAMESPACE}"}}
-    ...    spec=${{"acl": {"name": "test-delete-acl", "explicitName": False, "json": "{\"policies\":[{\"Name\":\"delete_policy\",\"Description\":\"Policy to be deleted\",\"Rules\":\"key_prefix \\\"delete/\\\" { policy = \\\"read\\\" }\"}],\"roles\":[{\"Name\":\"delete_role\",\"Description\":\"Role to be deleted\",\"policy_names\":[\"delete_policy\"]}],\"bind_rules\":[{\"BindName\":\"delete_bind\",\"ServiceAccountName\":\"integration-sa\"}]}"}}}
+    ${json}=    Set Variable    {"policies":[{"Name":"delete_policy","Description":"Policy to be deleted","Rules":"key_prefix \"delete/\" { policy = \"read\" }"}],"roles":[{"Name":"delete_role","Description":"Role to be deleted","policy_names":["delete_policy"]}],"bind_rules":[{"BindName":"delete_bind","ServiceAccountName":"integration-sa"}]}
+    &{body}=    Build ConsulACL Body    test-delete-acl    ${FALSE}    ${json}
     Apply ConsulACL CR    test-delete-acl    ${body}
     Sleep    ${RECONCILE_INTERVAL}
     Wait Until Keyword Succeeds    ${RECONCILE_TIMEOUT}    ${RECONCILE_INTERVAL}
