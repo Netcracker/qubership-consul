@@ -18,7 +18,7 @@ Apply ConsulACL CR
     ${result}    ${value}=    Run Keyword And Ignore Error
     ...    Get Namespaced Custom Object    ${GROUP}    ${VERSION}    ${TEST_NAMESPACE}    consulacls    ${name}
     IF    '${result}' == 'PASS'
-        Replace Namespaced Custom Object    ${GROUP}    ${VERSION}    ${TEST_NAMESPACE}    consulacls    ${name}    ${body}
+        Patch Namespaced Custom Object    ${GROUP}    ${VERSION}    ${TEST_NAMESPACE}    consulacls    ${name}    ${body}
     ELSE
         Create Namespaced Custom Object    ${GROUP}    ${VERSION}    ${TEST_NAMESPACE}    consulacls    ${body}
     END

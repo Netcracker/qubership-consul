@@ -17,7 +17,7 @@ Apply ConsulKV CR
     ${result}    ${value}=    Run Keyword And Ignore Error
     ...    Get Namespaced Custom Object    ${GROUP}    ${VERSION}    ${TEST_NAMESPACE}    consulkvs    ${name}
     IF    '${result}' == 'PASS'
-        Replace Namespaced Custom Object    ${GROUP}    ${VERSION}    ${TEST_NAMESPACE}    consulkvs    ${name}    ${body}
+        Patch Namespaced Custom Object    ${GROUP}    ${VERSION}    ${TEST_NAMESPACE}    consulkvs    ${name}    ${body}
     ELSE
         Create Namespaced Custom Object    ${GROUP}    ${VERSION}    ${TEST_NAMESPACE}    consulkvs    ${body}
     END
