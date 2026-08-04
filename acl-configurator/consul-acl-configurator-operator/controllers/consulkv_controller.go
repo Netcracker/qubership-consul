@@ -160,6 +160,9 @@ func applyKVEntries(entries []consulacl.ConsulKVEntry) ([]consulacl.ConsulKVEntr
 
 func deleteKVEntries(entries []consulacl.ConsulKVEntry) error {
 	for _, entry := range entries {
+		if entry.Key == "" {
+			continue
+		}
 		if _, err := kvClient.Delete(entry.Key, nil); err != nil {
 			kvLog.Error(err, "Error deleting KV entry", "key", entry.Key)
 			return err
