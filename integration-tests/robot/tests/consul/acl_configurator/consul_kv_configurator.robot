@@ -43,6 +43,35 @@ Build ConsulKV Body
     &{body}=        Create Dictionary    apiVersion=netcracker.com/v1alpha1    kind=ConsulKV    metadata=&{metadata}    spec=&{spec}
     RETURN    &{body}
 
+ConsulKV Apply Keys Should Exist
+    Kv Key Should Exist    config/integration/test-app/
+    Kv Key Should Exist    logging/integration/test-app/LOG_LEVEL
+
+ConsulKV Delete Keys Should Exist
+    Kv Key Should Exist    data/integration/delete-test/key1
+    Kv Key Should Exist    data/integration/delete-test/key2
+
+ConsulKV Delete Keys Should Not Exist
+    Kv Key Should Not Exist    data/integration/delete-test/key1
+    Kv Key Should Not Exist    data/integration/delete-test/key2
+
+ConsulKV Partial Failure Assertions
+    Kv Key Should Exist    data/integration/partial/valid1
+    Kv Key Should Exist    data/integration/partial/valid2
+    ${cr}=          Get Namespaced Custom Object Status    ${GROUP}    ${VERSION}    ${TEST_NAMESPACE}    consulkvs    test-consulkv-partial
+    ${cr_status}=   Get From Dictionary    ${cr}    status
+    ${entries}=     Get From Dictionary    ${cr_status}    entries
+    ${error_found}=    Set Variable    ${FALSE}
+    FOR    ${entry}    IN    @{entries}
+        ${key}=    Get From Dictionary    ${entry}    key
+        ${s}=      Get From Dictionary    ${entry}    status
+        IF    '${key}' == ''
+            Should Contain    ${s}    error
+            ${error_found}=    Set Variable    ${TRUE}
+        END
+    END
+    Should Be True    ${error_found}    msg=Empty-key entry error should be recorded in .status
+
 
 *** Test Cases ***
 
@@ -68,11 +97,6 @@ Test ConsulKV Reapply Is Idempotent
     ...    ConsulKV Apply Keys Should Exist
     [Teardown]    Delete ConsulKV CR    test-consulkv-apply
 
-ConsulKV Apply Keys Should Exist
-    Kv Key Should Exist    config/integration/test-app/
-    Kv Key Should Exist    logging/integration/test-app/LOG_LEVEL
-
-
 # 18.5 — delete: all keys removed
 Test ConsulKV Delete Removes All Keys
     [Tags]    kv-configurator    delete
@@ -88,15 +112,6 @@ Test ConsulKV Delete Removes All Keys
     Wait Until Keyword Succeeds    ${RECONCILE_TIMEOUT}    ${RECONCILE_INTERVAL}
     ...    ConsulKV Delete Keys Should Not Exist
 
-ConsulKV Delete Keys Should Exist
-    Kv Key Should Exist    data/integration/delete-test/key1
-    Kv Key Should Exist    data/integration/delete-test/key2
-
-ConsulKV Delete Keys Should Not Exist
-    Kv Key Should Not Exist    data/integration/delete-test/key1
-    Kv Key Should Not Exist    data/integration/delete-test/key2
-
-
 # 18.6 — partial failure: valid keys written, empty-key error in .status
 Test ConsulKV Partial Failure Valid Keys Written Error Status Recorded
     [Tags]    kv-configurator    partial-failure
@@ -109,20 +124,3 @@ Test ConsulKV Partial Failure Valid Keys Written Error Status Recorded
     Wait Until Keyword Succeeds    ${RECONCILE_TIMEOUT}    ${RECONCILE_INTERVAL}
     ...    ConsulKV Partial Failure Assertions
     [Teardown]    Delete ConsulKV CR    test-consulkv-partial
-
-ConsulKV Partial Failure Assertions
-    Kv Key Should Exist    data/integration/partial/valid1
-    Kv Key Should Exist    data/integration/partial/valid2
-    ${cr}=          Get Namespaced Custom Object Status    ${GROUP}    ${VERSION}    ${TEST_NAMESPACE}    consulkvs    test-consulkv-partial
-    ${cr_status}=   Get From Dictionary    ${cr}    status
-    ${entries}=     Get From Dictionary    ${cr_status}    entries
-    ${error_found}=    Set Variable    ${FALSE}
-    FOR    ${entry}    IN    @{entries}
-        ${key}=    Get From Dictionary    ${entry}    key
-        ${s}=      Get From Dictionary    ${entry}    status
-        IF    '${key}' == ''
-            Should Contain    ${s}    error
-            ${error_found}=    Set Variable    ${TRUE}
-        END
-    END
-    Should Be True    ${error_found}    msg=Empty-key entry error should be recorded in .status

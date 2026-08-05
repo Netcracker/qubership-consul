@@ -48,6 +48,28 @@ Dicts To Json
     ${json}=    Evaluate    __import__('json').dumps({'policies': $policies, 'roles': $roles, 'bind_rules': $bind_rules})
     RETURN    ${json}
 
+ACL Explicit Full Entities Should Exist
+    Acl Policy Should Exist    integration_explicit_policy
+    Acl Role Should Exist    integration_explicit_role
+    Acl Binding Rule Should Exist    integration_explicit_bind    ${AUTH_METHOD}
+
+ACL Explicit Role Should Be Gone
+    Acl Policy Should Exist    integration_explicit_policy
+    Acl Role Should Not Exist    integration_explicit_role
+
+ACL PerRule AuthMethod Entities Should Exist
+    Acl Binding Rule Should Exist    integration_perrule_bind    integration-override-auth-method
+
+ACL Delete Test Entities Should Exist
+    Acl Policy Should Exist    test-delete-acl_${TEST_NAMESPACE}_delete_policy
+    Acl Role Should Exist    test-delete-acl_${TEST_NAMESPACE}_delete_role
+    Acl Binding Rule Should Exist    test-delete-acl_${TEST_NAMESPACE}_delete_bind    ${AUTH_METHOD}
+
+ACL Delete Test Entities Should Not Exist
+    Acl Policy Should Not Exist    test-delete-acl_${TEST_NAMESPACE}_delete_policy
+    Acl Role Should Not Exist    test-delete-acl_${TEST_NAMESPACE}_delete_role
+    Acl Binding Rule Should Not Exist    test-delete-acl_${TEST_NAMESPACE}_delete_bind    ${AUTH_METHOD}
+
 
 *** Test Cases ***
 
@@ -75,16 +97,6 @@ Test ConsulACL ExplicitName Removed Entity Deleted On Update
     ...    ACL Explicit Role Should Be Gone
     [Teardown]    Delete ConsulACL CR    test-explicit-acl
 
-ACL Explicit Full Entities Should Exist
-    Acl Policy Should Exist    integration_explicit_policy
-    Acl Role Should Exist    integration_explicit_role
-    Acl Binding Rule Should Exist    integration_explicit_bind    ${AUTH_METHOD}
-
-ACL Explicit Role Should Be Gone
-    Acl Policy Should Exist    integration_explicit_policy
-    Acl Role Should Not Exist    integration_explicit_role
-
-
 # 18.2 — per-rule AuthMethod override
 Test ConsulACL PerRule AuthMethod Binding Rule Under Override Method
     [Tags]    acl-configurator    per-rule-auth-method
@@ -96,10 +108,6 @@ Test ConsulACL PerRule AuthMethod Binding Rule Under Override Method
     Wait Until Keyword Succeeds    ${RECONCILE_TIMEOUT}    ${RECONCILE_INTERVAL}
     ...    ACL PerRule AuthMethod Entities Should Exist
     [Teardown]    Delete ConsulACL CR    test-perrule-auth
-
-ACL PerRule AuthMethod Entities Should Exist
-    Acl Binding Rule Should Exist    integration_perrule_bind    integration-override-auth-method
-
 
 # 18.3 — delete: all entities removed
 Test ConsulACL Delete Removes All Entities
@@ -117,13 +125,3 @@ Test ConsulACL Delete Removes All Entities
     Sleep    ${RECONCILE_INTERVAL}
     Wait Until Keyword Succeeds    ${RECONCILE_TIMEOUT}    ${RECONCILE_INTERVAL}
     ...    ACL Delete Test Entities Should Not Exist
-
-ACL Delete Test Entities Should Exist
-    Acl Policy Should Exist    test-delete-acl_${TEST_NAMESPACE}_delete_policy
-    Acl Role Should Exist    test-delete-acl_${TEST_NAMESPACE}_delete_role
-    Acl Binding Rule Should Exist    test-delete-acl_${TEST_NAMESPACE}_delete_bind    ${AUTH_METHOD}
-
-ACL Delete Test Entities Should Not Exist
-    Acl Policy Should Not Exist    test-delete-acl_${TEST_NAMESPACE}_delete_policy
-    Acl Role Should Not Exist    test-delete-acl_${TEST_NAMESPACE}_delete_role
-    Acl Binding Rule Should Not Exist    test-delete-acl_${TEST_NAMESPACE}_delete_bind    ${AUTH_METHOD}
