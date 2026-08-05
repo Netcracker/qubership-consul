@@ -2,6 +2,8 @@
 Resource    ../../shared/keywords.robot
 Library     PlatformLibrary  managed_by_operator=true
 Library     Collections
+Suite Setup       Create Override Auth Method
+Suite Teardown    Delete Override Auth Method
 
 *** Variables ***
 ${TEST_NAMESPACE}        %{CONSUL_NAMESPACE}
@@ -27,6 +29,12 @@ Delete ConsulACL CR
     [Arguments]    ${name}
     Delete Namespaced Custom Object    ${GROUP}    ${VERSION}    ${TEST_NAMESPACE}    consulacls    ${name}
 
+Create Override Auth Method
+    Create Auth Method    integration-override-auth-method    kubernetes    Auth method for per-rule override integration test
+
+Delete Override Auth Method
+    Delete Auth Method    integration-override-auth-method
+
 Build ConsulACL Body
     [Arguments]    ${name}    ${explicit}    ${json}
     &{metadata}=    Create Dictionary    name=${name}    namespace=${TEST_NAMESPACE}
@@ -35,14 +43,21 @@ Build ConsulACL Body
     &{body}=        Create Dictionary    apiVersion=netcracker.com/v1alpha1    kind=ConsulACL    metadata=&{metadata}    spec=&{spec}
     RETURN    &{body}
 
+Dicts To Json
+    [Arguments]    ${policies}    ${roles}    ${bind_rules}
+    ${json}=    Evaluate    __import__('json').dumps({'policies': $policies, 'roles': $roles, 'bind_rules': $bind_rules})
+    RETURN    ${json}
+
 
 *** Test Cases ***
 
 # 18.1 — explicitName: true — verbatim names and stale entity removal on update
 Test ConsulACL ExplicitName Verbatim Names
     [Tags]    acl-configurator    explicit-name
-    ${json}=    Evaluate
-    ...    __import__('json').dumps({"policies":[{"Name":"integration_explicit_policy","Description":"Integration test explicit policy","Rules":"key_prefix \\"integration/\\" { policy = \\"read\\" }"}],"roles":[{"Name":"integration_explicit_role","Description":"Integration test explicit role","policy_names":["integration_explicit_policy"]}],"bind_rules":[{"BindName":"integration_explicit_bind","ServiceAccountName":"integration-sa"}]})
+    ${policies}=    Evaluate    [{'Name': 'integration_explicit_policy', 'Description': 'Integration test explicit policy', 'Rules': 'key_prefix "integration/" { policy = "read" }'}]
+    ${roles}=       Evaluate    [{'Name': 'integration_explicit_role', 'Description': 'Integration test explicit role', 'policy_names': ['integration_explicit_policy']}]
+    ${bind_rules}=  Evaluate    [{'BindName': 'integration_explicit_bind', 'ServiceAccountName': 'integration-sa'}]
+    ${json}=    Dicts To Json    ${policies}    ${roles}    ${bind_rules}
     &{body}=    Build ConsulACL Body    test-explicit-acl    ${TRUE}    ${json}
     Apply ConsulACL CR    test-explicit-acl    ${body}
     Sleep    ${RECONCILE_INTERVAL}
@@ -51,8 +66,8 @@ Test ConsulACL ExplicitName Verbatim Names
 
 Test ConsulACL ExplicitName Removed Entity Deleted On Update
     [Tags]    acl-configurator    explicit-name
-    ${json}=    Evaluate
-    ...    __import__('json').dumps({"policies":[{"Name":"integration_explicit_policy","Description":"Integration test explicit policy","Rules":"key_prefix \\"integration/\\" { policy = \\"read\\" }"}],"roles":[],"bind_rules":[]})
+    ${policies}=    Evaluate    [{'Name': 'integration_explicit_policy', 'Description': 'Integration test explicit policy', 'Rules': 'key_prefix "integration/" { policy = "read" }'}]
+    ${json}=    Dicts To Json    ${policies}    ${[]}    ${[]}
     &{body}=    Build ConsulACL Body    test-explicit-acl    ${TRUE}    ${json}
     Apply ConsulACL CR    test-explicit-acl    ${body}
     Sleep    ${RECONCILE_INTERVAL}
@@ -73,8 +88,8 @@ ACL Explicit Role Should Be Gone
 # 18.2 — per-rule AuthMethod override
 Test ConsulACL PerRule AuthMethod Binding Rule Under Override Method
     [Tags]    acl-configurator    per-rule-auth-method
-    ${json}=    Evaluate
-    ...    __import__('json').dumps({"policies":[],"roles":[],"bind_rules":[{"BindName":"integration_perrule_bind","AuthMethod":"integration-override-auth-method","ServiceAccountName":"integration-sa"}]})
+    ${bind_rules}=  Evaluate    [{'BindName': 'integration_perrule_bind', 'AuthMethod': 'integration-override-auth-method', 'ServiceAccountName': 'integration-sa'}]
+    ${json}=    Dicts To Json    ${[]}    ${[]}    ${bind_rules}
     &{body}=    Build ConsulACL Body    test-perrule-auth    ${TRUE}    ${json}
     Apply ConsulACL CR    test-perrule-auth    ${body}
     Sleep    ${RECONCILE_INTERVAL}
@@ -89,8 +104,10 @@ ACL PerRule AuthMethod Entities Should Exist
 # 18.3 — delete: all entities removed
 Test ConsulACL Delete Removes All Entities
     [Tags]    acl-configurator    delete
-    ${json}=    Evaluate
-    ...    __import__('json').dumps({"policies":[{"Name":"delete_policy","Description":"Policy to be deleted","Rules":"key_prefix \\"delete/\\" { policy = \\"read\\" }"}],"roles":[{"Name":"delete_role","Description":"Role to be deleted","policy_names":["delete_policy"]}],"bind_rules":[{"BindName":"delete_bind","ServiceAccountName":"integration-sa"}]})
+    ${policies}=    Evaluate    [{'Name': 'delete_policy', 'Description': 'Policy to be deleted', 'Rules': 'key_prefix "delete/" { policy = "read" }'}]
+    ${roles}=       Evaluate    [{'Name': 'delete_role', 'Description': 'Role to be deleted', 'policy_names': ['delete_policy']}]
+    ${bind_rules}=  Evaluate    [{'BindName': 'delete_bind', 'ServiceAccountName': 'integration-sa'}]
+    ${json}=    Dicts To Json    ${policies}    ${roles}    ${bind_rules}
     &{body}=    Build ConsulACL Body    test-delete-acl    ${FALSE}    ${json}
     Apply ConsulACL CR    test-delete-acl    ${body}
     Sleep    ${RECONCILE_INTERVAL}

@@ -122,6 +122,25 @@ class ConsulLibrary(object):
         result = self.get_acl_role_by_name(name)
         assert result is None, f'ACL role "{name}" should not exist in Consul but was found'
 
+    def create_auth_method(self, name, auth_type="kubernetes", description=""):
+        """Create a Consul ACL auth method. Idempotent: updates if already exists."""
+        url = f'{self.consul_scheme}://{self.consul_host}:{self.consul_port}/v1/acl/auth-method'
+        headers = {'X-Consul-Token': self.consul_token} if self.consul_token else {}
+        payload = {"Name": name, "Type": auth_type, "Description": description,
+                   "Config": {"Host": "https://kubernetes.default.svc", "CACert": "", "ServiceAccountJWT": ""}}
+        response = requests.put(url, json=payload, headers=headers, verify=self.consul_cafile)
+        response.raise_for_status()
+        return response.json()
+
+    def delete_auth_method(self, name):
+        """Delete a Consul ACL auth method. No-op if not found."""
+        try:
+            self._acl_delete(f'auth-method/{name}')
+        except requests.HTTPError as e:
+            if e.response.status_code == 404:
+                return
+            raise
+
     def list_acl_binding_rules(self, auth_method):
         """Return list of binding rules for the given auth method."""
         try:

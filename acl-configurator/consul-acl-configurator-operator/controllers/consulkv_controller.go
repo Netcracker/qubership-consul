@@ -74,7 +74,6 @@ func (r *ConsulKVReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			if err != nil {
 				return reconcile.Result{}, err
 			}
-			return reconcile.Result{}, nil
 		}
 	} else {
 		if containsFinalizer(instance.GetFinalizers(), consulKVFinalizer) {
