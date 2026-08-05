@@ -152,11 +152,11 @@ func (r *ConsulACLReconciler) SetupWithManager(mgr ctrl.Manager) error {
 func (r *ConsulACLReconciler) deleteACL(instance *consulacl.ConsulACL, crUpdater util.CustomResourceUpdater) (ctrl.Result, error) {
 	aclConfig, err := getAclConfig(instance)
 	if err != nil {
-		return ctrl.Result{}, err
-	}
-	err = r.deleteAclEntities(aclConfig, instance.Name, instance.Namespace, instance.Spec.ACL.ExplicitName)
-	if err != nil {
-		return ctrl.Result{}, err
+		log.Error(err, "Can not parse ACL configuration during deletion, skipping Consul cleanup and removing finalizer")
+	} else {
+		if err = r.deleteAclEntities(aclConfig, instance.Name, instance.Namespace, instance.Spec.ACL.ExplicitName); err != nil {
+			return ctrl.Result{}, err
+		}
 	}
 
 	err = crUpdater.UpdateWithRetry(func(cr *consulacl.ConsulACL) {
