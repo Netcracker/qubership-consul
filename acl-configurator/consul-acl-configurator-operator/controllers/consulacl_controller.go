@@ -169,7 +169,7 @@ func (r *ConsulACLReconciler) deleteAclEntities(aclConfig *ACLConfig, name strin
 	if err := deleteBindingRules(aclConfig, name, namespace, explicitName); err != nil {
 		return err
 	}
-	if err := deleteRoles(aclConfig, name, namespace); err != nil {
+	if err := deleteRoles(aclConfig, name, namespace, explicitName); err != nil {
 		return err
 	}
 	if err := deletePolicies(aclConfig, name, namespace); err != nil {
@@ -219,10 +219,15 @@ func deleteBindingRules(aclConfig *ACLConfig, name string, namespace string, exp
 	return nil
 }
 
-func deleteRoles(aclConfig *ACLConfig, name string, namespace string) error {
+func deleteRoles(aclConfig *ACLConfig, name string, namespace string, explicitName bool) error {
 	roles := aclConfig.Roles
 	for _, role := range roles {
-		roleName := convertEntityName(role.Name, name, namespace)
+		var roleName string
+		if explicitName {
+			roleName = role.Name
+		} else {
+			roleName = convertEntityName(role.Name, name, namespace)
+		}
 		deletedRole, err := readRole(roleName)
 		if err != nil {
 			log.Error(err, fmt.Sprintf("Error occurred during role reading operation, role name is [%s]", roleName))

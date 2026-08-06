@@ -89,7 +89,7 @@ class ConsulLibrary(object):
         try:
             return self._acl_get(f'policy/name/{name}')
         except requests.HTTPError as e:
-            if e.response.status_code == 403:
+            if e.response.status_code in (403, 404):
                 return None
             raise
 
@@ -98,7 +98,7 @@ class ConsulLibrary(object):
         try:
             return self._acl_get(f'role/name/{name}')
         except requests.HTTPError as e:
-            if e.response.status_code == 403:
+            if e.response.status_code in (403, 404):
                 return None
             raise
 

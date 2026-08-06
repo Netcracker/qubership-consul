@@ -44,11 +44,9 @@ Delete Override Auth Method
 
 Build ConsulACL Body
     [Arguments]    ${name}    ${explicit}    ${json}
-    &{metadata}=    Create Dictionary    name=${name}    namespace=${TEST_NAMESPACE}
-    &{acl}=         Create Dictionary    name=${name}    explicitName=${explicit}    json=${json}
-    &{spec}=        Create Dictionary    acl=&{acl}
-    &{body}=        Create Dictionary    apiVersion=netcracker.com/v1alpha1    kind=ConsulACL    metadata=&{metadata}    spec=&{spec}
-    RETURN    &{body}
+    ${body}=    Evaluate
+    ...    {'apiVersion': 'netcracker.com/v1alpha1', 'kind': 'ConsulACL', 'metadata': {'name': $name, 'namespace': $TEST_NAMESPACE}, 'spec': {'acl': {'name': $name, 'explicitName': bool($explicit), 'json': $json}}}
+    RETURN    ${body}
 
 Dicts To Json
     [Arguments]    ${policies}    ${roles}    ${bind_rules}
