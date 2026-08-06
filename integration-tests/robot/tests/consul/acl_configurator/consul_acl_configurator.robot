@@ -56,12 +56,12 @@ Dicts To Json
     RETURN    ${json}
 
 ACL Explicit Full Entities Should Exist
-    Acl Policy Should Exist    integration_explicit_policy
+    Acl Policy Should Exist    test-explicit-acl_${TEST_NAMESPACE}_integration_explicit_policy
     Acl Role Should Exist    integration_explicit_role
     Acl Binding Rule Should Exist    integration_explicit_bind    ${AUTH_METHOD}
 
 ACL Explicit Role Should Be Gone
-    Acl Policy Should Exist    integration_explicit_policy
+    Acl Policy Should Exist    test-explicit-acl_${TEST_NAMESPACE}_integration_explicit_policy
     Acl Role Should Not Exist    integration_explicit_role
 
 ACL PerRule AuthMethod Entities Should Exist
