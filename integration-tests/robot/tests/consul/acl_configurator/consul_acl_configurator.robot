@@ -20,10 +20,17 @@ Apply ConsulACL CR
     ${result}    ${value}=    Run Keyword And Ignore Error
     ...    Get Namespaced Custom Object    ${GROUP}    ${VERSION}    ${TEST_NAMESPACE}    consulacls    ${name}
     IF    '${result}' == 'PASS'
-        Patch Namespaced Custom Object    ${GROUP}    ${VERSION}    ${TEST_NAMESPACE}    consulacls    ${name}    ${body}
-    ELSE
-        Create Namespaced Custom Object    ${GROUP}    ${VERSION}    ${TEST_NAMESPACE}    consulacls    ${body}
+        Delete Namespaced Custom Object    ${GROUP}    ${VERSION}    ${TEST_NAMESPACE}    consulacls    ${name}
+        Wait Until Keyword Succeeds    ${RECONCILE_TIMEOUT}    ${RECONCILE_INTERVAL}
+        ...    CR Should Not Exist    ${name}
     END
+    Create Namespaced Custom Object    ${GROUP}    ${VERSION}    ${TEST_NAMESPACE}    consulacls    ${body}
+
+CR Should Not Exist
+    [Arguments]    ${name}
+    ${result}    ${value}=    Run Keyword And Ignore Error
+    ...    Get Namespaced Custom Object    ${GROUP}    ${VERSION}    ${TEST_NAMESPACE}    consulacls    ${name}
+    Should Be Equal    ${result}    FAIL
 
 Delete ConsulACL CR
     [Arguments]    ${name}
@@ -89,7 +96,8 @@ Test ConsulACL ExplicitName Verbatim Names
 Test ConsulACL ExplicitName Removed Entity Deleted On Update
     [Tags]    acl-configurator    explicit-name
     ${policies}=    Evaluate    [{'Name': 'integration_explicit_policy', 'Description': 'Integration test explicit policy', 'Rules': 'key_prefix "integration/" { policy = "read" }'}]
-    ${json}=    Dicts To Json    ${policies}    ${[]}    ${[]}
+    ${empty}=       Evaluate    []
+    ${json}=    Dicts To Json    ${policies}    ${empty}    ${empty}
     &{body}=    Build ConsulACL Body    test-explicit-acl    ${TRUE}    ${json}
     Apply ConsulACL CR    test-explicit-acl    ${body}
     Sleep    ${RECONCILE_INTERVAL}
@@ -101,7 +109,8 @@ Test ConsulACL ExplicitName Removed Entity Deleted On Update
 Test ConsulACL PerRule AuthMethod Binding Rule Under Override Method
     [Tags]    acl-configurator    per-rule-auth-method
     ${bind_rules}=  Evaluate    [{'BindName': 'integration_perrule_bind', 'AuthMethod': 'integration-override-auth-method', 'ServiceAccountName': 'integration-sa'}]
-    ${json}=    Dicts To Json    ${[]}    ${[]}    ${bind_rules}
+    ${empty}=       Evaluate    []
+    ${json}=    Dicts To Json    ${empty}    ${empty}    ${bind_rules}
     &{body}=    Build ConsulACL Body    test-perrule-auth    ${TRUE}    ${json}
     Apply ConsulACL CR    test-perrule-auth    ${body}
     Sleep    ${RECONCILE_INTERVAL}
