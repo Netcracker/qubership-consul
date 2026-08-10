@@ -80,6 +80,19 @@ func main() {
 		os.Exit(1)
 	}
 
+	clusterScoped := strings.TrimSpace(watchNamespaces) == "*"
+
+	// Cluster-scoped watch requires a single shared leader election ID so that
+	// all operator instances (across any namespace) compete for the same lease.
+	// Namespace-scoped watch uses a per-namespace ID so instances in different
+	// namespaces can run concurrently without interfering.
+	leaderElectionID := fmt.Sprintf("consulacls.%s.netcracker.com", ownNamespace)
+	leaderElectionNamespace := ownNamespace
+	if clusterScoped {
+		leaderElectionID = "consulacls.netcracker.com"
+		leaderElectionNamespace = ""
+	}
+
 	mgrOptions := ctrl.Options{
 		Scheme: scheme,
 		Metrics: metricsserver.Options{
@@ -89,9 +102,9 @@ func main() {
 			Port: 9443,
 		}),
 		HealthProbeBindAddress:  probeAddr,
-		LeaderElection:          enableLeaderElection,
-		LeaderElectionID:        fmt.Sprintf("consulacls.%s.netcracker.com", ownNamespace),
-		LeaderElectionNamespace: ownNamespace,
+		LeaderElection:          clusterScoped || enableLeaderElection,
+		LeaderElectionID:        leaderElectionID,
+		LeaderElectionNamespace: leaderElectionNamespace,
 	}
 
 	configureMgrNamespaces(&mgrOptions, watchNamespaces, ownNamespace)
@@ -150,6 +163,12 @@ func getWatchNamespace() (string, error) {
 }
 
 func configureMgrNamespaces(mgrOptions *ctrl.Options, namespace string, ownNamespace string) {
+	// "*" means watch all namespaces: leave DefaultNamespaces nil for a single
+	// cluster-scoped informer (lower memory than one informer per namespace).
+	if strings.TrimSpace(namespace) == "*" {
+		return
+	}
+
 	namespaces := strings.Split(namespace, ",")
 	if !util.Contains(ownNamespace, namespaces) {
 		namespaces = append(namespaces, ownNamespace)
