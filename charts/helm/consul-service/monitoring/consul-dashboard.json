@@ -3,7 +3,10 @@
     "list": [
       {
         "builtIn": 1,
-        "datasource": "-- Grafana --",
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
         "enable": true,
         "hide": true,
         "iconColor": "rgba(0, 211, 255, 1)",
@@ -155,7 +158,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "11.2.1",
+      "pluginVersion": "11.4.0",
       "targets": [
         {
           "datasource": "$datasource",
@@ -253,7 +256,7 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "9.4.3",
+      "pluginVersion": "11.4.0",
       "targets": [
         {
           "alias": "last contact time",
@@ -427,7 +430,7 @@
         },
         "showHeader": true
       },
-      "pluginVersion": "11.2.1",
+      "pluginVersion": "11.4.0",
       "targets": [
         {
           "datasource": "$datasource",
@@ -552,7 +555,7 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "9.4.3",
+      "pluginVersion": "11.4.0",
       "targets": [
         {
           "alias": "servers count",
@@ -730,7 +733,7 @@
         },
         "showHeader": true
       },
-      "pluginVersion": "11.2.1",
+      "pluginVersion": "11.4.0",
       "targets": [
         {
           "datasource": "$datasource",
@@ -841,7 +844,7 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "9.4.3",
+      "pluginVersion": "11.4.0",
       "targets": [
         {
           "alias": "$tag_host",
@@ -959,7 +962,7 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "9.4.3",
+      "pluginVersion": "11.4.0",
       "targets": [
         {
           "alias": "$tag_host",
@@ -1077,7 +1080,7 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "9.4.3",
+      "pluginVersion": "11.4.0",
       "targets": [
         {
           "alias": "$tag_host",
@@ -1270,7 +1273,7 @@
               "sort": "none"
             }
           },
-          "pluginVersion": "9.4.3",
+          "pluginVersion": "11.4.0",
           "targets": [
             {
               "alias": "$tag_host",
@@ -1308,7 +1311,7 @@
               "datasource": "$datasource",
               "dsType": "influxdb",
               "editorMode": "code",
-              "expr": "(avg(kube_pod_container_resource_limits_cpu_cores{exported_namespace=\"$project\",exported_pod=~\"$fullname-[0-9]+\",container=\"consul\", cluster=\"$cluster\"}) by (exported_pod)) * 1000",
+              "expr": "(avg(kube_pod_container_resource_limits{exported_namespace=\"$project\",exported_pod=~\"$fullname-[0-9]+\",container=\"consul\",resource=\"cpu\", cluster=\"$cluster\"}) by (exported_pod)) * 1000",
               "groupBy": [],
               "interval": "",
               "legendFormat": "{{exported_pod}}:limit",
@@ -1465,7 +1468,7 @@
               "sort": "none"
             }
           },
-          "pluginVersion": "9.4.3",
+          "pluginVersion": "11.4.0",
           "targets": [
             {
               "alias": "$tag_host",
@@ -1503,7 +1506,7 @@
               "alias": "limit: $tag_pod_name",
               "datasource": "$datasource",
               "editorMode": "code",
-              "expr": "sum(kube_pod_container_resource_limits_memory_bytes{exported_namespace=\"$project\",exported_pod=~\"$fullname-[0-9]+\",container=\"consul\", cluster=\"$cluster\"}) by (exported_pod)",
+              "expr": "sum(kube_pod_container_resource_limits{exported_namespace=\"$project\",exported_pod=~\"$fullname-[0-9]+\",container=\"consul\",resource=\"memory\", cluster=\"$cluster\"}) by (exported_pod)",
               "groupBy": [],
               "interval": "",
               "legendFormat": "{{exported_pod}}:limit",
@@ -1624,7 +1627,7 @@
               "sort": "none"
             }
           },
-          "pluginVersion": "9.4.3",
+          "pluginVersion": "11.4.0",
           "targets": [
             {
               "alias": "$tag_host",
@@ -1763,7 +1766,7 @@
               "sort": "none"
             }
           },
-          "pluginVersion": "9.4.3",
+          "pluginVersion": "11.4.0",
           "targets": [
             {
               "alias": "$tag_host",
@@ -1907,7 +1910,7 @@
               "sort": "none"
             }
           },
-          "pluginVersion": "9.4.3",
+          "pluginVersion": "11.4.0",
           "targets": [
             {
               "alias": "$tag_host",
@@ -2046,7 +2049,7 @@
               "sort": "none"
             }
           },
-          "pluginVersion": "9.4.3",
+          "pluginVersion": "11.4.0",
           "targets": [
             {
               "datasource": "$datasource",
@@ -2162,7 +2165,7 @@
               "sort": "none"
             }
           },
-          "pluginVersion": "9.4.3",
+          "pluginVersion": "11.4.0",
           "targets": [
             {
               "alias": "$tag_host",
@@ -2325,7 +2328,7 @@
               "sort": "none"
             }
           },
-          "pluginVersion": "9.4.3",
+          "pluginVersion": "11.4.0",
           "targets": [
             {
               "datasource": "$datasource",
@@ -2418,7 +2421,7 @@
               "sort": "none"
             }
           },
-          "pluginVersion": "9.4.3",
+          "pluginVersion": "11.4.0",
           "targets": [
             {
               "datasource": "$datasource",
@@ -2511,7 +2514,7 @@
               "sort": "none"
             }
           },
-          "pluginVersion": "9.4.3",
+          "pluginVersion": "11.4.0",
           "targets": [
             {
               "datasource": "$datasource",
@@ -2604,7 +2607,7 @@
               "sort": "none"
             }
           },
-          "pluginVersion": "9.4.3",
+          "pluginVersion": "11.4.0",
           "targets": [
             {
               "datasource": "$datasource",
@@ -2697,7 +2700,7 @@
               "sort": "none"
             }
           },
-          "pluginVersion": "9.4.3",
+          "pluginVersion": "11.4.0",
           "targets": [
             {
               "datasource": "$datasource",
@@ -2790,7 +2793,7 @@
               "sort": "none"
             }
           },
-          "pluginVersion": "9.4.3",
+          "pluginVersion": "11.4.0",
           "targets": [
             {
               "datasource": "$datasource",
@@ -2905,7 +2908,7 @@
               "sort": "none"
             }
           },
-          "pluginVersion": "9.4.3",
+          "pluginVersion": "11.4.0",
           "targets": [
             {
               "datasource": "$datasource",
@@ -3000,7 +3003,7 @@
               "sort": "none"
             }
           },
-          "pluginVersion": "9.4.3",
+          "pluginVersion": "11.4.0",
           "targets": [
             {
               "datasource": "$datasource",
@@ -3095,7 +3098,7 @@
               "sort": "none"
             }
           },
-          "pluginVersion": "9.4.3",
+          "pluginVersion": "11.4.0",
           "targets": [
             {
               "datasource": "$datasource",
@@ -3188,7 +3191,7 @@
               "sort": "none"
             }
           },
-          "pluginVersion": "9.4.3",
+          "pluginVersion": "11.4.0",
           "targets": [
             {
               "datasource": "$datasource",
@@ -3297,7 +3300,7 @@
               "sort": "none"
             }
           },
-          "pluginVersion": "9.4.3",
+          "pluginVersion": "11.4.0",
           "targets": [
             {
               "datasource": "$datasource",
@@ -3392,7 +3395,7 @@
               "sort": "none"
             }
           },
-          "pluginVersion": "9.4.3",
+          "pluginVersion": "11.4.0",
           "targets": [
             {
               "datasource": "$datasource",
@@ -3485,7 +3488,7 @@
               "sort": "none"
             }
           },
-          "pluginVersion": "9.4.3",
+          "pluginVersion": "11.4.0",
           "targets": [
             {
               "datasource": "$datasource",
@@ -3578,7 +3581,7 @@
               "sort": "none"
             }
           },
-          "pluginVersion": "9.4.3",
+          "pluginVersion": "11.4.0",
           "targets": [
             {
               "datasource": "$datasource",
@@ -3673,7 +3676,7 @@
               "sort": "none"
             }
           },
-          "pluginVersion": "9.4.3",
+          "pluginVersion": "11.4.0",
           "targets": [
             {
               "datasource": "$datasource",
@@ -3768,7 +3771,7 @@
               "sort": "none"
             }
           },
-          "pluginVersion": "9.4.3",
+          "pluginVersion": "11.4.0",
           "targets": [
             {
               "datasource": "$datasource",
@@ -3863,7 +3866,7 @@
               "sort": "none"
             }
           },
-          "pluginVersion": "9.4.3",
+          "pluginVersion": "11.4.0",
           "targets": [
             {
               "datasource": "$datasource",
@@ -3958,7 +3961,7 @@
               "sort": "none"
             }
           },
-          "pluginVersion": "9.4.3",
+          "pluginVersion": "11.4.0",
           "targets": [
             {
               "datasource": "$datasource",
@@ -4053,7 +4056,7 @@
               "sort": "none"
             }
           },
-          "pluginVersion": "9.4.3",
+          "pluginVersion": "11.4.0",
           "targets": [
             {
               "datasource": "$datasource",
@@ -4148,7 +4151,7 @@
               "sort": "none"
             }
           },
-          "pluginVersion": "9.4.3",
+          "pluginVersion": "11.4.0",
           "targets": [
             {
               "datasource": "$datasource",
@@ -4243,7 +4246,7 @@
               "sort": "none"
             }
           },
-          "pluginVersion": "9.4.3",
+          "pluginVersion": "11.4.0",
           "targets": [
             {
               "datasource": "$datasource",
@@ -4338,7 +4341,7 @@
               "sort": "none"
             }
           },
-          "pluginVersion": "9.4.3",
+          "pluginVersion": "11.4.0",
           "targets": [
             {
               "datasource": "$datasource",
@@ -4433,7 +4436,7 @@
               "sort": "none"
             }
           },
-          "pluginVersion": "9.4.3",
+          "pluginVersion": "11.4.0",
           "targets": [
             {
               "datasource": "$datasource",
@@ -4528,7 +4531,7 @@
               "sort": "none"
             }
           },
-          "pluginVersion": "9.4.3",
+          "pluginVersion": "11.4.0",
           "targets": [
             {
               "datasource": "$datasource",
@@ -4638,7 +4641,7 @@
               "sort": "none"
             }
           },
-          "pluginVersion": "9.4.3",
+          "pluginVersion": "11.4.0",
           "targets": [
             {
               "datasource": "$datasource",
@@ -4734,7 +4737,7 @@
               "sort": "none"
             }
           },
-          "pluginVersion": "9.4.3",
+          "pluginVersion": "11.4.0",
           "targets": [
             {
               "datasource": "$datasource",
@@ -4841,7 +4844,7 @@
               "sort": "none"
             }
           },
-          "pluginVersion": "9.4.3",
+          "pluginVersion": "11.4.0",
           "targets": [
             {
               "datasource": "$datasource",
@@ -4945,7 +4948,7 @@
               "sort": "none"
             }
           },
-          "pluginVersion": "9.4.3",
+          "pluginVersion": "11.4.0",
           "targets": [
             {
               "datasource": "$datasource",
@@ -4992,7 +4995,7 @@
   ],
   "refresh": "10s",
   "revision": 1,
-  "schemaVersion": 39,
+  "schemaVersion": 40,
   "tags": [
     "Prometheus",
     "Consul"
