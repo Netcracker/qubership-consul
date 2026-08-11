@@ -25,7 +25,7 @@ from PlatformLibrary import PlatformLibrary
 environ = os.environ
 namespace = environ.get("CONSUL_NAMESPACE")
 service = environ.get("CONSUL_HOST")
-timeout = 5000
+timeout = 500
 
 
 def wait_for_acl_init_job(namespace, service, timeout):
@@ -37,35 +37,33 @@ def wait_for_acl_init_job(namespace, service, timeout):
             job = batch_v1.read_namespaced_job(job_name, namespace)
         except ApiException as e:
             if e.status == 404:
+                print("No job acl init")
                 # ACL init job does not exist; ACLs likely disabled, skip wait
-                return
+                return True
             time.sleep(10)
             continue
         except Exception:
             time.sleep(10)
             continue
 
-        if job.status.succeeded and job.status.succeeded >= 1:
-            return
+        if job.status.succeeded and job.status.succeeded > 0:
+            return True
 
         conditions = job.status.conditions or []
         if any(c.type == "Failed" and c.status == "True" for c in conditions):
             print(f"ACL init job {job_name} failed", flush=True)
-            sys.exit(1)
+            return False
 
         time.sleep(10)
 
     print(f"Timed out waiting for ACL init job {job_name}", flush=True)
-    sys.exit(1)
-
+    return False
 
 if __name__ == '__main__':
     try:
         k8s_library = PlatformLibrary()
     except:
         exit(1)
-
-
 
     timeout_start = time.time()
     while time.time() < timeout_start + timeout:
@@ -79,10 +77,10 @@ if __name__ == '__main__':
         except:
             time.sleep(10)
             continue
+
         if desired_pods == ready_pods:
             time.sleep(60)
-            exit(0)
-        time.sleep(10)
-
-    wait_for_acl_init_job(namespace, service, timeout)
-    exit(1)
+            if not wait_for_acl_init_job(namespace, service, timeout):
+                sys.exit(1)
+            break
+    sys.exit(0)
