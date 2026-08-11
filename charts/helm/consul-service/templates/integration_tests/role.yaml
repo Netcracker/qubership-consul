@@ -17,6 +17,7 @@ rules:
       - apps
     resources:
       - statefulsets
+      - jobs
     verbs:
       - get
       - delete
