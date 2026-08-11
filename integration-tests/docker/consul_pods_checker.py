@@ -40,9 +40,14 @@ def wait_for_acl_init_job(namespace, service, timeout):
                 print("No job acl init")
                 # ACL init job does not exist; ACLs likely disabled, skip wait
                 return True
+
+            if e.status == 401:
+                print("Unauthorized access to ACL init job")
+                return False
             time.sleep(10)
             continue
-        except Exception:
+        except Exception as ex:
+            print(ex, flush=True)
             time.sleep(10)
             continue
 
