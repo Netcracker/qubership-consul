@@ -43,6 +43,8 @@ import (
 
 const errNotFound = "ACL not found"
 
+const ownerNamespaceAnnotation = "acl-configurator.netcracker.com/owner-namespace"
+
 const podSecretsDir = "/etc/secrets/consul-acl-configurator-pod-secrets"
 const bootstrapTokenEnv = "CONSUL_ACL_BOOTSTRAP_TOKEN"
 
@@ -66,6 +68,7 @@ type ConsulACLReconciler struct {
 	Client           client.Client
 	Scheme           *runtime.Scheme
 	ResourceVersions map[string]string
+	OwnNamespace     string
 }
 
 //+kubebuilder:rbac:groups=netcracker.com,resources=consulacls,verbs=get;list;watch;create;update;patch;delete
@@ -144,8 +147,13 @@ func (r *ConsulACLReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		},
 	}
 
+	ownerPredicate := predicate.NewPredicateFuncs(func(obj client.Object) bool {
+		ownerNs := obj.GetAnnotations()[ownerNamespaceAnnotation]
+		return ownerNs == "" || ownerNs == r.OwnNamespace
+	})
+
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&consulacl.ConsulACL{}, builder.WithPredicates(statusPredicate)).
+		For(&consulacl.ConsulACL{}, builder.WithPredicates(statusPredicate, ownerPredicate)).
 		Complete(r)
 }
 

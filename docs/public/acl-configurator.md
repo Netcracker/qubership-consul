@@ -83,6 +83,48 @@ This fields will be set for any rule binding inner json.
 * `Selector` - string, selector for service account namespace and service account name. This field will be built from `Namespace` and 
   `ServiceAccountName` with equal condition like this `serviceaccount.namespace==\"<ServiceAccountName>\" and serviceaccount.name==\"<Namespace>\"`.
 
+## spec.acl.explicitName
+
+By default the operator prefixes all entity names with `{crName}_{crNamespace}_` to avoid collisions between CRs from different namespaces.
+Set `spec.acl.explicitName: true` to use the literal names from the configuration JSON as-is.
+
+```yaml
+spec:
+  acl:
+    name: consul-acls
+    explicitName: true
+    json: >
+      {
+        "roles": [{"Name": "my-role", ...}],
+        "bind_rules": [{"BindName": "my-role", ...}]
+      }
+```
+
+With `explicitName: false` (default) the role above is created as `{crName}_{crNamespace}_my-role`.
+With `explicitName: true` it is created as `my-role`.
+
+## Operator ownership annotation
+
+When multiple Consul ACL Configurator operators are deployed in different namespaces and all watch the cluster (`WATCH_NAMESPACE=*`),
+every operator processes every CR by default. Use the `acl-configurator.netcracker.com/owner-namespace` annotation to pin a CR
+to a specific operator instance.
+
+```yaml
+metadata:
+  name: my-acl
+  namespace: opensearch-service
+  annotations:
+    acl-configurator.netcracker.com/owner-namespace: "alty1224-consul-service"
+```
+
+Only the operator deployed in `alty1224-consul-service` will reconcile this CR. All other operators skip it entirely
+at the informer level — the CR does not enter their reconcile queue at all.
+
+**Rules:**
+- Annotation absent — all operators that watch the CR's namespace will process it (existing behaviour, no change).
+- Annotation present — only the operator whose own namespace matches the annotation value processes the CR.
+- The annotation applies to both `ConsulACL` and `ConsulKV` resources.
+
 #Custom resource lifecycle
 
 Consul ACL Configurator uses namespaced CRD it means each CR has unique Kubernetes Namespace and CR name pair. After CR applied Consul ACL 

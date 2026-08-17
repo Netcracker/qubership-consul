@@ -80,19 +80,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	clusterScoped := strings.TrimSpace(watchNamespaces) == "*"
-
-	// Cluster-scoped watch requires a single shared leader election ID so that
-	// all operator instances (across any namespace) compete for the same lease.
-	// Namespace-scoped watch uses a per-namespace ID so instances in different
-	// namespaces can run concurrently without interfering.
-	leaderElectionID := fmt.Sprintf("consulacls.%s.netcracker.com", ownNamespace)
-	leaderElectionNamespace := ownNamespace
-	if clusterScoped {
-		leaderElectionID = "consulacls.netcracker.com"
-		leaderElectionNamespace = ""
-	}
-
 	mgrOptions := ctrl.Options{
 		Scheme: scheme,
 		Metrics: metricsserver.Options{
@@ -102,9 +89,9 @@ func main() {
 			Port: 9443,
 		}),
 		HealthProbeBindAddress:  probeAddr,
-		LeaderElection:          clusterScoped || enableLeaderElection,
-		LeaderElectionID:        leaderElectionID,
-		LeaderElectionNamespace: leaderElectionNamespace,
+		LeaderElection:          enableLeaderElection,
+		LeaderElectionID:        fmt.Sprintf("consulacls.%s.netcracker.com", ownNamespace),
+		LeaderElectionNamespace: ownNamespace,
 	}
 
 	configureMgrNamespaces(&mgrOptions, watchNamespaces, ownNamespace)
@@ -119,14 +106,16 @@ func main() {
 		Client:           mgr.GetClient(),
 		Scheme:           mgr.GetScheme(),
 		ResourceVersions: map[string]string{},
+		OwnNamespace:     ownNamespace,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ConsulACL")
 		os.Exit(1)
 	}
 
 	if err = (&controllers.ConsulKVReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:       mgr.GetClient(),
+		Scheme:       mgr.GetScheme(),
+		OwnNamespace: ownNamespace,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ConsulKV")
 		os.Exit(1)
