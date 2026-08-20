@@ -45,7 +45,7 @@ Delete Override Auth Method
 Build ConsulACL Body
     [Arguments]    ${name}    ${explicit}    ${json}
     ${body}=    Evaluate
-    ...    {'apiVersion': 'netcracker.com/v1alpha1', 'kind': 'ConsulACL', 'metadata': {'name': $name, 'namespace': $TEST_NAMESPACE}, 'spec': {'acl': {'name': $name, 'explicitName': bool($explicit), 'json': $json}}}
+    ...    {'apiVersion': 'netcracker.com/v1alpha1', 'kind': 'ConsulACL', 'metadata': {'name': $name, 'namespace': $TEST_NAMESPACE}, 'spec': {'acl': {'name': $name, 'explicitName': bool($explicit), 'operatorNamespace': $TEST_NAMESPACE, 'json': $json}}}
     RETURN    ${body}
 
 Dicts To Json

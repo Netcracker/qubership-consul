@@ -103,27 +103,31 @@ spec:
 With `explicitName: false` (default) the role above is created as `{crName}_{crNamespace}_my-role`.
 With `explicitName: true` it is created as `my-role`.
 
-## Operator ownership annotation
+## Operator ownership via spec.acl.operatorNamespace
 
-When multiple Consul ACL Configurator operators are deployed in different namespaces and all watch the cluster (`WATCH_NAMESPACE=*`),
-every operator processes every CR by default. Use the `acl-configurator.netcracker.com/owner-namespace` annotation to pin a CR
-to a specific operator instance.
+When multiple Consul ACL Configurator operators are deployed in different namespaces and all watch the cluster
+(`WATCH_NAMESPACE=*`), use `spec.acl.operatorNamespace` to pin a CR to a specific operator instance.
+
+The field is typically populated in the client's Helm chart by extracting the namespace from the Consul URL:
 
 ```yaml
-metadata:
-  name: my-acl
-  namespace: opensearch-service
-  annotations:
-    acl-configurator.netcracker.com/owner-namespace: "alty1224-consul-service"
+spec:
+  acl:
+    name: consul-acls
+    operatorNamespace: {{ (index (splitList "." (first (splitList ":" (last (splitList "://" .Values.CONSUL_ADDRESS))))) 1) | quote }}
+    json: >
+      { ... }
 ```
 
-Only the operator deployed in `alty1224-consul-service` will reconcile this CR. All other operators skip it entirely
-at the informer level — the CR does not enter their reconcile queue at all.
+For example, if `CONSUL_ADDRESS=http://consul-service-server.alty1224-consul-service.svc.cluster.local:8500`,
+`operatorNamespace` resolves to `alty1224-consul-service`.
+
+Only the operator deployed in that namespace will reconcile the CR. All other operators skip it at the informer
+level — it never enters their reconcile queue.
 
 **Rules:**
-- Annotation absent — all operators that watch the CR's namespace will process it (existing behaviour, no change).
-- Annotation present — only the operator whose own namespace matches the annotation value processes the CR.
-- The annotation applies to both `ConsulACL` and `ConsulKV` resources.
+- `operatorNamespace` absent — all operators that watch the CR's namespace process it (existing behaviour, no change).
+- `operatorNamespace` present — only the operator whose own namespace matches the value processes the CR.
 
 #Custom resource lifecycle
 

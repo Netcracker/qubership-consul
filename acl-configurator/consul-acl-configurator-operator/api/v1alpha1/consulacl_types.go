@@ -19,10 +19,11 @@ import (
 )
 
 type ACL struct {
-	Json            string `json:"json"`
-	Name            string `json:"name"`
-	CommonReconcile string `json:"commonReconcile,omitempty"`
-	ExplicitName    bool   `json:"explicitName,omitempty"`
+	Json              string `json:"json"`
+	Name              string `json:"name"`
+	CommonReconcile   string `json:"commonReconcile,omitempty"`
+	ExplicitName      bool   `json:"explicitName,omitempty"`
+	OperatorNamespace string `json:"operatorNamespace,omitempty"`
 }
 
 // ConsulACLSpec defines the desired state of ConsulACL

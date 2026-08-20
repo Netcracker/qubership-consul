@@ -1,0 +1,33 @@
+apiVersion: netcracker.com/v1alpha1
+kind: ConsulACL
+metadata:
+  name: example-consulacl
+  namespace: opensearch-service
+spec:
+  acl:
+    name: example-consulacl
+    explicitName: true
+    operatorNamespace: {{ (index (splitList "." (first (splitList ":" (last (splitList "://" .Values.CONSUL_ADDRESS))))) 1) | quote }}
+    json: >
+      {
+        "policies": [
+          {
+            "Name": "example_policy",
+            "Description": "Example policy for opensearch-service",
+            "Rules": "key_prefix \"config/opensearch/\" { policy = \"read\" }"
+          }
+        ],
+        "roles": [
+          {
+            "Name": "example_role",
+            "Description": "Example role for opensearch-service",
+            "policy_names": ["example_policy"]
+          }
+        ],
+        "bind_rules": [
+          {
+            "BindName": "example_bind",
+            "ServiceAccountName": "opensearch-service-operator"
+          }
+        ]
+      }

@@ -43,8 +43,6 @@ import (
 
 const errNotFound = "ACL not found"
 
-const ownerNamespaceAnnotation = "acl-configurator.netcracker.com/owner-namespace"
-
 const podSecretsDir = "/etc/secrets/consul-acl-configurator-pod-secrets"
 const bootstrapTokenEnv = "CONSUL_ACL_BOOTSTRAP_TOKEN"
 
@@ -148,8 +146,12 @@ func (r *ConsulACLReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	}
 
 	ownerPredicate := predicate.NewPredicateFuncs(func(obj client.Object) bool {
-		ownerNs := obj.GetAnnotations()[ownerNamespaceAnnotation]
-		return ownerNs == "" || ownerNs == r.OwnNamespace
+		cr, ok := obj.(*consulacl.ConsulACL)
+		if !ok {
+			return true
+		}
+		operatorNs := cr.Spec.ACL.OperatorNamespace
+		return operatorNs == "" || operatorNs == r.OwnNamespace
 	})
 
 	return ctrl.NewControllerManagedBy(mgr).
