@@ -43,9 +43,8 @@ var kvClient consulKVClient = makeKVClient()
 
 // ConsulKVReconciler reconciles a ConsulKV object
 type ConsulKVReconciler struct {
-	Client       client.Client
-	Scheme       *runtime.Scheme
-	OwnNamespace string
+	Client client.Client
+	Scheme *runtime.Scheme
 }
 
 //+kubebuilder:rbac:groups=netcracker.com,resources=consulkvs,verbs=get;list;watch;create;update;patch;delete
@@ -123,13 +122,8 @@ func (r *ConsulKVReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		},
 	}
 
-	ownerPredicate := predicate.NewPredicateFuncs(func(obj client.Object) bool {
-		ownerNs := obj.GetAnnotations()[ownerNamespaceAnnotation]
-		return ownerNs == "" || ownerNs == r.OwnNamespace
-	})
-
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&consulacl.ConsulKV{}, builder.WithPredicates(statusPredicate, ownerPredicate)).
+		For(&consulacl.ConsulKV{}, builder.WithPredicates(statusPredicate)).
 		Complete(r)
 }
 
