@@ -7,7 +7,7 @@ spec:
   acl:
     name: example-consulacl
     explicitName: true
-    operatorNamespace: {{ (index (splitList "." (first (splitList ":" (last (splitList "://" .Values.CONSUL_ADDRESS))))) 1) | quote }}
+    operatorNamespace: "alty1224-consul-service"  # replace with the namespace where consul-service operator is deployed
     json: >
       {
         "policies": [
