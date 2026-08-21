@@ -151,7 +151,10 @@ func (r *ConsulACLReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			return true
 		}
 		operatorNs := cr.Spec.ACL.OperatorNamespace
-		return operatorNs == "" || operatorNs == r.OwnNamespace
+		if operatorNs != "" {
+			return operatorNs == r.OwnNamespace
+		}
+		return obj.GetNamespace() == r.OwnNamespace
 	})
 
 	return ctrl.NewControllerManagedBy(mgr).
