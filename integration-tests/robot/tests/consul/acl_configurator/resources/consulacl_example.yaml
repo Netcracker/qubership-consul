@@ -1,3 +1,6 @@
+# This file is a Helm template example showing how a client service should define a ConsulACL CR.
+# .Values.CONSUL_URL must be a full URL: http://<service>.<namespace>.svc.cluster.local:<port>
+# operatorNamespace is extracted automatically from the second segment of the hostname.
 apiVersion: netcracker.com/v1alpha1
 kind: ConsulACL
 metadata:
@@ -7,7 +10,7 @@ spec:
   acl:
     name: example-consulacl
     explicitName: true
-    operatorNamespace: "alty1224-consul-service"  # replace with the namespace where consul-service operator is deployed
+    operatorNamespace: {{ (index (splitList "." (first (splitList ":" (last (splitList "://" .Values.CONSUL_URL))))) 1) | quote }}
     json: >
       {
         "policies": [

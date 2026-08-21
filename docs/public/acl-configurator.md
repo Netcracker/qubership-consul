@@ -114,7 +114,7 @@ The field is typically populated in the client's Helm chart by extracting the na
 spec:
   acl:
     name: consul-acls
-    operatorNamespace: {{ (index (splitList "." (first (splitList ":" (last (splitList "://" .Values.CONSUL_ADDRESS))))) 1) | quote }}
+    operatorNamespace: {{ (index (splitList "." (first (splitList ":" (last (splitList "://" .Values.CONSUL_URL))))) 1) | quote }}
     json: >
       { ... }
 ```
