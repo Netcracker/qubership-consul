@@ -12,6 +12,7 @@ ${RECONCILE_TIMEOUT}     60s
 ${RECONCILE_INTERVAL}    2s
 ${GROUP}                 netcracker.com
 ${VERSION}               v1alpha1
+${OTHER_NAMESPACE}       other-namespace
 
 
 *** Keywords ***
@@ -47,6 +48,33 @@ Build ConsulACL Body
     ${body}=    Evaluate
     ...    {'apiVersion': 'netcracker.com/v1alpha1', 'kind': 'ConsulACL', 'metadata': {'name': $name, 'namespace': $TEST_NAMESPACE}, 'spec': {'acl': {'name': $name, 'explicitName': bool($explicit), 'operatorNamespace': $TEST_NAMESPACE, 'json': $json}}}
     RETURN    ${body}
+
+Build ConsulACL Body In Namespace
+    [Arguments]    ${name}    ${namespace}    ${explicit}    ${operator_namespace}    ${json}
+    ${body}=    Evaluate
+    ...    {'apiVersion': 'netcracker.com/v1alpha1', 'kind': 'ConsulACL', 'metadata': {'name': $name, 'namespace': $namespace}, 'spec': {'acl': {'name': $name, 'explicitName': bool($explicit), 'operatorNamespace': $operator_namespace, 'json': $json}}}
+    RETURN    ${body}
+
+Apply ConsulACL CR In Namespace
+    [Arguments]    ${name}    ${namespace}    ${body}
+    ${result}    ${value}=    Run Keyword And Ignore Error
+    ...    Get Namespaced Custom Object    ${GROUP}    ${VERSION}    ${namespace}    consulacls    ${name}
+    IF    '${result}' == 'PASS'
+        Delete Namespaced Custom Object    ${GROUP}    ${VERSION}    ${namespace}    consulacls    ${name}
+        Wait Until Keyword Succeeds    ${RECONCILE_TIMEOUT}    ${RECONCILE_INTERVAL}
+        ...    CR Should Not Exist In Namespace    ${name}    ${namespace}
+    END
+    Create Namespaced Custom Object    ${GROUP}    ${VERSION}    ${namespace}    consulacls    ${body}
+
+CR Should Not Exist In Namespace
+    [Arguments]    ${name}    ${namespace}
+    ${result}    ${value}=    Run Keyword And Ignore Error
+    ...    Get Namespaced Custom Object    ${GROUP}    ${VERSION}    ${namespace}    consulacls    ${name}
+    Should Be Equal    ${result}    FAIL
+
+Delete ConsulACL CR In Namespace
+    [Arguments]    ${name}    ${namespace}
+    Delete Namespaced Custom Object    ${GROUP}    ${VERSION}    ${namespace}    consulacls    ${name}
 
 Dicts To Json
     [Arguments]    ${policies}    ${roles}    ${bind_rules}
@@ -132,3 +160,46 @@ Test ConsulACL Delete Removes All Entities
     Sleep    ${RECONCILE_INTERVAL}
     Wait Until Keyword Succeeds    ${RECONCILE_TIMEOUT}    ${RECONCILE_INTERVAL}
     ...    ACL Delete Test Entities Should Not Exist
+
+# 18.4 — operatorNamespace: CR from another namespace processed by correct operator
+Test ConsulACL OperatorNamespace Cross Namespace Routing
+    [Tags]    acl-configurator    operator-namespace
+    ${policies}=    Evaluate    [{'Name': 'cross_ns_policy', 'Description': 'Cross-namespace test policy', 'Rules': 'key_prefix "config/cross-ns/" { policy = "read" }'}]
+    ${roles}=       Evaluate    [{'Name': 'cross_ns_role', 'Description': 'Cross-namespace test role', 'policy_names': ['cross_ns_policy']}]
+    ${bind_rules}=  Evaluate    [{'BindName': 'cross_ns_bind', 'ServiceAccountName': 'cross-ns-sa'}]
+    ${json}=    Dicts To Json    ${policies}    ${roles}    ${bind_rules}
+    &{body}=    Build ConsulACL Body In Namespace    test-cross-ns-acl    ${OTHER_NAMESPACE}    ${TRUE}    ${TEST_NAMESPACE}    ${json}
+    Apply ConsulACL CR In Namespace    test-cross-ns-acl    ${OTHER_NAMESPACE}    ${body}
+    Sleep    ${RECONCILE_INTERVAL}
+    Wait Until Keyword Succeeds    ${RECONCILE_TIMEOUT}    ${RECONCILE_INTERVAL}
+    ...    Acl Role Should Exist    cross_ns_role
+    [Teardown]    Delete ConsulACL CR In Namespace    test-cross-ns-acl    ${OTHER_NAMESPACE}
+
+# 18.5 — operatorNamespace: CR with wrong operatorNamespace is ignored
+Test ConsulACL OperatorNamespace Wrong Namespace Ignored
+    [Tags]    acl-configurator    operator-namespace
+    ${policies}=    Evaluate    [{'Name': 'ignored_policy', 'Rules': 'key_prefix "ignored/" { policy = "read" }'}]
+    ${empty}=       Evaluate    []
+    ${json}=    Dicts To Json    ${policies}    ${empty}    ${empty}
+    &{body}=    Build ConsulACL Body In Namespace    test-ignored-acl    ${TEST_NAMESPACE}    ${TRUE}    wrong-namespace    ${json}
+    Apply ConsulACL CR In Namespace    test-ignored-acl    ${TEST_NAMESPACE}    ${body}
+    Sleep    10s
+    Acl Policy Should Not Exist    ignored_policy
+    [Teardown]    Delete ConsulACL CR In Namespace    test-ignored-acl    ${TEST_NAMESPACE}
+
+# 18.6 — idempotent binding rules: re-apply does not create duplicate
+Test ConsulACL Idempotent BindingRule No Duplicate On Reapply
+    [Tags]    acl-configurator    idempotent
+    ${bind_rules}=  Evaluate    [{'BindName': 'idempotent_bind', 'ServiceAccountName': 'integration-sa'}]
+    ${empty}=       Evaluate    []
+    ${json}=    Dicts To Json    ${empty}    ${empty}    ${bind_rules}
+    &{body}=    Build ConsulACL Body    test-idempotent-acl    ${TRUE}    ${json}
+    Apply ConsulACL CR    test-idempotent-acl    ${body}
+    Sleep    ${RECONCILE_INTERVAL}
+    Wait Until Keyword Succeeds    ${RECONCILE_TIMEOUT}    ${RECONCILE_INTERVAL}
+    ...    Acl Binding Rule Should Exist    idempotent_bind    ${AUTH_METHOD}
+    Apply ConsulACL CR    test-idempotent-acl    ${body}
+    Sleep    ${RECONCILE_INTERVAL}
+    Wait Until Keyword Succeeds    ${RECONCILE_TIMEOUT}    ${RECONCILE_INTERVAL}
+    ...    Acl Binding Rule Count Should Be    idempotent_bind    ${AUTH_METHOD}    1
+    [Teardown]    Delete ConsulACL CR    test-idempotent-acl

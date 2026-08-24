@@ -39,6 +39,7 @@ type ConsulKVEntryStatus struct {
 type ConsulKVStatus struct {
 	Entries       []ConsulKVEntryStatus `json:"entries,omitempty"`
 	GeneralStatus string                `json:"generalStatus,omitempty"`
+	ManagedBy     string                `json:"managedBy,omitempty"`
 }
 
 //+kubebuilder:object:root=true

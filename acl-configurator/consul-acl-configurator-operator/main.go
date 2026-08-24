@@ -113,8 +113,9 @@ func main() {
 	}
 
 	if err = (&controllers.ConsulKVReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:       mgr.GetClient(),
+		Scheme:       mgr.GetScheme(),
+		OwnNamespace: ownNamespace,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ConsulKV")
 		os.Exit(1)

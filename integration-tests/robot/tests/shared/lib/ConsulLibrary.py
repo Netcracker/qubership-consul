@@ -173,6 +173,16 @@ class ConsulLibrary(object):
                     f'Binding rule with BindName "{bind_name}" under auth method "{auth_method}" should not exist but was found'
                 )
 
+    def acl_binding_rule_count_should_be(self, bind_name, auth_method, expected_count):
+        """Fail if the number of binding rules with bind_name under auth_method differs from expected_count."""
+        rules = self.list_acl_binding_rules(auth_method)
+        count = sum(1 for rule in rules if rule.get('BindName') == bind_name)
+        expected = int(expected_count)
+        if count != expected:
+            raise AssertionError(
+                f'Expected {expected} binding rule(s) with BindName "{bind_name}" under "{auth_method}", but found {count}'
+            )
+
     def kv_key_should_exist(self, key):
         """Fail if the KV key does not exist in Consul."""
         index, data = self.connect.kv.get(key)

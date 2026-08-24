@@ -43,8 +43,9 @@ var kvClient consulKVClient = makeKVClient()
 
 // ConsulKVReconciler reconciles a ConsulKV object
 type ConsulKVReconciler struct {
-	Client client.Client
-	Scheme *runtime.Scheme
+	Client        client.Client
+	Scheme        *runtime.Scheme
+	OwnNamespace  string
 }
 
 //+kubebuilder:rbac:groups=netcracker.com,resources=consulkvs,verbs=get;list;watch;create;update;patch;delete
@@ -91,7 +92,8 @@ func (r *ConsulKVReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	entryStatuses, applyErr := applyKVEntries(instance.Spec.KV.Entries)
 
 	statusErr := crUpdater.updateStatusWithRetry(func(cr *consulacl.ConsulKV) {
-		cr.Status.Entries = entryStatuses
+		cr.Status.Entries = mergeKVStatuses(cr.Status.Entries, entryStatuses)
+		cr.Status.ManagedBy = "consul-acl-configurator-operator_" + r.OwnNamespace
 		if applyErr != nil {
 			cr.Status.GeneralStatus = "error"
 		} else {
@@ -155,6 +157,39 @@ func applyKVEntries(entries []consulacl.ConsulKVEntry) ([]consulacl.ConsulKVEntr
 		}
 	}
 	return statuses, firstNetErr
+}
+
+// mergeKVStatuses preserves the order of existing status entries and appends new ones at the bottom.
+// Entries removed from spec are marked "deleted" and kept in the status history.
+func mergeKVStatuses(existing, updated []consulacl.ConsulKVEntryStatus) []consulacl.ConsulKVEntryStatus {
+	updatedMap := make(map[string]string, len(updated))
+	for _, e := range updated {
+		updatedMap[e.Key] = e.Status
+	}
+
+	result := make([]consulacl.ConsulKVEntryStatus, 0, len(existing)+len(updated))
+	seen := make(map[string]bool, len(existing))
+
+	// First pass: existing entries — update status or mark deleted if removed from spec.
+	for _, e := range existing {
+		seen[e.Key] = true
+		if s, ok := updatedMap[e.Key]; ok {
+			result = append(result, consulacl.ConsulKVEntryStatus{Key: e.Key, Status: s})
+		} else if e.Status != "deleted" {
+			result = append(result, consulacl.ConsulKVEntryStatus{Key: e.Key, Status: "deleted"})
+		} else {
+			result = append(result, e)
+		}
+	}
+
+	// Second pass: append new entries (not seen in existing) in spec order.
+	for _, e := range updated {
+		if !seen[e.Key] {
+			result = append(result, e)
+		}
+	}
+
+	return result
 }
 
 func deleteKVEntries(entries []consulacl.ConsulKVEntry) error {
