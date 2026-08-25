@@ -43,9 +43,9 @@ var kvClient consulKVClient = makeKVClient()
 
 // ConsulKVReconciler reconciles a ConsulKV object
 type ConsulKVReconciler struct {
-	Client        client.Client
-	Scheme        *runtime.Scheme
-	OwnNamespace  string
+	Client       client.Client
+	Scheme       *runtime.Scheme
+	OwnNamespace string
 }
 
 //+kubebuilder:rbac:groups=netcracker.com,resources=consulkvs,verbs=get;list;watch;create;update;patch;delete
@@ -95,9 +95,9 @@ func (r *ConsulKVReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		cr.Status.Entries = mergeKVStatuses(cr.Status.Entries, entryStatuses)
 		cr.Status.ManagedBy = "consul-acl-configurator-operator_" + r.OwnNamespace
 		if applyErr != nil {
-			cr.Status.GeneralStatus = "error"
+			cr.Status.GeneralStatus = "Degraded"
 		} else {
-			cr.Status.GeneralStatus = "synced"
+			cr.Status.GeneralStatus = "Synced"
 		}
 	})
 	if statusErr != nil {
@@ -152,7 +152,8 @@ func applyKVEntries(entries []consulacl.ConsulKVEntry) ([]consulacl.ConsulKVEntr
 		} else {
 			statuses = append(statuses, consulacl.ConsulKVEntryStatus{
 				Key:    entry.Key,
-				Status: "synced",
+				Status: "Synced",
+				Info:   "Created",
 			})
 		}
 	}
@@ -175,8 +176,8 @@ func mergeKVStatuses(existing, updated []consulacl.ConsulKVEntryStatus) []consul
 		seen[e.Key] = true
 		if s, ok := updatedMap[e.Key]; ok {
 			result = append(result, consulacl.ConsulKVEntryStatus{Key: e.Key, Status: s})
-		} else if e.Status != "deleted" {
-			result = append(result, consulacl.ConsulKVEntryStatus{Key: e.Key, Status: "deleted"})
+		} else if e.Info != "Removed" {
+			result = append(result, consulacl.ConsulKVEntryStatus{Key: e.Key, Status: "Synced", Info: "Removed"})
 		} else {
 			result = append(result, e)
 		}
