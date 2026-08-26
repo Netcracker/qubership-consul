@@ -28,11 +28,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"time"
+
 	consulacl "github.com/Netcracker/consul-acl-configurator/consul-acl-configurator-operator/api/v1alpha1"
 	consulApi "github.com/hashicorp/consul/api"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/retry"
-	"time"
 )
 
 var consulKVFinalizer = consulacl.GroupVersion.Group + "/consulkvconfigurator-controller"
@@ -90,11 +91,12 @@ func (r *ConsulKVReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	}
 
 	entryStatuses, applyErr := applyKVEntries(instance.Spec.KV.Entries)
+	removeErr := deleteRemovedEntries(instance.Status.Entries, instance.Spec.KV.Entries)
 
 	statusErr := crUpdater.updateStatusWithRetry(func(cr *consulacl.ConsulKV) {
 		cr.Status.Entries = mergeKVStatuses(cr.Status.Entries, entryStatuses)
 		cr.Status.ManagedBy = "consul-acl-configurator-operator_" + r.OwnNamespace
-		if applyErr != nil {
+		if applyErr != nil || removeErr != nil {
 			cr.Status.GeneralStatus = "Degraded"
 		} else {
 			cr.Status.GeneralStatus = "Synced"
@@ -105,7 +107,7 @@ func (r *ConsulKVReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return reconcile.Result{RequeueAfter: time.Second * time.Duration(periodTime)}, nil
 	}
 
-	if applyErr != nil {
+	if applyErr != nil || removeErr != nil {
 		return reconcile.Result{RequeueAfter: time.Second * time.Duration(periodTime)}, nil
 	}
 
@@ -153,7 +155,6 @@ func applyKVEntries(entries []consulacl.ConsulKVEntry) ([]consulacl.ConsulKVEntr
 			statuses = append(statuses, consulacl.ConsulKVEntryStatus{
 				Key:    entry.Key,
 				Status: "Synced",
-				Info:   "Created",
 			})
 		}
 	}
@@ -163,9 +164,9 @@ func applyKVEntries(entries []consulacl.ConsulKVEntry) ([]consulacl.ConsulKVEntr
 // mergeKVStatuses preserves the order of existing status entries and appends new ones at the bottom.
 // Entries removed from spec are marked "deleted" and kept in the status history.
 func mergeKVStatuses(existing, updated []consulacl.ConsulKVEntryStatus) []consulacl.ConsulKVEntryStatus {
-	updatedMap := make(map[string]string, len(updated))
+	updatedMap := make(map[string]consulacl.ConsulKVEntryStatus, len(updated))
 	for _, e := range updated {
-		updatedMap[e.Key] = e.Status
+		updatedMap[e.Key] = e
 	}
 
 	result := make([]consulacl.ConsulKVEntryStatus, 0, len(existing)+len(updated))
@@ -174,10 +175,10 @@ func mergeKVStatuses(existing, updated []consulacl.ConsulKVEntryStatus) []consul
 	// First pass: existing entries — update status or mark deleted if removed from spec.
 	for _, e := range existing {
 		seen[e.Key] = true
-		if s, ok := updatedMap[e.Key]; ok {
-			result = append(result, consulacl.ConsulKVEntryStatus{Key: e.Key, Status: s})
-		} else if e.Info != "Removed" {
-			result = append(result, consulacl.ConsulKVEntryStatus{Key: e.Key, Status: "Synced", Info: "Removed"})
+		if entry, ok := updatedMap[e.Key]; ok {
+			result = append(result, entry)
+		} else if e.Status != "Removed" {
+			result = append(result, consulacl.ConsulKVEntryStatus{Key: e.Key, Status: "Removed"})
 		} else {
 			result = append(result, e)
 		}
@@ -200,6 +201,23 @@ func deleteKVEntries(entries []consulacl.ConsulKVEntry) error {
 		}
 		if _, err := kvClient.Delete(entry.Key, nil); err != nil {
 			kvLog.Error(err, "Error deleting KV entry", "key", entry.Key)
+			return err
+		}
+	}
+	return nil
+}
+
+func deleteRemovedEntries(existing []consulacl.ConsulKVEntryStatus, specEntries []consulacl.ConsulKVEntry) error {
+	specKeys := make(map[string]bool, len(specEntries))
+	for _, e := range specEntries {
+		specKeys[e.Key] = true
+	}
+	for _, e := range existing {
+		if specKeys[e.Key] || e.Status == "Removed" {
+			continue
+		}
+		if _, err := kvClient.Delete(e.Key, nil); err != nil {
+			kvLog.Error(err, "Error deleting removed KV entry", "key", e.Key)
 			return err
 		}
 	}

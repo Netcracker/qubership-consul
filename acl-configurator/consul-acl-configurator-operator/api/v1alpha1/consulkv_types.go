@@ -34,7 +34,6 @@ type ConsulKVSpec struct {
 type ConsulKVEntryStatus struct {
 	Key    string `json:"key"`
 	Status string `json:"status"`
-	Info   string `json:"info,omitempty"`
 }
 
 type ConsulKVStatus struct {
