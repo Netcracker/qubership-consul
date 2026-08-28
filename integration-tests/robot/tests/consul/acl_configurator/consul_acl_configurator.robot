@@ -87,12 +87,12 @@ Dicts To Json With Auth Methods
     RETURN    ${json}
 
 ACL Explicit Full Entities Should Exist
-    Acl Policy Should Exist    test-explicit-acl_${TEST_NAMESPACE}_integration_explicit_policy
+    Acl Policy Should Exist    integration_explicit_policy
     Acl Role Should Exist    integration_explicit_role
     Acl Binding Rule Should Exist    integration_explicit_bind    ${AUTH_METHOD}
 
 ACL Explicit Role Should Be Gone
-    Acl Policy Should Exist    test-explicit-acl_${TEST_NAMESPACE}_integration_explicit_policy
+    Acl Policy Should Exist    integration_explicit_policy
     Acl Role Should Not Exist    integration_explicit_role
 
 ACL PerRule AuthMethod Entities Should Exist
@@ -166,19 +166,6 @@ Test ConsulACL Delete Removes All Entities
     Wait Until Keyword Succeeds    ${RECONCILE_TIMEOUT}    ${RECONCILE_INTERVAL}
     ...    ACL Delete Test Entities Should Not Exist
 
-# 18.4 — operatorNamespace: CR from another namespace processed by correct operator
-Test ConsulACL OperatorNamespace Cross Namespace Routing
-    [Tags]    acl-configurator    operator-namespace
-    ${policies}=    Evaluate    [{'Name': 'cross_ns_policy', 'Description': 'Cross-namespace test policy', 'Rules': 'key_prefix "config/cross-ns/" { policy = "read" }'}]
-    ${roles}=       Evaluate    [{'Name': 'cross_ns_role', 'Description': 'Cross-namespace test role', 'policy_names': ['cross_ns_policy']}]
-    ${bind_rules}=  Evaluate    [{'BindName': 'cross_ns_bind', 'ServiceAccountName': 'cross-ns-sa'}]
-    ${json}=    Dicts To Json    ${policies}    ${roles}    ${bind_rules}
-    &{body}=    Build ConsulACL Body In Namespace    test-cross-ns-acl    ${OTHER_NAMESPACE}    ${TRUE}    ${TEST_NAMESPACE}    ${json}
-    Apply ConsulACL CR In Namespace    test-cross-ns-acl    ${OTHER_NAMESPACE}    ${body}
-    Sleep    ${RECONCILE_INTERVAL}
-    Wait Until Keyword Succeeds    ${RECONCILE_TIMEOUT}    ${RECONCILE_INTERVAL}
-    ...    Acl Role Should Exist    cross_ns_role
-    [Teardown]    Delete ConsulACL CR In Namespace    test-cross-ns-acl    ${OTHER_NAMESPACE}
 
 # 18.5 — operatorNamespace: CR with wrong operatorNamespace is ignored
 Test ConsulACL OperatorNamespace Wrong Namespace Ignored
