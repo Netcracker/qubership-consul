@@ -73,12 +73,7 @@ spec:
       kind: Service
       name: {{ $serviceName }}
   validation:
-    {{- if .Values.ui.envoyGateway.host }}
-    hostname: {{ .Values.ui.envoyGateway.host | quote }}
-    {{- else if .Values.ui.ingress.hosts }}
-    {{- $first := index .Values.ui.ingress.hosts 0 }}
-    hostname: {{ $first.host | quote }}
-    {{- end }}
+    hostname: {{ template "consul.fullname" . }}-server.{{ .Release.Namespace }}.svc
     caCertificateRefs:
       - group: ""
         kind: Secret
