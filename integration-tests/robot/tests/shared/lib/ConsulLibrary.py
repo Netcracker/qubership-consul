@@ -145,6 +145,35 @@ class ConsulLibrary(object):
                 return
             raise
 
+    def get_auth_method(self, name):
+        """Return the auth method object with the given name, or None if not found."""
+        try:
+            return self._acl_get(f'auth-method/{name}')
+        except requests.HTTPError as e:
+            if e.response.status_code in (403, 404):
+                return None
+            raise
+
+    def auth_method_should_exist(self, name):
+        """Fail if no auth method with the given name exists in Consul."""
+        result = self.get_auth_method(name)
+        assert result is not None, f'Auth method "{name}" not found in Consul'
+
+    def auth_method_should_not_exist(self, name):
+        """Fail if an auth method with the given name exists in Consul."""
+        result = self.get_auth_method(name)
+        assert result is None, f'Auth method "{name}" should not exist in Consul but was found'
+
+    def get_k8s_ca_cert(self):
+        """Return the in-cluster Kubernetes CA certificate PEM string."""
+        path = '/var/run/secrets/kubernetes.io/serviceaccount/ca.crt'
+        return open(path).read() if os.path.exists(path) else ''
+
+    def get_k8s_service_account_jwt(self):
+        """Return the in-cluster Kubernetes service account JWT."""
+        path = '/var/run/secrets/kubernetes.io/serviceaccount/token'
+        return open(path).read() if os.path.exists(path) else ''
+
     def list_acl_binding_rules(self, auth_method):
         """Return list of binding rules for the given auth method."""
         try:

@@ -81,6 +81,11 @@ Dicts To Json
     ${json}=    Evaluate    __import__('json').dumps({'policies': $policies, 'roles': $roles, 'bind_rules': $bind_rules})
     RETURN    ${json}
 
+Dicts To Json With Auth Methods
+    [Arguments]    ${policies}    ${roles}    ${bind_rules}    ${auth_methods}
+    ${json}=    Evaluate    __import__('json').dumps({'policies': $policies, 'roles': $roles, 'bind_rules': $bind_rules, 'auth_methods': $auth_methods})
+    RETURN    ${json}
+
 ACL Explicit Full Entities Should Exist
     Acl Policy Should Exist    test-explicit-acl_${TEST_NAMESPACE}_integration_explicit_policy
     Acl Role Should Exist    integration_explicit_role
@@ -186,6 +191,25 @@ Test ConsulACL OperatorNamespace Wrong Namespace Ignored
     Sleep    10s
     Acl Policy Should Not Exist    ignored_policy
     [Teardown]    Delete ConsulACL CR In Namespace    test-ignored-acl    ${TEST_NAMESPACE}
+
+# 18.7 — auth method created and deleted via CR
+Test ConsulACL AuthMethod Created Via CR
+    [Tags]    acl-configurator    auth-method
+    ${ca_cert}=      Get K8s Ca Cert
+    ${jwt}=          Get K8s Service Account Jwt
+    ${auth_methods}=    Evaluate
+    ...    [{'Name': 'integration-cr-auth-method', 'Type': 'kubernetes', 'Description': 'Integration test auth method', 'Config': {'Host': 'https://kubernetes.default.svc', 'CACert': $ca_cert, 'ServiceAccountJWT': $jwt}}]
+    ${empty}=    Evaluate    []
+    ${json}=    Dicts To Json With Auth Methods    ${empty}    ${empty}    ${empty}    ${auth_methods}
+    &{body}=    Build ConsulACL Body    test-authmethod-acl    ${TRUE}    ${json}
+    Apply ConsulACL CR    test-authmethod-acl    ${body}
+    Sleep    ${RECONCILE_INTERVAL}
+    Wait Until Keyword Succeeds    ${RECONCILE_TIMEOUT}    ${RECONCILE_INTERVAL}
+    ...    Auth Method Should Exist    integration-cr-auth-method
+    Delete ConsulACL CR    test-authmethod-acl
+    Sleep    ${RECONCILE_INTERVAL}
+    Wait Until Keyword Succeeds    ${RECONCILE_TIMEOUT}    ${RECONCILE_INTERVAL}
+    ...    Auth Method Should Not Exist    integration-cr-auth-method
 
 # 18.6 — idempotent binding rules: re-apply does not create duplicate
 Test ConsulACL Idempotent BindingRule No Duplicate On Reapply

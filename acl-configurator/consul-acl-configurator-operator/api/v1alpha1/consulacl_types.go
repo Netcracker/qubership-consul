@@ -33,10 +33,11 @@ type ConsulACLSpec struct {
 
 // ConsulACLStatus defines the observed state of ConsulACL
 type ConsulACLStatus struct {
-	PoliciesStatus  string `json:"policiesStatus"`
-	RolesStatus     string `json:"rolesStatus,omitempty"`
-	BindRulesStatus string `json:"bindRulesStatus,omitempty"`
-	GeneralStatus   string `json:"generalStatus,omitempty"`
+	PoliciesStatus    string `json:"policiesStatus"`
+	RolesStatus       string `json:"rolesStatus,omitempty"`
+	BindRulesStatus   string `json:"bindRulesStatus,omitempty"`
+	AuthMethodsStatus string `json:"authMethodsStatus,omitempty"`
+	GeneralStatus     string `json:"generalStatus,omitempty"`
 }
 
 //+kubebuilder:object:root=true

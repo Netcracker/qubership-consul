@@ -37,6 +37,7 @@ type ACLBindingRuleAdapter struct {
 	ServiceAccountName string `json:"ServiceAccountName,omitempty"`
 	BindName           string `json:"BindName,omitempty"`
 	AuthMethod         string `json:"AuthMethod,omitempty"`
+	Selector           string `json:"Selector,omitempty"`
 }
 
 type consulACLClient interface {
@@ -54,12 +55,24 @@ type consulACLClient interface {
 	BindingRuleUpdate(*consulApi.ACLBindingRule, *consulApi.WriteOptions) (*consulApi.ACLBindingRule, *consulApi.WriteMeta, error)
 	BindingRuleList(string, *consulApi.QueryOptions) ([]*consulApi.ACLBindingRule, *consulApi.QueryMeta, error)
 	BindingRuleDelete(string, *consulApi.WriteOptions) (*consulApi.WriteMeta, error)
+	AuthMethodCreate(*consulApi.ACLAuthMethod, *consulApi.WriteOptions) (*consulApi.ACLAuthMethod, *consulApi.WriteMeta, error)
+	AuthMethodRead(string, *consulApi.QueryOptions) (*consulApi.ACLAuthMethod, *consulApi.QueryMeta, error)
+	AuthMethodUpdate(*consulApi.ACLAuthMethod, *consulApi.WriteOptions) (*consulApi.ACLAuthMethod, *consulApi.WriteMeta, error)
+	AuthMethodDelete(string, *consulApi.WriteOptions) (*consulApi.WriteMeta, error)
+}
+
+type ACLAuthMethodAdapter struct {
+	Name        string                 `json:"Name,omitempty"`
+	Type        string                 `json:"Type,omitempty"`
+	Description string                 `json:"Description,omitempty"`
+	Config      map[string]interface{} `json:"Config,omitempty"`
 }
 
 type ACLConfig struct {
-	Policies  []consulApi.ACLPolicy   `json:"policies,omitempty"`
-	Roles     []ACLRoleAdapter        `json:"roles,omitempty"`
-	BindRules []ACLBindingRuleAdapter `json:"bind_rules,omitempty"`
+	Policies    []consulApi.ACLPolicy   `json:"policies,omitempty"`
+	Roles       []ACLRoleAdapter        `json:"roles,omitempty"`
+	BindRules   []ACLBindingRuleAdapter `json:"bind_rules,omitempty"`
+	AuthMethods []ACLAuthMethodAdapter  `json:"auth_methods,omitempty"`
 }
 
 type PoliciesStatus map[string]string
@@ -96,6 +109,14 @@ func (sh StatusHolder) GetStatus() string {
 type consulKVClient interface {
 	Put(p *consulApi.KVPair, q *consulApi.WriteOptions) (*consulApi.WriteMeta, error)
 	Delete(key string, q *consulApi.WriteOptions) (*consulApi.WriteMeta, error)
+}
+
+type consulTxnClient interface {
+	Txn(txns consulApi.TxnOps, q *consulApi.QueryOptions) (bool, *consulApi.TxnResponse, *consulApi.QueryMeta, error)
+}
+
+func makeTxnClient() consulTxnClient {
+	return makeConsulClient().Txn()
 }
 
 func makeConsulClient() *consulApi.Client {
