@@ -25,13 +25,13 @@ import (
 // mockACLClient is a test double for consulACLClient.
 type mockACLClient struct {
 	// Role
-	roleReadByNameFunc  func(string, *consulApi.QueryOptions) (*consulApi.ACLRole, *consulApi.QueryMeta, error)
-	roleListFunc        func(*consulApi.QueryOptions) ([]*consulApi.ACLRole, *consulApi.QueryMeta, error)
-	roleCreateCalled    bool
-	roleUpdateCalled    bool
-	roleDeletedIDs      []string
-	roleCreateFunc      func(*consulApi.ACLRole, *consulApi.WriteOptions) (*consulApi.ACLRole, *consulApi.WriteMeta, error)
-	roleUpdateFunc      func(*consulApi.ACLRole, *consulApi.WriteOptions) (*consulApi.ACLRole, *consulApi.WriteMeta, error)
+	roleReadByNameFunc func(string, *consulApi.QueryOptions) (*consulApi.ACLRole, *consulApi.QueryMeta, error)
+	roleListFunc       func(*consulApi.QueryOptions) ([]*consulApi.ACLRole, *consulApi.QueryMeta, error)
+	roleCreateCalled   bool
+	roleUpdateCalled   bool
+	roleDeletedIDs     []string
+	roleCreateFunc     func(*consulApi.ACLRole, *consulApi.WriteOptions) (*consulApi.ACLRole, *consulApi.WriteMeta, error)
+	roleUpdateFunc     func(*consulApi.ACLRole, *consulApi.WriteOptions) (*consulApi.ACLRole, *consulApi.WriteMeta, error)
 	// BindingRule
 	bindingRuleListFunc     func(string, *consulApi.QueryOptions) ([]*consulApi.ACLBindingRule, *consulApi.QueryMeta, error)
 	bindingRuleCreateCalled bool
@@ -107,6 +107,18 @@ func (m *mockACLClient) BindingRuleList(am string, q *consulApi.QueryOptions) ([
 }
 func (m *mockACLClient) BindingRuleDelete(id string, q *consulApi.WriteOptions) (*consulApi.WriteMeta, error) {
 	m.bindingRuleDeletedIDs = append(m.bindingRuleDeletedIDs, id)
+	return nil, nil
+}
+func (m *mockACLClient) AuthMethodCreate(am *consulApi.ACLAuthMethod, q *consulApi.WriteOptions) (*consulApi.ACLAuthMethod, *consulApi.WriteMeta, error) {
+	return am, nil, nil
+}
+func (m *mockACLClient) AuthMethodRead(name string, q *consulApi.QueryOptions) (*consulApi.ACLAuthMethod, *consulApi.QueryMeta, error) {
+	return nil, nil, nil
+}
+func (m *mockACLClient) AuthMethodUpdate(am *consulApi.ACLAuthMethod, q *consulApi.WriteOptions) (*consulApi.ACLAuthMethod, *consulApi.WriteMeta, error) {
+	return am, nil, nil
+}
+func (m *mockACLClient) AuthMethodDelete(name string, q *consulApi.WriteOptions) (*consulApi.WriteMeta, error) {
 	return nil, nil
 }
 
