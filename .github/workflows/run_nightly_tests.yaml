@@ -9,10 +9,10 @@ on:
 
 jobs:
   Nightly-Consul-Pipeline:
-    uses: Netcracker/qubership-test-pipelines/.github/workflows/consul.yaml@ddc741b38bac5dc4834b8f6827c9f6d16abf0db8 # v1.14.1
+    uses: Netcracker/qubership-test-pipelines/.github/workflows/consul.yaml@57a9fbc96d458a7bdc37cb919bad53937d7d08dd # v1.15.0
     with:
       service_branch: 'main'
-      pipeline_branch: 'ddc741b38bac5dc4834b8f6827c9f6d16abf0db8' # v1.14.1 renovate: depName=Netcracker/qubership-test-pipelines
+      pipeline_branch: '57a9fbc96d458a7bdc37cb919bad53937d7d08dd' # v1.15.0 renovate: depName=Netcracker/qubership-test-pipelines
       scope: 'nightly'
       allure: true
       verify_timeout_minutes: 30
