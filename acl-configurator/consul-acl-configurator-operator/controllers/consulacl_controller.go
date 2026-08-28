@@ -299,6 +299,9 @@ func (r *ConsulACLReconciler) applyACL(cr *consulacl.ConsulACL) (string, string,
 	if err != nil {
 		return "", "", "", "", err
 	}
+	if err := validateBindRuleAuthMethods(aclConfig.BindRules); err != nil {
+		return "", "", "", "", err
+	}
 	authMethodsStatus, err := processAuthMethods(aclConfig.AuthMethods, customResourceName, customResourceNamespace, cr.Spec.ACL.ExplicitName)
 	if err != nil {
 		return "", "", "", "", err
@@ -677,6 +680,69 @@ func convertAuthMethodAdapterToAuthMethod(adapter ACLAuthMethodAdapter, customRe
 	am.Description = adapter.Description
 	am.Config = adapter.Config
 	return am
+}
+
+// validateBindRuleAuthMethods checks that every auth method referenced in bind rules exists in Consul.
+// Returns an error (without touching any Consul entities) if any auth method is missing.
+func validateBindRuleAuthMethods(bindRules []ACLBindingRuleAdapter) error {
+	seen := map[string]bool{}
+	for _, br := range bindRules {
+		am := br.AuthMethod
+		if am == "" {
+			am = authMethod
+		}
+		if seen[am] {
+			continue
+		}
+		seen[am] = true
+		existing, _, err := aclClient.AuthMethodRead(am, &consulApi.QueryOptions{})
+		if err != nil {
+			return fmt.Errorf("error checking auth method %q: %w", am, err)
+		}
+		if existing == nil {
+			return fmt.Errorf("auth method %q does not exist in Consul; skipping CR processing", am)
+		}
+	}
+	return nil
+}
+
+// EnsureApplicationsAuthMethod creates the applications-k8s-m2m auth method in Consul if it does not exist.
+// Called once at operator startup.
+func EnsureApplicationsAuthMethod() error {
+	const amName = "applications-k8s-m2m"
+	existing, _, err := aclClient.AuthMethodRead(amName, &consulApi.QueryOptions{})
+	if err != nil {
+		return fmt.Errorf("error reading auth method %q: %w", amName, err)
+	}
+	if existing != nil {
+		return nil
+	}
+	caCert := readFileOrEmpty("/var/run/secrets/kubernetes.io/serviceaccount/ca.crt")
+	saJWT := readFileOrEmpty("/var/run/secrets/kubernetes.io/serviceaccount/token")
+	am := &consulApi.ACLAuthMethod{
+		Name:        amName,
+		Type:        "kubernetes",
+		Description: "Auth method for application M2M authentication",
+		Config: map[string]interface{}{
+			"Host":              "https://kubernetes.default.svc",
+			"CACert":            caCert,
+			"ServiceAccountJWT": saJWT,
+		},
+	}
+	_, _, err = aclClient.AuthMethodCreate(am, &consulApi.WriteOptions{})
+	if err != nil {
+		return fmt.Errorf("error creating auth method %q: %w", amName, err)
+	}
+	log.Info(fmt.Sprintf("Auth method %q created", amName))
+	return nil
+}
+
+func readFileOrEmpty(path string) string {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return ""
+	}
+	return string(data)
 }
 
 func deleteAuthMethods(aclConfig *ACLConfig, name string, namespace string, explicitName bool) error {
