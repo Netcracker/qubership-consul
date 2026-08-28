@@ -17,11 +17,12 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/Netcracker/consul-acl-configurator/consul-acl-configurator-operator/util"
 	"os"
+	"strings"
+
+	"github.com/Netcracker/consul-acl-configurator/consul-acl-configurator-operator/util"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
-	"strings"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -128,6 +129,10 @@ func main() {
 	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
 		setupLog.Error(err, "unable to set up ready check")
 		os.Exit(1)
+	}
+
+	if err := controllers.EnsureApplicationsAuthMethod(); err != nil {
+		setupLog.Error(err, "unable to ensure applications-k8s-m2m auth method")
 	}
 
 	setupLog.Info("starting ConsulACL manager")
