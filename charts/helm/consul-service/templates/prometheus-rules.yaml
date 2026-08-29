@@ -29,8 +29,8 @@ spec:
         - alert: ConsulIsDegradedAlarm
           annotations:
             description: 'Consul is Degraded.'
-            summary: Some of Consul server pods are down
-          expr: sum(kube_pod_status_ready{exported_namespace="{{ .Release.Namespace }}",exported_pod=~"{{ template "consul.fullname" . }}-server-[0-9]+",condition="false"}) / sum(kube_pod_status_ready{exported_namespace="{{ .Release.Namespace }}",exported_pod=~"{{ template "consul.fullname" . }}-server-[0-9]+"}) > 0
+            summary: Consul cluster is unhealthy
+          expr: min(consul_autopilot_healthy{namespace="{{ .Release.Namespace }}",pod=~"{{ template "consul.fullname" . }}-server-[0-9]+",role="Server"}) == 0
           for: 3m
           labels:
             service: {{ .Release.Name }}
@@ -39,8 +39,8 @@ spec:
         - alert: ConsulIsDownAlarm
           annotations:
             description: 'Consul is Down.'
-            summary: All of Consul server pods are down
-          expr: sum(kube_pod_status_ready{exported_namespace="{{ .Release.Namespace }}",exported_pod=~"{{ template "consul.fullname" . }}-server-[0-9]+",condition="false"}) / sum(kube_pod_status_ready{exported_namespace="{{ .Release.Namespace }}",exported_pod=~"{{ template "consul.fullname" . }}-server-[0-9]+"}) == 1
+            summary: Consul cluster has no leader
+          expr: count(consul_server_isLeader{namespace="{{ .Release.Namespace }}",pod=~"{{ template "consul.fullname" . }}-server-[0-9]+",role="Server"}) > 0 and sum(consul_server_isLeader{namespace="{{ .Release.Namespace }}",pod=~"{{ template "consul.fullname" . }}-server-[0-9]+",role="Server"}) == 0
           for: 3m
           labels:
             service: {{ .Release.Name }}
