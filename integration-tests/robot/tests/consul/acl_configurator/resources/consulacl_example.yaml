@@ -10,7 +10,7 @@ spec:
   acl:
     name: example-consulacl
     explicitName: true
-    operatorNamespace: {{ (index (splitList "." (first (splitList ":" (last (splitList "://" .Values.CONSUL_URL))))) 1) | quote }}
+    operatorNamespace: {{ (index (splitList "." (first (splitList ":" (last (splitList "://" .Values.CONSUL_URL))))) 1) | quote }}  # yamllint disable-line rule:braces
     json: >
       {
         "policies": [
