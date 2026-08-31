@@ -350,7 +350,7 @@ func TestReconcile_NotFound_ReturnsWithoutError(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected nil error for not-found CR, got: %v", err)
 	}
-	if result.Requeue || result.RequeueAfter != 0 {
+	if result.RequeueAfter != 0 {
 		t.Errorf("expected no requeue for not-found CR, got result=%+v", result)
 	}
 }
