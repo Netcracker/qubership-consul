@@ -21,6 +21,8 @@ import (
 	"github.com/Netcracker/consul-acl-configurator/consul-acl-configurator-operator/util"
 	consulApi "github.com/hashicorp/consul/api"
 	"k8s.io/apimachinery/pkg/api/errors"
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"net"
 	"os"
 	"path/filepath"
@@ -29,6 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -108,29 +111,52 @@ func (r *ConsulACLReconciler) Reconcile(ctx context.Context, request ctrl.Reques
 		return reconcile.Result{}, nil
 	}
 
-	policiesStatus, rolesStatus, bindRulesStatus, authMethodsStatus, err := r.applyACL(instance)
-	if err != nil {
-		if _, ok := err.(net.Error); ok {
-			log.Error(err, "Error during connection to Consul")
+	policiesStatus, rolesStatus, bindRulesStatus, authMethodsStatus, applyErr := r.applyACL(instance)
+	if applyErr != nil {
+		if _, ok := applyErr.(net.Error); ok {
+			log.Error(applyErr, "Error during connection to Consul")
 		} else {
-			log.Error(err, "Can not parse ACL configuration")
+			log.Error(applyErr, "Can not parse ACL configuration")
 		}
-		return reconcile.Result{RequeueAfter: time.Second * time.Duration(periodTime)}, nil
 	}
 
-	err = crUpdater.UpdateStatusWithRetry(func(cr *consulacl.ConsulACL) {
+	statusErr := crUpdater.UpdateStatusWithRetry(func(cr *consulacl.ConsulACL) {
 		cr.Status.PoliciesStatus = policiesStatus
 		cr.Status.RolesStatus = rolesStatus
 		cr.Status.BindRulesStatus = bindRulesStatus
 		cr.Status.AuthMethodsStatus = authMethodsStatus
+		setSuccessfulCondition(&cr.Status.Conditions, applyErr, cr.Generation)
 	})
-	if err != nil {
-		log.Error(err, "Error occurred during custom resource status update")
+	if statusErr != nil {
+		log.Error(statusErr, "Error occurred during custom resource status update")
+		return reconcile.Result{RequeueAfter: time.Second * time.Duration(periodTime)}, nil
+	}
+
+	if applyErr != nil {
 		return reconcile.Result{RequeueAfter: time.Second * time.Duration(periodTime)}, nil
 	}
 
 	reqLogger.Info("Reconcile cycle succeeded")
 	return reconcile.Result{}, nil
+}
+
+// setSuccessfulCondition sets the "Successful" status condition on the given conditions slice.
+func setSuccessfulCondition(conditions *[]metav1.Condition, err error, generation int64) {
+	c := metav1.Condition{
+		Type:               "Successful",
+		ObservedGeneration: generation,
+		LastTransitionTime: metav1.Now(),
+	}
+	if err == nil {
+		c.Status = metav1.ConditionTrue
+		c.Reason = "Reconciled"
+		c.Message = ""
+	} else {
+		c.Status = metav1.ConditionFalse
+		c.Reason = "Failed"
+		c.Message = err.Error()
+	}
+	apimeta.SetStatusCondition(conditions, c)
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -271,17 +297,25 @@ func deletePolicies(aclConfig *ACLConfig, name string, namespace string, explici
 		} else {
 			policyName = convertEntityName(policy.Name, name, namespace)
 		}
-		deletedPolicy, err := readPolicy(policyName)
+		existingPolicy, err := readPolicy(policyName)
 		if err != nil {
 			log.Error(err, fmt.Sprintf("Error occurred during policy reading operation, policy name is [%s]", policyName))
 			return err
-		} else if deletedPolicy == nil {
-			// skip deleting non-existent policy
+		} else if existingPolicy == nil {
 			continue
 		}
-		_, err = aclClient.PolicyDelete(deletedPolicy.ID, &consulApi.WriteOptions{})
-		if err != nil {
-			log.Error(err, fmt.Sprintf("Error occurred during policy deleting operation, policy id is [%s]", deletedPolicy.ID))
+		newDesc, isLast := withOwnerRemoved(existingPolicy.Description, namespace)
+		if !isLast {
+			log.Info(fmt.Sprintf("Policy [%s] is still used by other services, removing own namespace from description", policyName))
+			existingPolicy.Description = newDesc
+			if _, _, err = aclClient.PolicyUpdate(existingPolicy, &consulApi.WriteOptions{}); err != nil {
+				log.Error(err, fmt.Sprintf("Error updating policy description for [%s]", policyName))
+				return err
+			}
+			continue
+		}
+		if _, err = aclClient.PolicyDelete(existingPolicy.ID, &consulApi.WriteOptions{}); err != nil {
+			log.Error(err, fmt.Sprintf("Error occurred during policy deleting operation, policy id is [%s]", existingPolicy.ID))
 			return err
 		}
 	}
@@ -437,6 +471,71 @@ func getAclConfig(cr *consulacl.ConsulACL) (*ACLConfig, error) {
 	return &aclConfig, nil
 }
 
+const ownersMarker = "[consul-acl-owners:"
+
+// parseOwners splits a policy description into the user-visible base text and
+// the list of owner namespaces recorded by the operator.
+func parseOwners(description string) (baseDesc string, owners []string) {
+	idx := strings.LastIndex(description, ownersMarker)
+	if idx == -1 {
+		return strings.TrimRight(description, " \n"), nil
+	}
+	baseDesc = strings.TrimRight(description[:idx], " \n")
+	raw := strings.TrimSuffix(strings.TrimSpace(description[idx+len(ownersMarker):]), "]")
+	for _, o := range strings.Split(raw, ",") {
+		if o = strings.TrimSpace(o); o != "" {
+			owners = append(owners, o)
+		}
+	}
+	return
+}
+
+// buildDescription reassembles base description and owner list into the full description string.
+func buildDescription(baseDesc string, owners []string) string {
+	if len(owners) == 0 {
+		return baseDesc
+	}
+	sort.Strings(owners)
+	suffix := fmt.Sprintf("%s %s]", ownersMarker, strings.Join(owners, ", "))
+	if baseDesc == "" {
+		return suffix
+	}
+	return baseDesc + "\n" + suffix
+}
+
+// withOwnerRemoved returns description with namespace removed from the owners list,
+// and isLast=true when no other owners remain (caller should delete the policy).
+func withOwnerRemoved(description, namespace string) (string, bool) {
+	base, owners := parseOwners(description)
+	var remaining []string
+	for _, o := range owners {
+		if o != namespace {
+			remaining = append(remaining, o)
+		}
+	}
+	return buildDescription(base, remaining), len(remaining) == 0
+}
+
+// mergeOwnerIntoPolicy sets demand.Description to spec base + existing Consul owners + current namespace.
+func mergeOwnerIntoPolicy(demand *consulApi.ACLPolicy, existing *consulApi.ACLPolicy, namespace string) {
+	specBase, _ := parseOwners(demand.Description)
+	var owners []string
+	if existing != nil {
+		_, owners = parseOwners(existing.Description)
+	}
+	found := false
+	for _, o := range owners {
+		if o == namespace {
+			found = true
+			break
+		}
+	}
+	if !found {
+		owners = append(owners, namespace)
+	}
+	demand.Description = buildDescription(specBase, owners)
+}
+
 func processPolicies(policies []consulApi.ACLPolicy, customResourceName string, customResourceNamespace string, explicitName bool) (*StatusHolder, map[string]string, error) {
 	statusMap := StatusHolder{}
 	processedPolicies := map[string]string{}
@@ -450,15 +549,18 @@ func processPolicies(policies []consulApi.ACLPolicy, customResourceName string, 
 		}
 		var resPolicy *consulApi.ACLPolicy
 		var action string
+		var existingPolicy *consulApi.ACLPolicy
 
 		if policyDemand.ID == "" {
-			resPolicy, err = readPolicy(policyDemand.Name)
+			existingPolicy, err = readPolicy(policyDemand.Name)
 			if err != nil {
 				log.Info(fmt.Sprintf("Error occurred during reading a policy by name - %s, %s", policyDemand.Name, err.Error()))
-			} else if resPolicy != nil {
-				policyDemand.ID = resPolicy.ID
+			} else if existingPolicy != nil {
+				policyDemand.ID = existingPolicy.ID
 			}
 		}
+
+		mergeOwnerIntoPolicy(&policyDemand, existingPolicy, customResourceNamespace)
 
 		if policyDemand.ID == "" {
 			action = "create"

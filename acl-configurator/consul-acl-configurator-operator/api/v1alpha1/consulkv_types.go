@@ -34,12 +34,14 @@ type ConsulKVSpec struct {
 type ConsulKVEntryStatus struct {
 	Key    string `json:"key"`
 	Status string `json:"status"`
+	Owned  bool   `json:"owned,omitempty"`
 }
 
 type ConsulKVStatus struct {
 	Entries       []ConsulKVEntryStatus `json:"entries,omitempty"`
 	GeneralStatus string                `json:"generalStatus,omitempty"`
 	ManagedBy     string                `json:"managedBy,omitempty"`
+	Conditions    []metav1.Condition    `json:"conditions,omitempty"`
 }
 
 //+kubebuilder:object:root=true

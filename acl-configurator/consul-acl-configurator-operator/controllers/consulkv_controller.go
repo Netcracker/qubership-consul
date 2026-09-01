@@ -41,10 +41,9 @@ var consulKVFinalizer = consulacl.GroupVersion.Group + "/consulkvconfigurator-co
 
 var kvLog = logf.Log.WithName("controller_consulkv")
 
-const txnBatchSize = 64
+const casMaxRetries = 10
 
 var kvClient consulKVClient = makeKVClient()
-var txnClient consulTxnClient = makeTxnClient()
 
 // ConsulKVReconciler reconciles a ConsulKV object
 type ConsulKVReconciler struct {
@@ -83,7 +82,7 @@ func (r *ConsulKVReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		}
 	} else {
 		if containsFinalizer(instance.GetFinalizers(), consulKVFinalizer) {
-			if err := deleteKVEntries(instance.Spec.KV.Entries); err != nil {
+			if err := deleteKVEntries(instance.Status.Entries); err != nil {
 				return reconcile.Result{RequeueAfter: time.Second * time.Duration(periodTime)}, nil
 			}
 			err = crUpdater.updateWithRetry(func(cr *consulacl.ConsulKV) {
@@ -94,17 +93,30 @@ func (r *ConsulKVReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return reconcile.Result{}, nil
 	}
 
-	entryStatuses, applyErr := applyKVEntries(instance.Spec.KV.Entries)
-	removeErr := deleteRemovedEntries(instance.Status.Entries, instance.Spec.KV.Entries)
+	ownedKeys := make(map[string]bool, len(instance.Status.Entries))
+	for _, e := range instance.Status.Entries {
+		if e.Owned {
+			ownedKeys[e.Key] = true
+		}
+	}
+
+	entryStatuses, applyErr := applyKVEntries(instance.Spec.KV.Entries, ownedKeys)
+	cleanedKeys, removeErr := deleteRemovedEntries(instance.Status.Entries, instance.Spec.KV.Entries)
+
+	reconcileErr := applyErr
+	if reconcileErr == nil {
+		reconcileErr = removeErr
+	}
 
 	statusErr := crUpdater.updateStatusWithRetry(func(cr *consulacl.ConsulKV) {
-		cr.Status.Entries = mergeKVStatuses(cr.Status.Entries, entryStatuses)
+		cr.Status.Entries = mergeKVStatuses(cr.Status.Entries, entryStatuses, cleanedKeys)
 		cr.Status.ManagedBy = "consul-acl-configurator-operator_" + r.OwnNamespace
 		if applyErr != nil || removeErr != nil {
-			cr.Status.GeneralStatus = "Degraded"
+			cr.Status.GeneralStatus = "degraded"
 		} else {
-			cr.Status.GeneralStatus = "Synced"
+			cr.Status.GeneralStatus = "synced"
 		}
+		setSuccessfulCondition(&cr.Status.Conditions, reconcileErr, cr.Generation)
 	})
 	if statusErr != nil {
 		kvLog.Error(statusErr, "Error updating ConsulKV status")
@@ -135,68 +147,106 @@ func (r *ConsulKVReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func applyKVEntries(entries []consulacl.ConsulKVEntry) ([]consulacl.ConsulKVEntryStatus, error) {
+func applyKVEntries(entries []consulacl.ConsulKVEntry, ownedKeys map[string]bool) ([]consulacl.ConsulKVEntryStatus, error) {
 	statuses := make([]consulacl.ConsulKVEntryStatus, len(entries))
+	var firstErr error
 
-	type indexedEntry struct {
-		pos   int
-		entry consulacl.ConsulKVEntry
-	}
-	var valid []indexedEntry
 	for i, e := range entries {
 		if e.Key == "" {
 			statuses[i] = consulacl.ConsulKVEntryStatus{Key: "", Status: "error: key must not be empty"}
-		} else {
-			valid = append(valid, indexedEntry{i, e})
+			continue
 		}
-	}
-
-	var firstErr error
-	for batchStart := 0; batchStart < len(valid); batchStart += txnBatchSize {
-		batch := valid[batchStart:min(batchStart+txnBatchSize, len(valid))]
-		ops := make(consulApi.TxnOps, len(batch))
-		for j, ie := range batch {
-			ops[j] = &consulApi.TxnOp{KV: &consulApi.KVTxnOp{
-				Verb:  consulApi.KVSet,
-				Key:   ie.entry.Key,
-				Value: []byte(ie.entry.Value),
-			}}
-		}
-		ok, resp, _, err := txnClient.Txn(ops, nil)
-		if err != nil {
-			for _, ie := range batch {
-				statuses[ie.pos] = consulacl.ConsulKVEntryStatus{Key: ie.entry.Key, Status: "error: " + err.Error()}
-			}
+		if err := writeKVWithOwnership(e.Key, e.Value, ownedKeys[e.Key]); err != nil {
+			statuses[i] = consulacl.ConsulKVEntryStatus{Key: e.Key, Status: "error: " + err.Error()}
 			if firstErr == nil {
 				firstErr = err
 			}
-		} else if !ok {
-			errByIndex := make(map[int]string, len(resp.Errors))
-			for _, txnErr := range resp.Errors {
-				errByIndex[txnErr.OpIndex] = txnErr.What
-			}
-			for j, ie := range batch {
-				msg := errByIndex[j]
-				if msg == "" {
-					msg = "transaction rejected"
-				}
-				statuses[ie.pos] = consulacl.ConsulKVEntryStatus{Key: ie.entry.Key, Status: "error: " + msg}
-			}
-			if firstErr == nil {
-				firstErr = fmt.Errorf("KV set transaction rejected")
-			}
-		} else {
-			for _, ie := range batch {
-				statuses[ie.pos] = consulacl.ConsulKVEntryStatus{Key: ie.entry.Key, Status: "Synced"}
-			}
+			continue
 		}
+		statuses[i] = consulacl.ConsulKVEntryStatus{Key: e.Key, Status: "synced", Owned: true}
 	}
 	return statuses, firstErr
 }
 
+// writeKVWithOwnership atomically writes the KV value. If not yet owned, increments the Flags counter via CAS.
+func writeKVWithOwnership(key, value string, alreadyOwned bool) error {
+	for attempt := 0; attempt < casMaxRetries; attempt++ {
+		pair, _, err := kvClient.Get(key, nil)
+		if err != nil {
+			return fmt.Errorf("KV get %q: %w", key, err)
+		}
+
+		var currentFlags uint64
+		var modifyIndex uint64
+		if pair != nil {
+			currentFlags = pair.Flags
+			modifyIndex = pair.ModifyIndex
+		}
+
+		newFlags := currentFlags
+		if !alreadyOwned {
+			newFlags = currentFlags + 1
+		}
+
+		ok, _, err := kvClient.CAS(&consulApi.KVPair{
+			Key:         key,
+			Value:       []byte(value),
+			Flags:       newFlags,
+			ModifyIndex: modifyIndex,
+		}, nil)
+		if err != nil {
+			return fmt.Errorf("KV cas %q: %w", key, err)
+		}
+		if ok {
+			return nil
+		}
+		// CAS conflict — retry with fresh read
+	}
+	return fmt.Errorf("KV cas %q: max retries exceeded", key)
+}
+
+// decrementOrDelete decrements the Flags counter via CAS. If Flags reaches 0, deletes the key.
+func decrementOrDelete(key string) error {
+	for attempt := 0; attempt < casMaxRetries; attempt++ {
+		pair, _, err := kvClient.Get(key, nil)
+		if err != nil {
+			return fmt.Errorf("KV get %q: %w", key, err)
+		}
+		if pair == nil {
+			return nil // already gone — idempotent
+		}
+
+		if pair.Flags <= 1 {
+			ok, _, err := kvClient.DeleteCAS(pair, nil)
+			if err != nil {
+				return fmt.Errorf("KV deletecas %q: %w", key, err)
+			}
+			if ok {
+				return nil
+			}
+			continue // conflict — retry
+		}
+
+		ok, _, err := kvClient.CAS(&consulApi.KVPair{
+			Key:         key,
+			Value:       pair.Value,
+			Flags:       pair.Flags - 1,
+			ModifyIndex: pair.ModifyIndex,
+		}, nil)
+		if err != nil {
+			return fmt.Errorf("KV cas decrement %q: %w", key, err)
+		}
+		if ok {
+			return nil
+		}
+		// conflict — retry
+	}
+	return fmt.Errorf("KV decrement %q: max retries exceeded", key)
+}
+
 // mergeKVStatuses preserves the order of existing status entries and appends new ones at the bottom.
-// Entries removed from spec are marked "deleted" and kept in the status history.
-func mergeKVStatuses(existing, updated []consulacl.ConsulKVEntryStatus) []consulacl.ConsulKVEntryStatus {
+// cleanedKeys contains keys that were successfully decremented this reconcile cycle.
+func mergeKVStatuses(existing, updated []consulacl.ConsulKVEntryStatus, cleanedKeys map[string]bool) []consulacl.ConsulKVEntryStatus {
 	updatedMap := make(map[string]consulacl.ConsulKVEntryStatus, len(updated))
 	for _, e := range updated {
 		updatedMap[e.Key] = e
@@ -205,19 +255,17 @@ func mergeKVStatuses(existing, updated []consulacl.ConsulKVEntryStatus) []consul
 	result := make([]consulacl.ConsulKVEntryStatus, 0, len(existing)+len(updated))
 	seen := make(map[string]bool, len(existing))
 
-	// First pass: existing entries — update status or mark deleted if removed from spec.
 	for _, e := range existing {
 		seen[e.Key] = true
 		if entry, ok := updatedMap[e.Key]; ok {
 			result = append(result, entry)
-		} else if e.Status != "Removed" {
-			result = append(result, consulacl.ConsulKVEntryStatus{Key: e.Key, Status: "Removed"})
 		} else {
-			result = append(result, e)
+			// key removed from spec: owned=false only if decrement succeeded
+			owned := e.Owned && !cleanedKeys[e.Key]
+			result = append(result, consulacl.ConsulKVEntryStatus{Key: e.Key, Status: "removed", Owned: owned})
 		}
 	}
 
-	// Second pass: append new entries (not seen in existing) in spec order.
 	for _, e := range updated {
 		if !seen[e.Key] {
 			result = append(result, e)
@@ -227,49 +275,45 @@ func mergeKVStatuses(existing, updated []consulacl.ConsulKVEntryStatus) []consul
 	return result
 }
 
-func deleteKVEntries(entries []consulacl.ConsulKVEntry) error {
-	var keys []string
-	for _, e := range entries {
-		if e.Key != "" {
-			keys = append(keys, e.Key)
+// deleteKVEntries is called on CR deletion. Decrements Flags for every owned entry.
+func deleteKVEntries(statuses []consulacl.ConsulKVEntryStatus) error {
+	var firstErr error
+	for _, e := range statuses {
+		if e.Key == "" || !e.Owned {
+			continue
+		}
+		if err := decrementOrDelete(e.Key); err != nil {
+			kvLog.Error(err, "Error during KV ownership cleanup", "key", e.Key)
+			if firstErr == nil {
+				firstErr = err
+			}
 		}
 	}
-	return deleteKeysByTxn(keys)
+	return firstErr
 }
 
-func deleteRemovedEntries(existing []consulacl.ConsulKVEntryStatus, specEntries []consulacl.ConsulKVEntry) error {
+// deleteRemovedEntries decrements Flags for entries that were in status but removed from spec.
+// Returns the set of keys that were successfully cleaned (for status update).
+func deleteRemovedEntries(existing []consulacl.ConsulKVEntryStatus, specEntries []consulacl.ConsulKVEntry) (map[string]bool, error) {
 	specKeys := make(map[string]bool, len(specEntries))
 	for _, e := range specEntries {
 		specKeys[e.Key] = true
 	}
-	var keys []string
+	cleanedKeys := make(map[string]bool)
+	var firstErr error
 	for _, e := range existing {
-		if !specKeys[e.Key] && e.Status != "Removed" {
-			keys = append(keys, e.Key)
+		if !specKeys[e.Key] && e.Owned {
+			if err := decrementOrDelete(e.Key); err != nil {
+				kvLog.Error(err, "Error decrementing KV flags on remove", "key", e.Key)
+				if firstErr == nil {
+					firstErr = err
+				}
+			} else {
+				cleanedKeys[e.Key] = true
+			}
 		}
 	}
-	return deleteKeysByTxn(keys)
-}
-
-func deleteKeysByTxn(keys []string) error {
-	for batchStart := 0; batchStart < len(keys); batchStart += txnBatchSize {
-		batch := keys[batchStart:min(batchStart+txnBatchSize, len(keys))]
-		ops := make(consulApi.TxnOps, len(batch))
-		for j, key := range batch {
-			ops[j] = &consulApi.TxnOp{KV: &consulApi.KVTxnOp{Verb: consulApi.KVDelete, Key: key}}
-		}
-		ok, resp, _, err := txnClient.Txn(ops, nil)
-		if err != nil {
-			kvLog.Error(err, "Error in KV delete transaction")
-			return err
-		}
-		if !ok {
-			err = fmt.Errorf("KV delete transaction rejected: %v", resp.Errors)
-			kvLog.Error(err, "KV delete transaction rejected")
-			return err
-		}
-	}
-	return nil
+	return cleanedKeys, firstErr
 }
 
 func containsFinalizer(finalizers []string, finalizer string) bool {

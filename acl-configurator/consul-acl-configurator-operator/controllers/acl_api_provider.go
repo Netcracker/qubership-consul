@@ -107,16 +107,11 @@ func (sh StatusHolder) GetStatus() string {
 }
 
 type consulKVClient interface {
+	Get(key string, q *consulApi.QueryOptions) (*consulApi.KVPair, *consulApi.QueryMeta, error)
 	Put(p *consulApi.KVPair, q *consulApi.WriteOptions) (*consulApi.WriteMeta, error)
+	CAS(p *consulApi.KVPair, q *consulApi.WriteOptions) (bool, *consulApi.WriteMeta, error)
 	Delete(key string, q *consulApi.WriteOptions) (*consulApi.WriteMeta, error)
-}
-
-type consulTxnClient interface {
-	Txn(txns consulApi.TxnOps, q *consulApi.QueryOptions) (bool, *consulApi.TxnResponse, *consulApi.QueryMeta, error)
-}
-
-func makeTxnClient() consulTxnClient {
-	return makeConsulClient().Txn()
+	DeleteCAS(p *consulApi.KVPair, q *consulApi.WriteOptions) (bool, *consulApi.WriteMeta, error)
 }
 
 func makeConsulClient() *consulApi.Client {

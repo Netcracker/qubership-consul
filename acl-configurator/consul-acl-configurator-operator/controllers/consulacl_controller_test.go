@@ -502,108 +502,159 @@ func TestDeleteBindingRules_MixedAuthMethods_AllDeleted(t *testing.T) {
 // --- mockKVClient ---
 
 type mockKVClient struct {
-	deletedKeys []string
-	deleteFunc  func(key string) error
-	putFunc     func(p *consulApi.KVPair) error
+	store         map[string]*consulApi.KVPair
+	deletedKeys   []string
+	casPairs      []consulApi.KVPair
+	getFunc       func(key string) (*consulApi.KVPair, error)
+	casFunc       func(p *consulApi.KVPair) (bool, error)
+	putFunc       func(p *consulApi.KVPair) error
+	deleteFunc    func(key string) error
+	deleteCASFunc func(p *consulApi.KVPair) (bool, error)
 }
 
-func (m *mockKVClient) Put(p *consulApi.KVPair, q *consulApi.WriteOptions) (*consulApi.WriteMeta, error) {
+func (m *mockKVClient) initStore() {
+	if m.store == nil {
+		m.store = make(map[string]*consulApi.KVPair)
+	}
+}
+
+func (m *mockKVClient) Get(key string, _ *consulApi.QueryOptions) (*consulApi.KVPair, *consulApi.QueryMeta, error) {
+	m.initStore()
+	if m.getFunc != nil {
+		p, err := m.getFunc(key)
+		return p, nil, err
+	}
+	return m.store[key], nil, nil
+}
+
+func (m *mockKVClient) CAS(p *consulApi.KVPair, _ *consulApi.WriteOptions) (bool, *consulApi.WriteMeta, error) {
+	m.initStore()
+	if m.casFunc != nil {
+		ok, err := m.casFunc(p)
+		return ok, nil, err
+	}
+	m.casPairs = append(m.casPairs, *p)
+	current := m.store[p.Key]
+	var currentIdx uint64
+	if current != nil {
+		currentIdx = current.ModifyIndex
+	}
+	if p.ModifyIndex != currentIdx {
+		return false, nil, nil
+	}
+	cp := *p
+	cp.ModifyIndex = currentIdx + 1
+	m.store[p.Key] = &cp
+	return true, nil, nil
+}
+
+func (m *mockKVClient) Put(p *consulApi.KVPair, _ *consulApi.WriteOptions) (*consulApi.WriteMeta, error) {
+	m.initStore()
 	if m.putFunc != nil {
 		return nil, m.putFunc(p)
 	}
+	cp := *p
+	m.store[p.Key] = &cp
 	return nil, nil
 }
 
-func (m *mockKVClient) Delete(key string, q *consulApi.WriteOptions) (*consulApi.WriteMeta, error) {
+func (m *mockKVClient) Delete(key string, _ *consulApi.WriteOptions) (*consulApi.WriteMeta, error) {
+	m.initStore()
 	m.deletedKeys = append(m.deletedKeys, key)
 	if m.deleteFunc != nil {
 		return nil, m.deleteFunc(key)
 	}
+	delete(m.store, key)
 	return nil, nil
 }
 
-// 14.1: deleteKVEntries calls Delete for every entry
-func TestDeleteKVEntries_CallsDeleteForEachEntry(t *testing.T) {
+func (m *mockKVClient) DeleteCAS(p *consulApi.KVPair, _ *consulApi.WriteOptions) (bool, *consulApi.WriteMeta, error) {
+	m.initStore()
+	if m.deleteCASFunc != nil {
+		ok, err := m.deleteCASFunc(p)
+		return ok, nil, err
+	}
+	current := m.store[p.Key]
+	if current == nil {
+		return true, nil, nil
+	}
+	if p.ModifyIndex != current.ModifyIndex {
+		return false, nil, nil
+	}
+	m.deletedKeys = append(m.deletedKeys, p.Key)
+	delete(m.store, p.Key)
+	return true, nil, nil
+}
+
+// 14.1: deleteKVEntries deletes only owned entries via decrementOrDelete
+func TestDeleteKVEntries_CallsDeleteForEachOwnedEntry(t *testing.T) {
 	mock := &mockKVClient{}
 	origKV := kvClient
 	kvClient = mock
 	defer func() { kvClient = origKV }()
 
-	entries := []consulacl.ConsulKVEntry{
-		{Key: "config/ns/svc/"},
-		{Key: "logging/ns/svc/LOG_LEVEL"},
+	mock.initStore()
+	mock.store["config/ns/svc/"] = &consulApi.KVPair{Key: "config/ns/svc/", Flags: 1, ModifyIndex: 1}
+	mock.store["logging/ns/svc/LOG_LEVEL"] = &consulApi.KVPair{Key: "logging/ns/svc/LOG_LEVEL", Flags: 1, ModifyIndex: 1}
+
+	statuses := []consulacl.ConsulKVEntryStatus{
+		{Key: "config/ns/svc/", Status: "synced", Owned: true},
+		{Key: "logging/ns/svc/LOG_LEVEL", Status: "synced", Owned: true},
 	}
-	if err := deleteKVEntries(entries); err != nil {
+	if err := deleteKVEntries(statuses); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if len(mock.deletedKeys) != 2 {
-		t.Fatalf("expected 2 Delete calls, got %d", len(mock.deletedKeys))
-	}
-	if mock.deletedKeys[0] != "config/ns/svc/" {
-		t.Errorf("first key: got %q, want %q", mock.deletedKeys[0], "config/ns/svc/")
-	}
-	if mock.deletedKeys[1] != "logging/ns/svc/LOG_LEVEL" {
-		t.Errorf("second key: got %q, want %q", mock.deletedKeys[1], "logging/ns/svc/LOG_LEVEL")
+		t.Fatalf("expected 2 deletions, got %d: %v", len(mock.deletedKeys), mock.deletedKeys)
 	}
 }
 
-// 14.2: absent key (Delete returns nil — Consul 200 for missing key) is treated as
-// success; remaining entries are still processed.
-func TestDeleteKVEntries_AbsentKey_TreatedAsSuccess(t *testing.T) {
-	mock := &mockKVClient{
-		// first key is "absent": mock returns nil (Consul returns HTTP 200 for DELETEs of
-		// missing keys, so the client returns nil error — not a 404).
-		deleteFunc: func(key string) error {
-			return nil
-		},
-	}
+// 14.2: not-owned entries are skipped by deleteKVEntries
+func TestDeleteKVEntries_NotOwnedEntries_Skipped(t *testing.T) {
+	mock := &mockKVClient{}
 	origKV := kvClient
 	kvClient = mock
 	defer func() { kvClient = origKV }()
 
-	entries := []consulacl.ConsulKVEntry{
-		{Key: "missing/key"},
-		{Key: "present/key"},
+	statuses := []consulacl.ConsulKVEntryStatus{
+		{Key: "config/ns/svc/", Status: "synced", Owned: false},
 	}
-	if err := deleteKVEntries(entries); err != nil {
+	if err := deleteKVEntries(statuses); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if len(mock.deletedKeys) != 2 {
-		t.Errorf("both entries must be attempted; got %d Delete calls", len(mock.deletedKeys))
+	if len(mock.deletedKeys) != 0 {
+		t.Errorf("no deletions expected for not-owned entries, got %v", mock.deletedKeys)
 	}
 }
 
-// 14.3: network error from Delete is returned to the caller immediately.
+// 14.3: network error from Get is returned; remaining entries are still processed
 func TestDeleteKVEntries_NetworkError_Returned(t *testing.T) {
 	netErr := fmt.Errorf("dial tcp: connection refused")
 	callCount := 0
 	mock := &mockKVClient{
-		deleteFunc: func(key string) error {
+		getFunc: func(key string) (*consulApi.KVPair, error) {
 			callCount++
 			if callCount == 1 {
-				return netErr
+				return nil, netErr
 			}
-			return nil
+			return &consulApi.KVPair{Key: key, Flags: 1, ModifyIndex: 1}, nil
 		},
 	}
 	origKV := kvClient
 	kvClient = mock
 	defer func() { kvClient = origKV }()
 
-	entries := []consulacl.ConsulKVEntry{
-		{Key: "key/one"},
-		{Key: "key/two"},
+	statuses := []consulacl.ConsulKVEntryStatus{
+		{Key: "key/one", Status: "synced", Owned: true},
+		{Key: "key/two", Status: "synced", Owned: true},
 	}
-	err := deleteKVEntries(entries)
+	err := deleteKVEntries(statuses)
 	if err == nil {
 		t.Fatal("expected error to be returned, got nil")
 	}
-	if err.Error() != netErr.Error() {
-		t.Errorf("got error %q, want %q", err.Error(), netErr.Error())
-	}
-	// loop must stop after first error — second key must not be attempted
-	if callCount != 1 {
-		t.Errorf("expected 1 Delete call before returning error, got %d", callCount)
+	// all entries are attempted even on partial error
+	if callCount != 2 {
+		t.Errorf("expected Get called for both entries, got %d calls", callCount)
 	}
 }
 

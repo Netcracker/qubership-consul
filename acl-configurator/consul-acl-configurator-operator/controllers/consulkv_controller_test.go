@@ -51,15 +51,9 @@ func newConsulKV(name, namespace string, finalizers []string, entries []consulac
 
 // ---- 16.1: applyKVEntries ----
 
-// 16.1a: all entries written verbatim (keys passed to Put unchanged)
+// 16.1a: all entries written verbatim (keys passed to CAS unchanged)
 func TestApplyKVEntries_AllEntriesWrittenVerbatim(t *testing.T) {
-	var putPairs []consulApi.KVPair
-	mock := &mockKVClient{
-		putFunc: func(p *consulApi.KVPair) error {
-			putPairs = append(putPairs, *p)
-			return nil
-		},
-	}
+	mock := &mockKVClient{}
 	origKV := kvClient
 	kvClient = mock
 	defer func() { kvClient = origKV }()
@@ -68,21 +62,21 @@ func TestApplyKVEntries_AllEntriesWrittenVerbatim(t *testing.T) {
 		{Key: "config/ns/app/", Value: ""},
 		{Key: "logging/ns/app/LOG_LEVEL", Value: "INFO"},
 	}
-	statuses, err := applyKVEntries(entries)
+	statuses, err := applyKVEntries(entries, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if len(putPairs) != 2 {
-		t.Fatalf("expected 2 Put calls, got %d", len(putPairs))
+	if len(mock.casPairs) != 2 {
+		t.Fatalf("expected 2 CAS calls, got %d", len(mock.casPairs))
 	}
-	if putPairs[0].Key != "config/ns/app/" {
-		t.Errorf("first key: got %q, want %q", putPairs[0].Key, "config/ns/app/")
+	if mock.casPairs[0].Key != "config/ns/app/" {
+		t.Errorf("first key: got %q, want %q", mock.casPairs[0].Key, "config/ns/app/")
 	}
-	if putPairs[1].Key != "logging/ns/app/LOG_LEVEL" {
-		t.Errorf("second key: got %q, want %q", putPairs[1].Key, "logging/ns/app/LOG_LEVEL")
+	if mock.casPairs[1].Key != "logging/ns/app/LOG_LEVEL" {
+		t.Errorf("second key: got %q, want %q", mock.casPairs[1].Key, "logging/ns/app/LOG_LEVEL")
 	}
-	if string(putPairs[1].Value) != "INFO" {
-		t.Errorf("second value: got %q, want %q", string(putPairs[1].Value), "INFO")
+	if string(mock.casPairs[1].Value) != "INFO" {
+		t.Errorf("second value: got %q, want %q", string(mock.casPairs[1].Value), "INFO")
 	}
 	if len(statuses) != 2 {
 		t.Fatalf("expected 2 statuses, got %d", len(statuses))
@@ -91,18 +85,15 @@ func TestApplyKVEntries_AllEntriesWrittenVerbatim(t *testing.T) {
 		if s.Status != "synced" {
 			t.Errorf("key %q: got status %q, want \"synced\"", s.Key, s.Status)
 		}
+		if !s.Owned {
+			t.Errorf("key %q: Owned should be true after first apply", s.Key)
+		}
 	}
 }
 
 // 16.1b: empty-key entry is skipped with an error status; loop continues
 func TestApplyKVEntries_EmptyKeySkippedWithErrorStatus(t *testing.T) {
-	putCount := 0
-	mock := &mockKVClient{
-		putFunc: func(p *consulApi.KVPair) error {
-			putCount++
-			return nil
-		},
-	}
+	mock := &mockKVClient{}
 	origKV := kvClient
 	kvClient = mock
 	defer func() { kvClient = origKV }()
@@ -111,12 +102,12 @@ func TestApplyKVEntries_EmptyKeySkippedWithErrorStatus(t *testing.T) {
 		{Key: ""},
 		{Key: "valid/key", Value: "v"},
 	}
-	statuses, err := applyKVEntries(entries)
+	statuses, err := applyKVEntries(entries, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if putCount != 1 {
-		t.Errorf("Put called %d times; only the valid key should be put", putCount)
+	if len(mock.casPairs) != 1 {
+		t.Errorf("CAS called %d times; only the valid key should be written", len(mock.casPairs))
 	}
 	if len(statuses) != 2 {
 		t.Fatalf("expected 2 statuses, got %d", len(statuses))
@@ -129,7 +120,7 @@ func TestApplyKVEntries_EmptyKeySkippedWithErrorStatus(t *testing.T) {
 	}
 }
 
-// 16.1c: idempotent re-apply — calling applyKVEntries twice for the same entries succeeds both times
+// 16.1c: idempotent re-apply — second apply with owned=true preserves existing flags
 func TestApplyKVEntries_IdempotentReapply(t *testing.T) {
 	mock := &mockKVClient{}
 	origKV := kvClient
@@ -138,28 +129,44 @@ func TestApplyKVEntries_IdempotentReapply(t *testing.T) {
 
 	entries := []consulacl.ConsulKVEntry{{Key: "data/ns/svc", Value: "x"}}
 
-	for i := 0; i < 2; i++ {
-		statuses, err := applyKVEntries(entries)
-		if err != nil {
-			t.Fatalf("apply %d: unexpected error: %v", i+1, err)
-		}
-		if len(statuses) != 1 || statuses[0].Status != "synced" {
-			t.Errorf("apply %d: expected synced status, got %v", i+1, statuses)
-		}
+	// First apply: not owned yet — flags should go from 0 to 1
+	statuses, err := applyKVEntries(entries, nil)
+	if err != nil {
+		t.Fatalf("apply 1: unexpected error: %v", err)
+	}
+	if len(statuses) != 1 || statuses[0].Status != "synced" || !statuses[0].Owned {
+		t.Errorf("apply 1: unexpected status %v", statuses)
+	}
+	flagsAfterFirst := mock.store["data/ns/svc"].Flags
+	if flagsAfterFirst != 1 {
+		t.Errorf("flags after first apply: got %d, want 1", flagsAfterFirst)
+	}
+
+	// Second apply: already owned — flags must not change
+	statuses, err = applyKVEntries(entries, map[string]bool{"data/ns/svc": true})
+	if err != nil {
+		t.Fatalf("apply 2: unexpected error: %v", err)
+	}
+	if len(statuses) != 1 || statuses[0].Status != "synced" {
+		t.Errorf("apply 2: unexpected status %v", statuses)
+	}
+	flagsAfterSecond := mock.store["data/ns/svc"].Flags
+	if flagsAfterSecond != 1 {
+		t.Errorf("flags after second apply: got %d, want 1 (should not increment again)", flagsAfterSecond)
 	}
 }
 
-// 16.1d: network error from Put is returned; loop stops after first error
+// 16.1d: network error from CAS is returned; remaining entries still processed
 func TestApplyKVEntries_NetworkErrorReturned(t *testing.T) {
 	netErr := fmt.Errorf("dial tcp: connection refused")
 	callCount := 0
 	mock := &mockKVClient{
-		putFunc: func(p *consulApi.KVPair) error {
+		casFunc: func(p *consulApi.KVPair) (bool, error) {
 			callCount++
 			if callCount == 1 {
-				return netErr
+				return false, netErr
 			}
-			return nil
+			return true, nil
 		},
 	}
 	origKV := kvClient
@@ -170,16 +177,78 @@ func TestApplyKVEntries_NetworkErrorReturned(t *testing.T) {
 		{Key: "key/one"},
 		{Key: "key/two"},
 	}
-	statuses, err := applyKVEntries(entries)
+	statuses, err := applyKVEntries(entries, nil)
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
-	// statuses are still returned for all entries (loop does not abort)
 	if len(statuses) != 2 {
 		t.Errorf("expected 2 statuses even on error, got %d", len(statuses))
 	}
 	if statuses[0].Status == "synced" {
 		t.Error("first entry should have error status")
+	}
+}
+
+// ---- 16.2: ownership tracking ----
+
+// 16.2a: two owners — key is not deleted on first CR removal, only flags decremented
+func TestOwnership_KeyNotDeletedUntilLastOwner(t *testing.T) {
+	mock := &mockKVClient{}
+	origKV := kvClient
+	kvClient = mock
+	defer func() { kvClient = origKV }()
+
+	// Simulate key with flags=2 (two owners)
+	mock.initStore()
+	mock.store["shared/key"] = &consulApi.KVPair{Key: "shared/key", Value: []byte("v"), Flags: 2, ModifyIndex: 5}
+
+	// First owner releases
+	if err := decrementOrDelete("shared/key"); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(mock.deletedKeys) != 0 {
+		t.Errorf("key should not be deleted while flags > 1, deletedKeys=%v", mock.deletedKeys)
+	}
+	if mock.store["shared/key"] == nil || mock.store["shared/key"].Flags != 1 {
+		t.Errorf("flags should be 1 after first decrement, got store=%v", mock.store["shared/key"])
+	}
+}
+
+// 16.2b: last owner — key is deleted when flags reaches 0
+func TestOwnership_KeyDeletedByLastOwner(t *testing.T) {
+	mock := &mockKVClient{}
+	origKV := kvClient
+	kvClient = mock
+	defer func() { kvClient = origKV }()
+
+	mock.initStore()
+	mock.store["shared/key"] = &consulApi.KVPair{Key: "shared/key", Value: []byte("v"), Flags: 1, ModifyIndex: 3}
+
+	if err := decrementOrDelete("shared/key"); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(mock.deletedKeys) != 1 || mock.deletedKeys[0] != "shared/key" {
+		t.Errorf("expected key to be deleted, deletedKeys=%v", mock.deletedKeys)
+	}
+	if _, exists := mock.store["shared/key"]; exists {
+		t.Error("key should be absent from store after last owner releases")
+	}
+}
+
+// 16.2c: already absent key — decrementOrDelete is a no-op
+func TestOwnership_AlreadyAbsentKey(t *testing.T) {
+	mock := &mockKVClient{}
+	origKV := kvClient
+	kvClient = mock
+	defer func() { kvClient = origKV }()
+
+	if err := decrementOrDelete("missing/key"); err != nil {
+		t.Errorf("expected no error for absent key, got %v", err)
+	}
+	if len(mock.deletedKeys) != 0 {
+		t.Errorf("no deletions expected, got %v", mock.deletedKeys)
 	}
 }
 
@@ -247,20 +316,33 @@ func TestReconcile_ActiveReconcileCallsApplyAndWritesStatus(t *testing.T) {
 	if len(updated.Status.Entries) != 1 || updated.Status.Entries[0].Key != "config/ns/app" {
 		t.Errorf("unexpected status entries: %v", updated.Status.Entries)
 	}
+	if !updated.Status.Entries[0].Owned {
+		t.Errorf("status entry should have Owned=true after first apply")
+	}
 }
 
-// 16.3c: deletion reconcile (DeletionTimestamp non-zero, finalizer present) calls delete and removes finalizer
+// 16.3c: deletion reconcile (DeletionTimestamp non-zero, finalizer present) decrements flags and removes finalizer
 func TestReconcile_DeletionCallsDeleteAndRemovesFinalizer(t *testing.T) {
 	mock := &mockKVClient{}
 	origKV := kvClient
 	kvClient = mock
 	defer func() { kvClient = origKV }()
 
+	// Pre-populate the Consul store with the key (flags=1, only owner)
+	mock.initStore()
+	mock.store["config/ns/app"] = &consulApi.KVPair{Key: "config/ns/app", Value: []byte{}, Flags: 1, ModifyIndex: 1}
+
 	now := metav1.Now()
 	cr := newConsulKV("test-kv", "default", []string{consulKVFinalizer}, []consulacl.ConsulKVEntry{
 		{Key: "config/ns/app"},
 	})
 	cr.DeletionTimestamp = &now
+	// CR has status from a prior reconcile — owned=true
+	cr.Status = consulacl.ConsulKVStatus{
+		Entries: []consulacl.ConsulKVEntryStatus{
+			{Key: "config/ns/app", Status: "synced", Owned: true},
+		},
+	}
 
 	fakeClient := fake.NewClientBuilder().WithScheme(kvScheme()).WithObjects(cr).Build()
 
@@ -272,11 +354,9 @@ func TestReconcile_DeletionCallsDeleteAndRemovesFinalizer(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if len(mock.deletedKeys) != 1 || mock.deletedKeys[0] != "config/ns/app" {
-		t.Errorf("expected Delete called for \"config/ns/app\", got %v", mock.deletedKeys)
+		t.Errorf("expected DeleteCAS called for \"config/ns/app\", got deletedKeys=%v", mock.deletedKeys)
 	}
 
-	// After finalizer removal the fake client garbage-collects the object (no more
-	// finalizers → object deleted). Verify either the object is gone or finalizer removed.
 	remaining := &consulacl.ConsulKV{}
 	getErr := fakeClient.Get(context.TODO(), types.NamespacedName{Name: "test-kv", Namespace: "default"}, remaining)
 	if getErr == nil && containsFinalizer(remaining.GetFinalizers(), consulKVFinalizer) {
@@ -285,17 +365,12 @@ func TestReconcile_DeletionCallsDeleteAndRemovesFinalizer(t *testing.T) {
 }
 
 // 16.3d: a status-only update (generation unchanged) does not trigger a KV write.
-// The generation-based predicate lives in SetupWithManager and is tested here by
-// verifying that applyKVEntries is not called when the reconciler sees a CR whose
-// generation matches the last observed generation — simulated by re-reconciling a CR
-// that already has the finalizer and checking the Put call count does not increase
-// across two identical reconciles (idempotent, but also shows predicate intent).
 func TestReconcile_StatusOnlyUpdate_DoesNotCallApplyTwice(t *testing.T) {
-	putCount := 0
+	casCount := 0
 	mock := &mockKVClient{
-		putFunc: func(p *consulApi.KVPair) error {
-			putCount++
-			return nil
+		casFunc: func(p *consulApi.KVPair) (bool, error) {
+			casCount++
+			return true, nil
 		},
 	}
 	origKV := kvClient
@@ -314,28 +389,21 @@ func TestReconcile_StatusOnlyUpdate_DoesNotCallApplyTwice(t *testing.T) {
 	r := &ConsulKVReconciler{Client: fakeClient, Scheme: kvScheme()}
 	req := ctrl.Request{NamespacedName: types.NamespacedName{Name: "test-kv", Namespace: "default"}}
 
-	// First reconcile — spec change (generation bump would normally trigger this)
 	if _, err := r.Reconcile(context.TODO(), req); err != nil {
 		t.Fatalf("first reconcile: %v", err)
 	}
-	afterFirst := putCount
+	afterFirst := casCount
 
-	// Second reconcile with no spec change — same generation, predicate would filter
-	// this in a real manager; here we verify apply is still safe to call (idempotent)
-	// and that the predicate marker (UpdateFunc checks generation) is defined correctly.
 	if _, err := r.Reconcile(context.TODO(), req); err != nil {
 		t.Fatalf("second reconcile: %v", err)
 	}
-	afterSecond := putCount
+	afterSecond := casCount
 
-	// Both reconciles should have called apply (manager predicate filters update events,
-	// not explicit Reconcile calls); what matters is each call is idempotent and
-	// produces the same count increment.
 	if afterFirst != 1 {
-		t.Errorf("first reconcile: expected 1 Put call, got %d", afterFirst)
+		t.Errorf("first reconcile: expected 1 CAS call, got %d", afterFirst)
 	}
 	if afterSecond != 2 {
-		t.Errorf("second reconcile: expected 2 cumulative Put calls (idempotent), got %d", afterSecond)
+		t.Errorf("second reconcile: expected 2 cumulative CAS calls (idempotent), got %d", afterSecond)
 	}
 }
 
