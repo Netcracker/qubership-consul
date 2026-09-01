@@ -82,7 +82,13 @@ func (r *ConsulKVReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		}
 	} else {
 		if containsFinalizer(instance.GetFinalizers(), consulKVFinalizer) {
-			if err := deleteKVEntries(instance.Status.Entries); err != nil {
+			var deleteErr error
+			if instance.Spec.KV.PurgeOnDelete {
+				deleteErr = deleteKVTree(instance.Status.Entries)
+			} else {
+				deleteErr = deleteKVEntries(instance.Status.Entries)
+			}
+			if deleteErr != nil {
 				return reconcile.Result{RequeueAfter: time.Second * time.Duration(periodTime)}, nil
 			}
 			err = crUpdater.updateWithRetry(func(cr *consulacl.ConsulKV) {
@@ -284,6 +290,24 @@ func deleteKVEntries(statuses []consulacl.ConsulKVEntryStatus) error {
 		}
 		if err := decrementOrDelete(e.Key); err != nil {
 			kvLog.Error(err, "Error during KV ownership cleanup", "key", e.Key)
+			if firstErr == nil {
+				firstErr = err
+			}
+		}
+	}
+	return firstErr
+}
+
+// deleteKVTree is called on CR deletion when PurgeOnDelete is set.
+// It recursively deletes all Consul keys under each entry's key prefix, bypassing ownership checks.
+func deleteKVTree(statuses []consulacl.ConsulKVEntryStatus) error {
+	var firstErr error
+	for _, e := range statuses {
+		if e.Key == "" {
+			continue
+		}
+		if _, err := kvClient.DeleteTree(e.Key, nil); err != nil {
+			kvLog.Error(err, "Error deleting KV tree", "prefix", e.Key)
 			if firstErr == nil {
 				firstErr = err
 			}

@@ -112,6 +112,7 @@ type consulKVClient interface {
 	CAS(p *consulApi.KVPair, q *consulApi.WriteOptions) (bool, *consulApi.WriteMeta, error)
 	Delete(key string, q *consulApi.WriteOptions) (*consulApi.WriteMeta, error)
 	DeleteCAS(p *consulApi.KVPair, q *consulApi.WriteOptions) (bool, *consulApi.WriteMeta, error)
+	DeleteTree(prefix string, q *consulApi.WriteOptions) (*consulApi.WriteMeta, error)
 }
 
 func makeConsulClient() *consulApi.Client {

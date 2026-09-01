@@ -16,6 +16,7 @@ package controllers
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	consulacl "github.com/Netcracker/consul-acl-configurator/consul-acl-configurator-operator/api/v1alpha1"
@@ -502,14 +503,16 @@ func TestDeleteBindingRules_MixedAuthMethods_AllDeleted(t *testing.T) {
 // --- mockKVClient ---
 
 type mockKVClient struct {
-	store         map[string]*consulApi.KVPair
-	deletedKeys   []string
-	casPairs      []consulApi.KVPair
-	getFunc       func(key string) (*consulApi.KVPair, error)
-	casFunc       func(p *consulApi.KVPair) (bool, error)
-	putFunc       func(p *consulApi.KVPair) error
-	deleteFunc    func(key string) error
-	deleteCASFunc func(p *consulApi.KVPair) (bool, error)
+	store          map[string]*consulApi.KVPair
+	deletedKeys    []string
+	deletedTrees   []string
+	casPairs       []consulApi.KVPair
+	getFunc        func(key string) (*consulApi.KVPair, error)
+	casFunc        func(p *consulApi.KVPair) (bool, error)
+	putFunc        func(p *consulApi.KVPair) error
+	deleteFunc     func(key string) error
+	deleteCASFunc  func(p *consulApi.KVPair) (bool, error)
+	deleteTreeFunc func(prefix string) error
 }
 
 func (m *mockKVClient) initStore() {
@@ -584,6 +587,20 @@ func (m *mockKVClient) DeleteCAS(p *consulApi.KVPair, _ *consulApi.WriteOptions)
 	m.deletedKeys = append(m.deletedKeys, p.Key)
 	delete(m.store, p.Key)
 	return true, nil, nil
+}
+
+func (m *mockKVClient) DeleteTree(prefix string, _ *consulApi.WriteOptions) (*consulApi.WriteMeta, error) {
+	m.initStore()
+	if m.deleteTreeFunc != nil {
+		return nil, m.deleteTreeFunc(prefix)
+	}
+	m.deletedTrees = append(m.deletedTrees, prefix)
+	for key := range m.store {
+		if key == prefix || strings.HasPrefix(key, prefix+"/") {
+			delete(m.store, key)
+		}
+	}
+	return nil, nil
 }
 
 // 14.1: deleteKVEntries deletes only owned entries via decrementOrDelete

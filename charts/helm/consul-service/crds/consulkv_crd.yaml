@@ -40,6 +40,8 @@ spec:
                       - key
                       type: object
                     type: array
+                  purgeOnDelete:
+                    type: boolean
                 required:
                 - entries
                 type: object

@@ -24,7 +24,8 @@ type ConsulKVEntry struct {
 }
 
 type ConsulKVConfig struct {
-	Entries []ConsulKVEntry `json:"entries"`
+	Entries       []ConsulKVEntry `json:"entries"`
+	PurgeOnDelete bool            `json:"purgeOnDelete,omitempty"`
 }
 
 type ConsulKVSpec struct {

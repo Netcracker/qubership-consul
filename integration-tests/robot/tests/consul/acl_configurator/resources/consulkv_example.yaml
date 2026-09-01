@@ -5,6 +5,7 @@ metadata:
   namespace: opensearch-service
 spec:
   kv:
+    purgeOnDelete: true
     entries:
       - key: "config/opensearch/example-app"
       - key: "config/opensearch/example-app/LOG_LEVEL_1"
