@@ -114,6 +114,12 @@ func (r *ConsulACLReconciler) Reconcile(ctx context.Context, request ctrl.Reques
 		} else {
 			log.Error(err, "Can not parse ACL configuration")
 		}
+		statusErr := crUpdater.UpdateStatusWithRetry(func(cr *consulacl.ConsulACL) {
+			cr.Status.GeneralStatus = "Failed"
+		})
+		if statusErr != nil {
+			log.Error(statusErr, "Error occurred during custom resource status update")
+		}
 		return reconcile.Result{RequeueAfter: time.Second * time.Duration(periodTime)}, nil
 	}
 
@@ -121,6 +127,7 @@ func (r *ConsulACLReconciler) Reconcile(ctx context.Context, request ctrl.Reques
 		cr.Status.PoliciesStatus = policiesStatus
 		cr.Status.RolesStatus = rolesStatus
 		cr.Status.BindRulesStatus = bindRulesStatus
+		cr.Status.GeneralStatus = "Reconciled successfully"
 	})
 	if err != nil {
 		log.Error(err, "Error occurred during custom resource status update")
