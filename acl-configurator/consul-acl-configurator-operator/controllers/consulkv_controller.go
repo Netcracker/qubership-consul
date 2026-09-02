@@ -148,8 +148,12 @@ func (r *ConsulKVReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		},
 	}
 
+	ownerPredicate := predicate.NewPredicateFuncs(func(obj client.Object) bool {
+		return obj.GetNamespace() == r.OwnNamespace
+	})
+
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&consulacl.ConsulKV{}, builder.WithPredicates(statusPredicate)).
+		For(&consulacl.ConsulKV{}, builder.WithPredicates(statusPredicate, ownerPredicate)).
 		Complete(r)
 }
 
@@ -162,24 +166,36 @@ func applyKVEntries(entries []consulacl.ConsulKVEntry, ownedKeys map[string]bool
 			statuses[i] = consulacl.ConsulKVEntryStatus{Key: "", Status: "error: key must not be empty"}
 			continue
 		}
-		if err := writeKVWithOwnership(e.Key, e.Value, ownedKeys[e.Key]); err != nil {
+		tookOwnership, err := writeKVWithOwnership(e.Key, e.Value, ownedKeys[e.Key])
+		if err != nil {
 			statuses[i] = consulacl.ConsulKVEntryStatus{Key: e.Key, Status: "error: " + err.Error()}
 			if firstErr == nil {
 				firstErr = err
 			}
 			continue
 		}
-		statuses[i] = consulacl.ConsulKVEntryStatus{Key: e.Key, Status: "synced", Owned: true}
+		owned := ownedKeys[e.Key] || tookOwnership
+		status := "synced"
+		if !owned {
+			status = "synced (not owned: pre-existing key)"
+		}
+		statuses[i] = consulacl.ConsulKVEntryStatus{Key: e.Key, Status: status, Owned: owned}
 	}
 	return statuses, firstErr
 }
 
-// writeKVWithOwnership atomically writes the KV value. If not yet owned, increments the Flags counter via CAS.
-func writeKVWithOwnership(key, value string, alreadyOwned bool) error {
+// writeKVWithOwnership atomically writes the KV value and manages ownership via the Flags counter.
+// Ownership is tracked using Consul KV Flags as a reference counter:
+//   - If the key does not exist: creates it with Flags=1, returns tookOwnership=true.
+//   - If the key exists with Flags=0 (created externally): writes the value but keeps Flags=0,
+//     returns tookOwnership=false. The key will NOT be deleted when the CR is removed.
+//   - If the key is already owned (alreadyOwned=true): updates value without changing Flags.
+//   - If the key exists with Flags>0 (owned by another CR): increments Flags (ref-count).
+func writeKVWithOwnership(key, value string, alreadyOwned bool) (tookOwnership bool, err error) {
 	for attempt := 0; attempt < casMaxRetries; attempt++ {
 		pair, _, err := kvClient.Get(key, nil)
 		if err != nil {
-			return fmt.Errorf("KV get %q: %w", key, err)
+			return false, fmt.Errorf("KV get %q: %w", key, err)
 		}
 
 		var currentFlags uint64
@@ -187,6 +203,25 @@ func writeKVWithOwnership(key, value string, alreadyOwned bool) error {
 		if pair != nil {
 			currentFlags = pair.Flags
 			modifyIndex = pair.ModifyIndex
+		}
+
+		// Do not take ownership of pre-existing keys with Flags=0 (created externally).
+		// Write the value but leave Flags unchanged so the key is not deleted on CR removal.
+		if !alreadyOwned && pair != nil && currentFlags == 0 {
+			ok, _, err := kvClient.CAS(&consulApi.KVPair{
+				Key:         key,
+				Value:       []byte(value),
+				Flags:       0,
+				ModifyIndex: modifyIndex,
+			}, nil)
+			if err != nil {
+				return false, fmt.Errorf("KV cas %q: %w", key, err)
+			}
+			if ok {
+				return false, nil
+			}
+			// CAS conflict — retry with fresh read
+			continue
 		}
 
 		newFlags := currentFlags
@@ -201,14 +236,14 @@ func writeKVWithOwnership(key, value string, alreadyOwned bool) error {
 			ModifyIndex: modifyIndex,
 		}, nil)
 		if err != nil {
-			return fmt.Errorf("KV cas %q: %w", key, err)
+			return false, fmt.Errorf("KV cas %q: %w", key, err)
 		}
 		if ok {
-			return nil
+			return true, nil
 		}
 		// CAS conflict — retry with fresh read
 	}
-	return fmt.Errorf("KV cas %q: max retries exceeded", key)
+	return false, fmt.Errorf("KV cas %q: max retries exceeded", key)
 }
 
 // decrementOrDelete decrements the Flags counter via CAS. If Flags reaches 0, deletes the key.

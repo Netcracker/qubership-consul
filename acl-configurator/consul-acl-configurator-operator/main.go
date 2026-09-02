@@ -135,6 +135,7 @@ func main() {
 
 	if err := controllers.EnsureApplicationsAuthMethod(); err != nil {
 		setupLog.Error(err, "unable to ensure applications-k8s-m2m auth method")
+		os.Exit(1)
 	}
 
 	setupLog.Info("starting ConsulACL manager")

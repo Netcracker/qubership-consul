@@ -56,23 +56,16 @@ type consulACLClient interface {
 	BindingRuleList(string, *consulApi.QueryOptions) ([]*consulApi.ACLBindingRule, *consulApi.QueryMeta, error)
 	BindingRuleDelete(string, *consulApi.WriteOptions) (*consulApi.WriteMeta, error)
 	AuthMethodCreate(*consulApi.ACLAuthMethod, *consulApi.WriteOptions) (*consulApi.ACLAuthMethod, *consulApi.WriteMeta, error)
-	AuthMethodRead(string, *consulApi.QueryOptions) (*consulApi.ACLAuthMethod, *consulApi.QueryMeta, error)
 	AuthMethodUpdate(*consulApi.ACLAuthMethod, *consulApi.WriteOptions) (*consulApi.ACLAuthMethod, *consulApi.WriteMeta, error)
-	AuthMethodDelete(string, *consulApi.WriteOptions) (*consulApi.WriteMeta, error)
-}
-
-type ACLAuthMethodAdapter struct {
-	Name        string                 `json:"Name,omitempty"`
-	Type        string                 `json:"Type,omitempty"`
-	Description string                 `json:"Description,omitempty"`
-	Config      map[string]interface{} `json:"Config,omitempty"`
+	AuthMethodRead(string, *consulApi.QueryOptions) (*consulApi.ACLAuthMethod, *consulApi.QueryMeta, error)
+	TokenListFiltered(consulApi.ACLTokenFilterOptions, *consulApi.QueryOptions) ([]*consulApi.ACLTokenListEntry, *consulApi.QueryMeta, error)
+	TokenDelete(string, *consulApi.WriteOptions) (*consulApi.WriteMeta, error)
 }
 
 type ACLConfig struct {
-	Policies    []consulApi.ACLPolicy   `json:"policies,omitempty"`
-	Roles       []ACLRoleAdapter        `json:"roles,omitempty"`
-	BindRules   []ACLBindingRuleAdapter `json:"bind_rules,omitempty"`
-	AuthMethods []ACLAuthMethodAdapter  `json:"auth_methods,omitempty"`
+	Policies  []consulApi.ACLPolicy   `json:"policies,omitempty"`
+	Roles     []ACLRoleAdapter        `json:"roles,omitempty"`
+	BindRules []ACLBindingRuleAdapter `json:"bind_rules,omitempty"`
 }
 
 type PoliciesStatus map[string]string

@@ -162,3 +162,46 @@ If current service namespace belongs to the allowed list common reconcile will b
 `ALLOWED_NAMESPACES` environment variable defines a list of namespaces which have permissions to execute common reconcile. If this variable is empty
 all namespaces have necessary permissions. This is a service based behavior. To start common reconcile manually we recommend scale down and then
 scale up Consul ACL Configurator deployment.
+
+# ConsulKV
+
+The `ConsulKV` custom resource allows provisioning Consul KV entries. For example:
+
+```yaml
+apiVersion: netcracker.com/v1alpha1
+kind: ConsulKV
+metadata:
+  name: example-consulkv
+  namespace: my-service
+spec:
+  kv:
+    entries:
+      - key: "config/my-service/application/"
+      - key: "config/my-service/LOG_LEVEL"
+        value: "INFO"
+```
+
+Keys are created exactly as defined in the spec — no automatic prefixes are applied.
+
+## KV ownership
+
+The operator tracks ownership of KV keys using the Consul KV `Flags` field as a reference counter.
+This allows multiple CRs to safely reference the same key — the key is only deleted when the last owner removes it.
+
+**Ownership rules on apply:**
+
+- Key does not exist → operator creates it with `Flags=1`. Key is **owned**; it will be deleted when the CR is removed.
+- Key exists with `Flags=0` (created manually or by an external tool) → operator updates the value but does **not** claim ownership (`Flags` stays 0). The key will **not** be deleted when the CR is removed. The CR status for this entry will show `synced (not owned: pre-existing key)`.
+- Key exists with `Flags>0` (owned by another CR) → operator increments `Flags`. Key is **co-owned**; it will only be deleted when all owning CRs are removed.
+
+## spec.kv.purgeOnDelete
+
+If `spec.kv.purgeOnDelete: true` is set, deleting the CR will recursively delete all Consul keys under each entry's key as a prefix, bypassing the ownership counter. Use this only when the CR owns an entire key namespace exclusively.
+
+```yaml
+spec:
+  kv:
+    purgeOnDelete: true
+    entries:
+      - key: "config/my-service/"
+```

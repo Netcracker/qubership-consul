@@ -119,7 +119,10 @@ func (m *mockACLClient) AuthMethodRead(name string, q *consulApi.QueryOptions) (
 func (m *mockACLClient) AuthMethodUpdate(am *consulApi.ACLAuthMethod, q *consulApi.WriteOptions) (*consulApi.ACLAuthMethod, *consulApi.WriteMeta, error) {
 	return am, nil, nil
 }
-func (m *mockACLClient) AuthMethodDelete(name string, q *consulApi.WriteOptions) (*consulApi.WriteMeta, error) {
+func (m *mockACLClient) TokenListFiltered(f consulApi.ACLTokenFilterOptions, q *consulApi.QueryOptions) ([]*consulApi.ACLTokenListEntry, *consulApi.QueryMeta, error) {
+	return nil, nil, nil
+}
+func (m *mockACLClient) TokenDelete(accessorID string, q *consulApi.WriteOptions) (*consulApi.WriteMeta, error) {
 	return nil, nil
 }
 
