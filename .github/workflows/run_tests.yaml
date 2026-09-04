@@ -39,10 +39,10 @@ jobs:
           poll-interval: 20
   Consul-Pipeline:
     needs: Wait-for-images
-    uses: Netcracker/qubership-test-pipelines/.github/workflows/consul.yaml@6219b21460f77c6dde9bff517eed7196122ba6fe # atp-integration — TODO: revert after merge
+    uses: Netcracker/qubership-test-pipelines/.github/workflows/consul.yaml@00bedc21aa15f60fcf766379b1dd2e77a670a26c # atp-integration — TODO: revert after merge
     with:
       service_branch: '${{ github.head_ref || github.ref_name }}'
-      pipeline_branch: '6219b21460f77c6dde9bff517eed7196122ba6fe' # atp-integration — must match uses@ above
+      pipeline_branch: '00bedc21aa15f60fcf766379b1dd2e77a670a26c' # atp-integration — must match uses@ above
       scope: nightly
       allure: false
     secrets:
