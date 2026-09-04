@@ -17,11 +17,14 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/Netcracker/consul-acl-configurator/consul-acl-configurator-operator/util"
 	"os"
-	"sigs.k8s.io/controller-runtime/pkg/cache"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"strings"
+
+	"github.com/Netcracker/consul-acl-configurator/consul-acl-configurator-operator/util"
+	"k8s.io/apimachinery/pkg/fields"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -106,8 +109,18 @@ func main() {
 		Client:           mgr.GetClient(),
 		Scheme:           mgr.GetScheme(),
 		ResourceVersions: map[string]string{},
+		OwnNamespace:     ownNamespace,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ConsulACL")
+		os.Exit(1)
+	}
+
+	if err = (&controllers.ConsulKVReconciler{
+		Client:       mgr.GetClient(),
+		Scheme:       mgr.GetScheme(),
+		OwnNamespace: ownNamespace,
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "ConsulKV")
 		os.Exit(1)
 	}
 
@@ -117,6 +130,11 @@ func main() {
 	}
 	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
 		setupLog.Error(err, "unable to set up ready check")
+		os.Exit(1)
+	}
+
+	if err := controllers.EnsureApplicationsAuthMethod(); err != nil {
+		setupLog.Error(err, "unable to ensure applications-k8s-m2m auth method")
 		os.Exit(1)
 	}
 
@@ -142,6 +160,32 @@ func getWatchNamespace() (string, error) {
 }
 
 func configureMgrNamespaces(mgrOptions *ctrl.Options, namespace string, ownNamespace string) {
+	if strings.TrimSpace(namespace) == "*" {
+		// Cluster-wide watch: configure per-namespace cache filters for ConsulACL so each
+		// operator only caches its own CRs. Requires spec.acl.operatorNamespace declared as
+		// a CRD selectableField (k8s >= 1.30).
+		//
+		// - ownNamespace: no field selector — the operator processes CRs here by default
+		//   (operatorNamespace typically absent for same-namespace deployments).
+		// - AllNamespaces: field selector so CRs from other namespaces are only cached when
+		//   spec.acl.operatorNamespace explicitly targets this operator.
+		//
+		// Without this, every operator would hold the full cluster's ConsulACL set in memory.
+		mgrOptions.Cache.ByObject = map[client.Object]cache.ByObject{
+			&qubershiporgv1.ConsulACL{}: {
+				Namespaces: map[string]cache.Config{
+					ownNamespace: {},
+					cache.AllNamespaces: {
+						FieldSelector: fields.SelectorFromSet(fields.Set{
+							"spec.acl.operatorNamespace": ownNamespace,
+						}),
+					},
+				},
+			},
+		}
+		return
+	}
+
 	namespaces := strings.Split(namespace, ",")
 	if !util.Contains(ownNamespace, namespaces) {
 		namespaces = append(namespaces, ownNamespace)

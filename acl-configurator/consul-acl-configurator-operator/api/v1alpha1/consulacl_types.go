@@ -19,9 +19,11 @@ import (
 )
 
 type ACL struct {
-	Json            string `json:"json"`
-	Name            string `json:"name"`
-	CommonReconcile string `json:"commonReconcile,omitempty"`
+	Json              string `json:"json"`
+	Name              string `json:"name"`
+	CommonReconcile   string `json:"commonReconcile,omitempty"`
+	ExplicitName      bool   `json:"explicitName,omitempty"`
+	OperatorNamespace string `json:"operatorNamespace,omitempty"`
 }
 
 // ConsulACLSpec defines the desired state of ConsulACL
@@ -31,10 +33,12 @@ type ConsulACLSpec struct {
 
 // ConsulACLStatus defines the observed state of ConsulACL
 type ConsulACLStatus struct {
-	PoliciesStatus  string `json:"policiesStatus"`
-	RolesStatus     string `json:"rolesStatus,omitempty"`
-	BindRulesStatus string `json:"bindRulesStatus,omitempty"`
-	GeneralStatus   string `json:"generalStatus,omitempty"`
+	PoliciesStatus    string             `json:"policiesStatus"`
+	RolesStatus       string             `json:"rolesStatus,omitempty"`
+	BindRulesStatus   string             `json:"bindRulesStatus,omitempty"`
+	AuthMethodsStatus string             `json:"authMethodsStatus,omitempty"`
+	GeneralStatus     string             `json:"generalStatus,omitempty"`
+	Conditions        []metav1.Condition `json:"conditions,omitempty"`
 }
 
 //+kubebuilder:object:root=true

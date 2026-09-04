@@ -41,9 +41,24 @@ rules:
     resources:
       - deployments/status
     verbs:
+        - get
+        - list
+        - update
+        - patch
+  {{- end }}
+  - apiGroups:
+      - netcracker.com
+    resources:
+      - consulacls
+      - consulacls/status
+      - consulkvs
+      - consulkvs/status
+    verbs:
       - get
       - list
+      - watch
+      - create
       - update
       - patch
-  {{- end }}
+      - delete
 {{- end }}

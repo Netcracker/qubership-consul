@@ -18,20 +18,24 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/Netcracker/consul-acl-configurator/consul-acl-configurator-operator/util"
-	consulApi "github.com/hashicorp/consul/api"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"net"
 	"os"
 	"path/filepath"
+	"sort"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/Netcracker/consul-acl-configurator/consul-acl-configurator-operator/util"
+	consulApi "github.com/hashicorp/consul/api"
+	"k8s.io/apimachinery/pkg/api/errors"
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"strconv"
-	"strings"
-	"time"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -59,13 +63,14 @@ var bootstrapToken = util.GetSecretFromFileOrEnv(
 )
 var authMethod = os.Getenv("CONSUL_AUTH_METHOD_NAME")
 var periodTime, _ = strconv.Atoi(os.Getenv("RECONCILE_PERIOD_SECONDS"))
-var aclClient = makeAclClient()
+var aclClient consulACLClient = makeAclClient()
 
 // ConsulACLReconciler reconciles a ConsulACL object
 type ConsulACLReconciler struct {
 	Client           client.Client
 	Scheme           *runtime.Scheme
 	ResourceVersions map[string]string
+	OwnNamespace     string
 }
 
 //+kubebuilder:rbac:groups=netcracker.com,resources=consulacls,verbs=get;list;watch;create;update;patch;delete
@@ -107,28 +112,51 @@ func (r *ConsulACLReconciler) Reconcile(ctx context.Context, request ctrl.Reques
 		return reconcile.Result{}, nil
 	}
 
-	policiesStatus, rolesStatus, bindRulesStatus, err := r.applyACL(instance)
-	if err != nil {
-		if _, ok := err.(net.Error); ok {
-			log.Error(err, "Error during connection to Consul")
+	policiesStatus, rolesStatus, bindRulesStatus, applyErr := r.applyACL(instance)
+	if applyErr != nil {
+		if _, ok := applyErr.(net.Error); ok {
+			log.Error(applyErr, "Error during connection to Consul")
 		} else {
-			log.Error(err, "Can not parse ACL configuration")
+			log.Error(applyErr, "Can not parse ACL configuration")
 		}
-		return reconcile.Result{RequeueAfter: time.Second * time.Duration(periodTime)}, nil
 	}
 
-	err = crUpdater.UpdateStatusWithRetry(func(cr *consulacl.ConsulACL) {
+	statusErr := crUpdater.UpdateStatusWithRetry(func(cr *consulacl.ConsulACL) {
 		cr.Status.PoliciesStatus = policiesStatus
 		cr.Status.RolesStatus = rolesStatus
 		cr.Status.BindRulesStatus = bindRulesStatus
+		setSuccessfulCondition(&cr.Status.Conditions, applyErr, cr.Generation)
 	})
-	if err != nil {
-		log.Error(err, "Error occurred during custom resource status update")
+	if statusErr != nil {
+		log.Error(statusErr, "Error occurred during custom resource status update")
+		return reconcile.Result{RequeueAfter: time.Second * time.Duration(periodTime)}, nil
+	}
+
+	if applyErr != nil {
 		return reconcile.Result{RequeueAfter: time.Second * time.Duration(periodTime)}, nil
 	}
 
 	reqLogger.Info("Reconcile cycle succeeded")
 	return reconcile.Result{}, nil
+}
+
+// setSuccessfulCondition sets the "Successful" status condition on the given conditions slice.
+func setSuccessfulCondition(conditions *[]metav1.Condition, err error, generation int64) {
+	c := metav1.Condition{
+		Type:               "Successful",
+		ObservedGeneration: generation,
+		LastTransitionTime: metav1.Now(),
+	}
+	if err == nil {
+		c.Status = metav1.ConditionTrue
+		c.Reason = "Reconciled"
+		c.Message = ""
+	} else {
+		c.Status = metav1.ConditionFalse
+		c.Reason = "Failed"
+		c.Message = err.Error()
+	}
+	apimeta.SetStatusCondition(conditions, c)
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -144,18 +172,31 @@ func (r *ConsulACLReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		},
 	}
 
+	ownerPredicate := predicate.NewPredicateFuncs(func(obj client.Object) bool {
+		cr, ok := obj.(*consulacl.ConsulACL)
+		if !ok {
+			return true
+		}
+		operatorNs := cr.Spec.ACL.OperatorNamespace
+		if operatorNs != "" {
+			return operatorNs == r.OwnNamespace
+		}
+		return obj.GetNamespace() == r.OwnNamespace
+	})
+
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&consulacl.ConsulACL{}, builder.WithPredicates(statusPredicate)).
+		For(&consulacl.ConsulACL{}, builder.WithPredicates(statusPredicate, ownerPredicate)).
 		Complete(r)
 }
 
 func (r *ConsulACLReconciler) deleteACL(instance *consulacl.ConsulACL, crUpdater util.CustomResourceUpdater) (ctrl.Result, error) {
 	aclConfig, err := getAclConfig(instance)
 	if err != nil {
+		log.Error(err, "Can not parse ACL configuration during deletion; Consul entities may need manual cleanup. To force deletion, remove the finalizer manually.")
 		return ctrl.Result{}, err
 	}
-	err = r.deleteAclEntities(aclConfig, instance.Name, instance.Namespace)
-	if err != nil {
+
+	if err = r.deleteAclEntities(aclConfig, instance.Name, instance.Namespace, instance.Spec.ACL.ExplicitName); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -165,14 +206,15 @@ func (r *ConsulACLReconciler) deleteACL(instance *consulacl.ConsulACL, crUpdater
 	return ctrl.Result{}, err
 }
 
-func (r *ConsulACLReconciler) deleteAclEntities(aclConfig *ACLConfig, name string, namespace string) error {
-	if err := deleteBindingRules(aclConfig, name, namespace); err != nil {
+func (r *ConsulACLReconciler) deleteAclEntities(aclConfig *ACLConfig, name string, namespace string, explicitName bool) error {
+	if err := deleteBindingRules(aclConfig, name, namespace, explicitName); err != nil {
 		return err
 	}
-	if err := deleteRoles(aclConfig, name, namespace); err != nil {
+	revokeRoleTokens(collectRoleNames(aclConfig, name, namespace, explicitName))
+	if err := deleteRoles(aclConfig, name, namespace, explicitName); err != nil {
 		return err
 	}
-	if err := deletePolicies(aclConfig, name, namespace); err != nil {
+	if err := deletePolicies(aclConfig, name, namespace, explicitName); err != nil {
 		return err
 	}
 	log.Info(fmt.Sprintf("All ACL entities for ConsulACL resource with name - [%s] from namespace - [%s] are deleted",
@@ -180,14 +222,67 @@ func (r *ConsulACLReconciler) deleteAclEntities(aclConfig *ACLConfig, name strin
 	return nil
 }
 
-func deleteBindingRules(aclConfig *ACLConfig, name string, namespace string) error {
-	existedBindingRules, _, err := aclClient.BindingRuleList(authMethod, &consulApi.QueryOptions{})
-	if err != nil {
-		return err
+// collectRoleNames returns the Consul role names for all roles in the config.
+func collectRoleNames(aclConfig *ACLConfig, name, namespace string, explicitName bool) []string {
+	names := make([]string, 0, len(aclConfig.Roles))
+	for _, role := range aclConfig.Roles {
+		if role.Name == "" {
+			continue
+		}
+		if explicitName {
+			names = append(names, role.Name)
+		} else {
+			names = append(names, convertEntityName(role.Name, name, namespace))
+		}
 	}
+	return names
+}
+
+// revokeRoleTokens revokes all Consul tokens associated with the given role names.
+// Errors are logged but do not block deletion.
+func revokeRoleTokens(roleNames []string) {
+	for _, roleName := range roleNames {
+		tokens, _, err := aclClient.TokenListFiltered(consulApi.ACLTokenFilterOptions{Role: roleName}, &consulApi.QueryOptions{})
+		if err != nil {
+			log.Error(err, "Error listing tokens for role", "role", roleName)
+			continue
+		}
+		for _, token := range tokens {
+			if _, err := aclClient.TokenDelete(token.AccessorID, &consulApi.WriteOptions{}); err != nil {
+				log.Error(err, "Error revoking token", "accessorID", token.AccessorID, "role", roleName)
+			}
+		}
+	}
+}
+
+func deleteBindingRules(aclConfig *ACLConfig, name string, namespace string, explicitName bool) error {
+	// Collect all distinct auth methods referenced in this CR (global + any per-rule overrides).
+	authMethods := map[string]struct{}{authMethod: {}}
 	for _, br := range aclConfig.BindRules {
-		for _, ebr := range existedBindingRules {
-			if convertEntityName(br.BindName, name, namespace) == ebr.BindName {
+		if br.AuthMethod != "" {
+			authMethods[br.AuthMethod] = struct{}{}
+		}
+	}
+
+	// Build the set of bind names declared by this CR.
+	declaredBindNames := map[string]struct{}{}
+	for _, br := range aclConfig.BindRules {
+		var bindName string
+		if explicitName {
+			bindName = br.BindName
+		} else {
+			bindName = convertEntityName(br.BindName, name, namespace)
+		}
+		declaredBindNames[bindName] = struct{}{}
+	}
+
+	for am := range authMethods {
+		existingRules, _, err := aclClient.BindingRuleList(am, &consulApi.QueryOptions{})
+		if err != nil {
+			return err
+		}
+		for _, ebr := range existingRules {
+			if _, declared := declaredBindNames[ebr.BindName]; declared {
 				_, err = aclClient.BindingRuleDelete(ebr.ID, &consulApi.WriteOptions{})
 				if err != nil {
 					log.Error(err, fmt.Sprintf("Error occurred during binding rule deleting operation, binding rule id is [%s]", ebr.ID))
@@ -199,10 +294,15 @@ func deleteBindingRules(aclConfig *ACLConfig, name string, namespace string) err
 	return nil
 }
 
-func deleteRoles(aclConfig *ACLConfig, name string, namespace string) error {
+func deleteRoles(aclConfig *ACLConfig, name string, namespace string, explicitName bool) error {
 	roles := aclConfig.Roles
 	for _, role := range roles {
-		roleName := convertEntityName(role.Name, name, namespace)
+		var roleName string
+		if explicitName {
+			roleName = role.Name
+		} else {
+			roleName = convertEntityName(role.Name, name, namespace)
+		}
 		deletedRole, err := readRole(roleName)
 		if err != nil {
 			log.Error(err, fmt.Sprintf("Error occurred during role reading operation, role name is [%s]", roleName))
@@ -220,21 +320,34 @@ func deleteRoles(aclConfig *ACLConfig, name string, namespace string) error {
 	return nil
 }
 
-func deletePolicies(aclConfig *ACLConfig, name string, namespace string) error {
+func deletePolicies(aclConfig *ACLConfig, name string, namespace string, explicitName bool) error {
 	policies := aclConfig.Policies
 	for _, policy := range policies {
-		policyName := convertEntityName(policy.Name, name, namespace)
-		deletedPolicy, err := readPolicy(policyName)
+		var policyName string
+		if explicitName {
+			policyName = policy.Name
+		} else {
+			policyName = convertEntityName(policy.Name, name, namespace)
+		}
+		existingPolicy, err := readPolicy(policyName)
 		if err != nil {
 			log.Error(err, fmt.Sprintf("Error occurred during policy reading operation, policy name is [%s]", policyName))
 			return err
-		} else if deletedPolicy == nil {
-			// skip deleting non-existent policy
+		} else if existingPolicy == nil {
 			continue
 		}
-		_, err = aclClient.PolicyDelete(deletedPolicy.ID, &consulApi.WriteOptions{})
-		if err != nil {
-			log.Error(err, fmt.Sprintf("Error occurred during policy deleting operation, policy id is [%s]", deletedPolicy.ID))
+		newDesc, isLast := withOwnerRemoved(existingPolicy.Description, namespace)
+		if !isLast {
+			log.Info(fmt.Sprintf("Policy [%s] is still used by other services, removing own namespace from description", policyName))
+			existingPolicy.Description = newDesc
+			if _, _, err = aclClient.PolicyUpdate(existingPolicy, &consulApi.WriteOptions{}); err != nil {
+				log.Error(err, fmt.Sprintf("Error updating policy description for [%s]", policyName))
+				return err
+			}
+			continue
+		}
+		if _, err = aclClient.PolicyDelete(existingPolicy.ID, &consulApi.WriteOptions{}); err != nil {
+			log.Error(err, fmt.Sprintf("Error occurred during policy deleting operation, policy id is [%s]", existingPolicy.ID))
 			return err
 		}
 	}
@@ -252,19 +365,121 @@ func (r *ConsulACLReconciler) applyACL(cr *consulacl.ConsulACL) (string, string,
 	if err != nil {
 		return "", "", "", err
 	}
-	policiesStatus, processedPolicies, err := processPolicies(aclConfig.Policies, customResourceName, customResourceNamespace)
+	policiesStatus, processedPolicies, err := processPolicies(aclConfig.Policies, customResourceName, customResourceNamespace, cr.Spec.ACL.ExplicitName)
 	if err != nil {
 		return "", "", "", err
 	}
-	rolesStatus, err := processRoles(aclConfig.Roles, processedPolicies, customResourceName, customResourceNamespace)
+	rolesStatus, err := processRoles(aclConfig.Roles, processedPolicies, customResourceName, customResourceNamespace, cr.Spec.ACL.ExplicitName)
 	if err != nil {
 		return "", "", "", err
 	}
-	bindRulesStatus, err := processBindRules(aclConfig.BindRules, customResourceName, customResourceNamespace)
+	bindRulesStatus, err := processBindRules(aclConfig.BindRules, customResourceName, customResourceNamespace, cr.Spec.ACL.ExplicitName)
 	if err != nil {
+		return "", "", "", err
+	}
+	if err := removeStaleEntities(aclConfig, customResourceName, customResourceNamespace, cr.Spec.ACL.ExplicitName, cr.Status.PoliciesStatus); err != nil {
 		return "", "", "", err
 	}
 	return policiesStatus.GetStatus(), rolesStatus.GetStatus(), bindRulesStatus.GetStatus(), nil
+}
+
+// removeStaleEntities deletes Consul entities that were present under this CR's naming
+// pattern but are no longer declared in the current spec. Deletion order mirrors
+// deleteAclEntities: binding rules → roles → policies.
+//
+// With explicitName=false, ownership is determined by the name prefix {crName}_{crNamespace}_.
+//
+// With explicitName=true, policy stale cleanup uses the [consul-acl-owners:] ref-count
+// stored in each policy's Description. A policy is removed from this namespace's owner
+// list; if no other namespaces own it, it is deleted from Consul. Roles and binding
+// rules do not have an equivalent ref-count mechanism, so their stale cleanup is skipped
+// for explicitName=true.
+func removeStaleEntities(aclConfig *ACLConfig, name string, namespace string, explicitName bool, previousPoliciesStatus string) error {
+	if explicitName {
+		return removeStaleExplicitPolicies(aclConfig, namespace, previousPoliciesStatus)
+	}
+
+	namePrefix := fmt.Sprintf("%s_%s_", name, namespace)
+	isOwned := func(entityName string) bool {
+		return strings.HasPrefix(entityName, namePrefix)
+	}
+
+	// --- binding rules ---
+	// Collect all auth methods referenced in the current spec (global + per-rule overrides).
+	authMethods := map[string]struct{}{authMethod: {}}
+	for _, br := range aclConfig.BindRules {
+		if br.AuthMethod != "" {
+			authMethods[br.AuthMethod] = struct{}{}
+		}
+	}
+	// Build the set of declared BindNames for this CR.
+	declaredBindNames := map[string]struct{}{}
+	for _, br := range aclConfig.BindRules {
+		declaredBindNames[convertEntityName(br.BindName, name, namespace)] = struct{}{}
+	}
+	for am := range authMethods {
+		existingRules, _, err := aclClient.BindingRuleList(am, &consulApi.QueryOptions{})
+		if err != nil {
+			return err
+		}
+		for _, ebr := range existingRules {
+			if !isOwned(ebr.BindName) {
+				continue
+			}
+			if _, declared := declaredBindNames[ebr.BindName]; !declared {
+				if _, err := aclClient.BindingRuleDelete(ebr.ID, &consulApi.WriteOptions{}); err != nil {
+					log.Error(err, fmt.Sprintf("Error deleting stale binding rule [%s]", ebr.ID))
+					return err
+				}
+			}
+		}
+	}
+
+	// --- roles ---
+	declaredRoleNames := map[string]struct{}{}
+	for _, r := range aclConfig.Roles {
+		declaredRoleNames[convertEntityName(r.Name, name, namespace)] = struct{}{}
+	}
+	existingRoles, _, err := aclClient.RoleList(&consulApi.QueryOptions{})
+	if err != nil {
+		return err
+	}
+	for _, er := range existingRoles {
+		if !isOwned(er.Name) {
+			continue
+		}
+		if _, declared := declaredRoleNames[er.Name]; !declared {
+			if _, err := aclClient.RoleDelete(er.ID, &consulApi.WriteOptions{}); err != nil {
+				log.Error(err, fmt.Sprintf("Error deleting stale role [%s]", er.ID))
+				return err
+			}
+		}
+	}
+
+	// --- policies ---
+	if !explicitName {
+		declaredPolicyNames := map[string]struct{}{}
+		for _, p := range aclConfig.Policies {
+			declaredPolicyNames[convertEntityName(p.Name, name, namespace)] = struct{}{}
+		}
+		existingPolicies, _, err := aclClient.PolicyList(&consulApi.QueryOptions{})
+		if err != nil {
+			return err
+		}
+		for _, ep := range existingPolicies {
+			if !strings.HasPrefix(ep.Name, namePrefix) {
+				continue
+			}
+			if _, declared := declaredPolicyNames[ep.Name]; !declared {
+				if _, err := aclClient.PolicyDelete(ep.ID, &consulApi.WriteOptions{}); err != nil {
+					log.Error(err, fmt.Sprintf("Error deleting stale policy [%s]", ep.ID))
+					return err
+				}
+			}
+		}
+	}
+
+	return nil
 }
 
 func getAclConfig(cr *consulacl.ConsulACL) (*ACLConfig, error) {
@@ -278,7 +493,138 @@ func getAclConfig(cr *consulacl.ConsulACL) (*ACLConfig, error) {
 	return &aclConfig, nil
 }
 
-func processPolicies(policies []consulApi.ACLPolicy, customResourceName string, customResourceNamespace string) (*StatusHolder, map[string]string, error) {
+// removeStaleExplicitPolicies handles stale policy cleanup when explicitName=true.
+// It compares previously applied policy names (from CR status) with the current spec,
+// and for each removed policy calls withOwnerRemoved. If this namespace was the last
+// owner the policy is deleted from Consul; otherwise only the Description is updated.
+func removeStaleExplicitPolicies(aclConfig *ACLConfig, namespace string, previousPoliciesStatus string) error {
+	previous := parsePolicyNamesFromStatus(previousPoliciesStatus)
+	if len(previous) == 0 {
+		return nil
+	}
+	declared := map[string]struct{}{}
+	for _, p := range aclConfig.Policies {
+		if p.Name != "" {
+			declared[p.Name] = struct{}{}
+		}
+	}
+	for policyName := range previous {
+		if _, ok := declared[policyName]; ok {
+			continue
+		}
+		existingPolicy, err := readPolicy(policyName)
+		if err != nil {
+			return err
+		}
+		if existingPolicy == nil {
+			continue
+		}
+		newDesc, isLast := withOwnerRemoved(existingPolicy.Description, namespace)
+		if isLast {
+			if _, err := aclClient.PolicyDelete(existingPolicy.ID, &consulApi.WriteOptions{}); err != nil {
+				log.Error(err, fmt.Sprintf("Error deleting stale explicit policy [%s]", policyName))
+				return err
+			}
+			log.Info(fmt.Sprintf("Deleted stale explicit policy [%s]", policyName))
+		} else {
+			existingPolicy.Description = newDesc
+			if _, _, err := aclClient.PolicyUpdate(existingPolicy, &consulApi.WriteOptions{}); err != nil {
+				log.Error(err, fmt.Sprintf("Error updating stale explicit policy description [%s]", policyName))
+				return err
+			}
+			log.Info(fmt.Sprintf("Removed namespace from owners of explicit policy [%s]", policyName))
+		}
+	}
+	return nil
+}
+
+// parsePolicyNamesFromStatus extracts entity names from a StatusHolder.GetStatus() string.
+// Format: "name1: status1, name2: status2". Returns empty set for empty or default status.
+func parsePolicyNamesFromStatus(status string) map[string]struct{} {
+	names := map[string]struct{}{}
+	if status == "" || status == "No action was taken" {
+		return names
+	}
+	for _, part := range strings.Split(status, ", ") {
+		idx := strings.Index(part, ": ")
+		if idx <= 0 {
+			continue
+		}
+		name := strings.TrimSpace(part[:idx])
+		if name == "" || name == "innerErrorHandlingItem" {
+			continue
+		}
+		names[name] = struct{}{}
+	}
+	return names
+}
+
+const ownersMarker = "[consul-acl-owners:"
+
+// parseOwners splits a policy description into the user-visible base text and
+// the list of owner namespaces recorded by the operator.
+func parseOwners(description string) (baseDesc string, owners []string) {
+	idx := strings.LastIndex(description, ownersMarker)
+	if idx == -1 {
+		return strings.TrimRight(description, " \n"), nil
+	}
+	baseDesc = strings.TrimRight(description[:idx], " \n")
+	raw := strings.TrimSuffix(strings.TrimSpace(description[idx+len(ownersMarker):]), "]")
+	for _, o := range strings.Split(raw, ",") {
+		if o = strings.TrimSpace(o); o != "" {
+			owners = append(owners, o)
+		}
+	}
+	return
+}
+
+// buildDescription reassembles base description and owner list into the full description string.
+func buildDescription(baseDesc string, owners []string) string {
+	if len(owners) == 0 {
+		return baseDesc
+	}
+	sort.Strings(owners)
+	suffix := fmt.Sprintf("%s %s]", ownersMarker, strings.Join(owners, ", "))
+	if baseDesc == "" {
+		return suffix
+	}
+	return baseDesc + "\n" + suffix
+}
+
+// withOwnerRemoved returns description with namespace removed from the owners list,
+// and isLast=true when no other owners remain (caller should delete the policy).
+func withOwnerRemoved(description, namespace string) (string, bool) {
+	base, owners := parseOwners(description)
+	var remaining []string
+	for _, o := range owners {
+		if o != namespace {
+			remaining = append(remaining, o)
+		}
+	}
+	return buildDescription(base, remaining), len(remaining) == 0
+}
+
+// mergeOwnerIntoPolicy sets demand.Description to spec base + existing Consul owners + current namespace.
+func mergeOwnerIntoPolicy(demand *consulApi.ACLPolicy, existing *consulApi.ACLPolicy, namespace string) {
+	specBase, _ := parseOwners(demand.Description)
+	var owners []string
+	if existing != nil {
+		_, owners = parseOwners(existing.Description)
+	}
+	found := false
+	for _, o := range owners {
+		if o == namespace {
+			found = true
+			break
+		}
+	}
+	if !found {
+		owners = append(owners, namespace)
+	}
+	demand.Description = buildDescription(specBase, owners)
+}
+
+func processPolicies(policies []consulApi.ACLPolicy, customResourceName string, customResourceNamespace string, explicitName bool) (*StatusHolder, map[string]string, error) {
 	statusMap := StatusHolder{}
 	processedPolicies := map[string]string{}
 	var err error
@@ -286,20 +632,23 @@ func processPolicies(policies []consulApi.ACLPolicy, customResourceName string, 
 		if policyDemand.Name == "" {
 			statusMap["innerErrorHandlingItem"] = "Some policies have not got a name"
 			continue
-		} else {
+		} else if !explicitName {
 			policyDemand.Name = fmt.Sprintf("%s_%s_%s", customResourceName, customResourceNamespace, policyDemand.Name)
 		}
 		var resPolicy *consulApi.ACLPolicy
 		var action string
+		var existingPolicy *consulApi.ACLPolicy
 
 		if policyDemand.ID == "" {
-			resPolicy, err = readPolicy(policyDemand.Name)
+			existingPolicy, err = readPolicy(policyDemand.Name)
 			if err != nil {
 				log.Info(fmt.Sprintf("Error occurred during reading a policy by name - %s, %s", policyDemand.Name, err.Error()))
-			} else if resPolicy != nil {
-				policyDemand.ID = resPolicy.ID
+			} else if existingPolicy != nil {
+				policyDemand.ID = existingPolicy.ID
 			}
 		}
+
+		mergeOwnerIntoPolicy(&policyDemand, existingPolicy, customResourceNamespace)
 
 		if policyDemand.ID == "" {
 			action = "create"
@@ -324,7 +673,7 @@ func processPolicies(policies []consulApi.ACLPolicy, customResourceName string, 
 	return &statusMap, processedPolicies, err
 }
 
-func processRoles(roles []ACLRoleAdapter, policies map[string]string, customResourceName string, customResourceNamespace string) (*StatusHolder, error) {
+func processRoles(roles []ACLRoleAdapter, policies map[string]string, customResourceName string, customResourceNamespace string, explicitName bool) (*StatusHolder, error) {
 	statusMap := StatusHolder{}
 	var err error
 	for _, roleAdapter := range roles {
@@ -334,7 +683,7 @@ func processRoles(roles []ACLRoleAdapter, policies map[string]string, customReso
 		}
 		var resRole *consulApi.ACLRole
 		var action string
-		role := convertRoleAdapterToRole(roleAdapter, policies, customResourceName, customResourceNamespace)
+		role := convertRoleAdapterToRole(roleAdapter, policies, customResourceName, customResourceNamespace, explicitName)
 
 		if role.ID == "" {
 			resRole, err = readRole(role.Name)
@@ -367,38 +716,65 @@ func processRoles(roles []ACLRoleAdapter, policies map[string]string, customReso
 	return &statusMap, err
 }
 
-func convertRoleAdapterToRole(roleAdapter ACLRoleAdapter, policies map[string]string, customResourceName string, customResourceNamespace string) consulApi.ACLRole {
+func convertRoleAdapterToRole(roleAdapter ACLRoleAdapter, policies map[string]string, customResourceName string, customResourceNamespace string, explicitName bool) consulApi.ACLRole {
 	role := consulApi.ACLRole{}
 	role.ID = roleAdapter.ID
-	role.Name = fmt.Sprintf("%s_%s_%s", customResourceName, customResourceNamespace, roleAdapter.Name)
+	if explicitName {
+		role.Name = roleAdapter.Name
+	} else {
+		role.Name = convertEntityName(roleAdapter.Name, customResourceName, customResourceNamespace)
+	}
 	role.Description = roleAdapter.Description
-	role.Policies = getPolicyLinks(roleAdapter, policies, customResourceName, customResourceNamespace)
+	role.Policies = getPolicyLinks(roleAdapter, policies, customResourceName, customResourceNamespace, explicitName)
 	return role
 }
 
-func getPolicyLinks(roleAdapter ACLRoleAdapter, policies map[string]string, customResourceName string, customResourceNamespace string) []*consulApi.ACLRolePolicyLink {
+func getPolicyLinks(roleAdapter ACLRoleAdapter, policies map[string]string, customResourceName string, customResourceNamespace string, explicitName bool) []*consulApi.ACLRolePolicyLink {
 	var resLinks []*consulApi.ACLRolePolicyLink
 	for _, policyName := range roleAdapter.PolicyNames {
-		if policyID, ok := policies[fmt.Sprintf("%s_%s_%s", customResourceName, customResourceNamespace, policyName)]; ok {
-			policyLink := consulApi.ACLRolePolicyLink{}
-			policyLink.Name = fmt.Sprintf("%s_%s_%s", customResourceName, customResourceNamespace, policyName)
-			policyLink.ID = policyID
-			resLinks = append(resLinks, &policyLink)
+		var resolvedName string
+		var resolvedID string
+		if explicitName {
+			resolvedName = policyName
+			if id, ok := policies[policyName]; ok {
+				resolvedID = id
+			} else {
+				// cross-CR reference: look up policy by exact name in Consul
+				if p, err := readPolicy(policyName); err == nil && p != nil {
+					resolvedID = p.ID
+				}
+			}
+		} else {
+			resolvedName = fmt.Sprintf("%s_%s_%s", customResourceName, customResourceNamespace, policyName)
+			resolvedID = policies[resolvedName]
+		}
+		if resolvedID != "" {
+			resLinks = append(resLinks, &consulApi.ACLRolePolicyLink{Name: resolvedName, ID: resolvedID})
 		}
 	}
 	return resLinks
 }
 
-func processBindRules(bindRules []ACLBindingRuleAdapter, customResourceName string, customResourceNamespace string) (*StatusHolder, error) {
+func processBindRules(bindRules []ACLBindingRuleAdapter, customResourceName string, customResourceNamespace string, explicitName bool) (*StatusHolder, error) {
 	statusMap := StatusHolder{}
 	var err error
-	//TODO: bind rule created every time with new id and maybe similar other fields
 	for _, bindRuleAdapter := range bindRules {
 		if bindRuleAdapter.BindName == "" {
 			statusMap["innerErrorHandlingItem"] = "Some binding rules have not got a name"
 			continue
 		}
-		bindRuleDemand := convertBindRuleAdapterToBindRule(bindRuleAdapter, customResourceName, customResourceNamespace)
+		bindRuleDemand := convertBindRuleAdapterToBindRule(bindRuleAdapter, customResourceName, customResourceNamespace, explicitName)
+		applicableAuthMethod := bindRuleDemand.AuthMethod
+		existingRules, _, err := aclClient.BindingRuleList(applicableAuthMethod, &consulApi.QueryOptions{})
+		if err != nil {
+			return &statusMap, err
+		}
+		for _, existing := range existingRules {
+			if existing.BindName == bindRuleDemand.BindName {
+				bindRuleDemand.ID = existing.ID
+				break
+			}
+		}
 		var action string
 		if bindRuleDemand.ID == "" {
 			_, _, err = aclClient.BindingRuleCreate(&bindRuleDemand, &consulApi.WriteOptions{})
@@ -422,17 +798,81 @@ func processBindRules(bindRules []ACLBindingRuleAdapter, customResourceName stri
 	return &statusMap, err
 }
 
-func convertBindRuleAdapterToBindRule(bindRuleAdapter ACLBindingRuleAdapter, customResourceName string, customResourceNamespace string) consulApi.ACLBindingRule {
+func convertBindRuleAdapterToBindRule(bindRuleAdapter ACLBindingRuleAdapter, customResourceName string, customResourceNamespace string, explicitName bool) consulApi.ACLBindingRule {
 	bindingRule := consulApi.ACLBindingRule{}
 	bindingRule.ID = bindRuleAdapter.ID
-	bindingRule.BindName = fmt.Sprintf("%s_%s_%s", customResourceName, customResourceNamespace, bindRuleAdapter.BindName)
+	if explicitName {
+		bindingRule.BindName = bindRuleAdapter.BindName
+	} else {
+		bindingRule.BindName = convertEntityName(bindRuleAdapter.BindName, customResourceName, customResourceNamespace)
+	}
 	bindingRule.BindType = "role"
-	bindingRule.AuthMethod = authMethod
+	if bindRuleAdapter.AuthMethod != "" {
+		bindingRule.AuthMethod = bindRuleAdapter.AuthMethod
+	} else {
+		bindingRule.AuthMethod = authMethod
+	}
 	bindingRule.Description = bindRuleAdapter.Description
-	bindingRule.Selector = fmt.Sprintf("serviceaccount.namespace==\"%s\" and serviceaccount.name==\"%s\"",
-		customResourceNamespace,
-		bindRuleAdapter.ServiceAccountName)
+	if bindRuleAdapter.Selector != "" {
+		bindingRule.Selector = bindRuleAdapter.Selector
+	} else if bindRuleAdapter.ServiceAccountName != "" {
+		bindingRule.Selector = fmt.Sprintf("serviceaccount.namespace==\"%s\" and serviceaccount.name==\"%s\"",
+			customResourceNamespace,
+			bindRuleAdapter.ServiceAccountName)
+	}
 	return bindingRule
+}
+
+// EnsureApplicationsAuthMethod creates or updates the applications-k8s-m2m auth method in Consul.
+// Called at every operator startup to keep the ServiceAccount JWT and CA cert fresh.
+func EnsureApplicationsAuthMethod() error {
+	const amName = "applications-k8s-m2m"
+	existing, _, err := aclClient.AuthMethodRead(amName, &consulApi.QueryOptions{})
+	if err != nil {
+		return fmt.Errorf("error reading auth method %q: %w", amName, err)
+	}
+	caCertPath := os.Getenv("SA_CA_CERT_PATH")
+	if caCertPath == "" {
+		caCertPath = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+	}
+	saJWTPath := os.Getenv("SA_JWT_PATH")
+	if saJWTPath == "" {
+		saJWTPath = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+	}
+	caCert := readFileOrEmpty(caCertPath)
+	saJWT := readFileOrEmpty(saJWTPath)
+	am := &consulApi.ACLAuthMethod{
+		Name:        amName,
+		Type:        "kubernetes",
+		Description: "Auth method for application M2M authentication",
+		Config: map[string]interface{}{
+			"Host":              "https://kubernetes.default.svc",
+			"CACert":            caCert,
+			"ServiceAccountJWT": saJWT,
+		},
+	}
+	if existing == nil {
+		_, _, err = aclClient.AuthMethodCreate(am, &consulApi.WriteOptions{})
+		if err != nil {
+			return fmt.Errorf("error creating auth method %q: %w", amName, err)
+		}
+		log.Info(fmt.Sprintf("Auth method %q created", amName))
+	} else {
+		_, _, err = aclClient.AuthMethodUpdate(am, &consulApi.WriteOptions{})
+		if err != nil {
+			return fmt.Errorf("error updating auth method %q: %w", amName, err)
+		}
+		log.Info(fmt.Sprintf("Auth method %q updated", amName))
+	}
+	return nil
+}
+
+func readFileOrEmpty(path string) string {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return ""
+	}
+	return string(data)
 }
 
 func readRole(roleName string) (*consulApi.ACLRole, error) {

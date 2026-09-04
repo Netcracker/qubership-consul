@@ -2269,8 +2269,10 @@ consulAclConfigurator:
   # The parameter used to define delay period for repeated a Custom Resource reconcile.
   reconcilePeriod: 100
 
-  # The parameter specifies list of Kubernetes namespaces which watched by Consul ACL Configurator operator. If this parameter is empty all namespaces are watched.
-  namespaces: ""
+  # The parameter specifies which Kubernetes namespaces are watched by the Consul ACL Configurator operator.
+  # Use a comma-separated list for specific namespaces (e.g. "ns1,ns2"), empty string to watch only the
+  # operator's own namespace, or "*" to watch all namespaces (cluster-scoped; forces leader election).
+  namespaces: "*"
 
   # The name of Kubernetes service for Consul ACL Configurator HTTP server.
   serviceName: "consul-acl-configurator-reconcile"
