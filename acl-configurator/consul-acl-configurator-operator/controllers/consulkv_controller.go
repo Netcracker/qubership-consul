@@ -43,6 +43,22 @@ var kvLog = logf.Log.WithName("controller_consulkv")
 
 const casMaxRetries = 10
 
+// retryOnCASConflict retries fn up to casMaxRetries times on a CAS conflict (fn returns false, nil).
+// Stops immediately on success (true, nil) or any error.
+func retryOnCASConflict(key string, fn func() (done bool, err error)) error {
+	for attempt := 0; attempt < casMaxRetries; attempt++ {
+		done, err := fn()
+		if err != nil {
+			return err
+		}
+		if done {
+			return nil
+		}
+		// CAS conflict — retry with fresh read
+	}
+	return fmt.Errorf("KV cas %q: max retries exceeded", key)
+}
+
 var kvClient consulKVClient = makeKVClient()
 
 // ConsulKVReconciler reconciles a ConsulKV object
@@ -192,7 +208,7 @@ func applyKVEntries(entries []consulacl.ConsulKVEntry, ownedKeys map[string]bool
 //   - If the key is already owned (alreadyOwned=true): updates value without changing Flags.
 //   - If the key exists with Flags>0 (owned by another CR): increments Flags (ref-count).
 func writeKVWithOwnership(key, value string, alreadyOwned bool) (tookOwnership bool, err error) {
-	for attempt := 0; attempt < casMaxRetries; attempt++ {
+	err = retryOnCASConflict(key, func() (bool, error) {
 		pair, _, err := kvClient.Get(key, nil)
 		if err != nil {
 			return false, fmt.Errorf("KV get %q: %w", key, err)
@@ -209,19 +225,15 @@ func writeKVWithOwnership(key, value string, alreadyOwned bool) (tookOwnership b
 		// Write the value but leave Flags unchanged so the key is not deleted on CR removal.
 		if !alreadyOwned && pair != nil && currentFlags == 0 {
 			ok, _, err := kvClient.CAS(&consulApi.KVPair{
-				Key:         key,
-				Value:       []byte(value),
-				Flags:       0,
-				ModifyIndex: modifyIndex,
+				Key: key, Value: []byte(value), Flags: 0, ModifyIndex: modifyIndex,
 			}, nil)
 			if err != nil {
 				return false, fmt.Errorf("KV cas %q: %w", key, err)
 			}
 			if ok {
-				return false, nil
+				tookOwnership = false
 			}
-			// CAS conflict — retry with fresh read
-			continue
+			return ok, nil
 		}
 
 		newFlags := currentFlags
@@ -230,42 +242,36 @@ func writeKVWithOwnership(key, value string, alreadyOwned bool) (tookOwnership b
 		}
 
 		ok, _, err := kvClient.CAS(&consulApi.KVPair{
-			Key:         key,
-			Value:       []byte(value),
-			Flags:       newFlags,
-			ModifyIndex: modifyIndex,
+			Key: key, Value: []byte(value), Flags: newFlags, ModifyIndex: modifyIndex,
 		}, nil)
 		if err != nil {
 			return false, fmt.Errorf("KV cas %q: %w", key, err)
 		}
 		if ok {
-			return true, nil
+			tookOwnership = true
 		}
-		// CAS conflict — retry with fresh read
-	}
-	return false, fmt.Errorf("KV cas %q: max retries exceeded", key)
+		return ok, nil
+	})
+	return tookOwnership, err
 }
 
 // decrementOrDelete decrements the Flags counter via CAS. If Flags reaches 0, deletes the key.
 func decrementOrDelete(key string) error {
-	for attempt := 0; attempt < casMaxRetries; attempt++ {
+	return retryOnCASConflict(key, func() (bool, error) {
 		pair, _, err := kvClient.Get(key, nil)
 		if err != nil {
-			return fmt.Errorf("KV get %q: %w", key, err)
+			return false, fmt.Errorf("KV get %q: %w", key, err)
 		}
 		if pair == nil {
-			return nil // already gone — idempotent
+			return true, nil // already gone — idempotent
 		}
 
 		if pair.Flags <= 1 {
 			ok, _, err := kvClient.DeleteCAS(pair, nil)
 			if err != nil {
-				return fmt.Errorf("KV deletecas %q: %w", key, err)
+				return false, fmt.Errorf("KV deletecas %q: %w", key, err)
 			}
-			if ok {
-				return nil
-			}
-			continue // conflict — retry
+			return ok, nil
 		}
 
 		ok, _, err := kvClient.CAS(&consulApi.KVPair{
@@ -275,14 +281,10 @@ func decrementOrDelete(key string) error {
 			ModifyIndex: pair.ModifyIndex,
 		}, nil)
 		if err != nil {
-			return fmt.Errorf("KV cas decrement %q: %w", key, err)
+			return false, fmt.Errorf("KV cas decrement %q: %w", key, err)
 		}
-		if ok {
-			return nil
-		}
-		// conflict — retry
-	}
-	return fmt.Errorf("KV decrement %q: max retries exceeded", key)
+		return ok, nil
+	})
 }
 
 // mergeKVStatuses preserves the order of existing status entries and appends new ones at the bottom.
