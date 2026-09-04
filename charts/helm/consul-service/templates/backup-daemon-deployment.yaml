@@ -234,7 +234,7 @@ spec:
             {{- end }}
           livenessProbe:
             httpGet:
-              path: /health
+              path: /health/live
               port: {{ template "backupDaemon.port" . }}
               scheme: {{ include "backupDaemon.protocol" . | upper }}
             failureThreshold: 5
@@ -244,7 +244,7 @@ spec:
             timeoutSeconds: 10
           readinessProbe:
             httpGet:
-              path: /health
+              path: /health/ready
               port: {{ template "backupDaemon.port" . }}
               scheme: {{ include "backupDaemon.protocol" . | upper }}
             failureThreshold: 5
