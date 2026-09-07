@@ -1,7 +1,7 @@
 FROM ghcr.io/netcracker/qubership-docker-integration-tests:0.6.1
 
 # Switch to root for installation of dependencies and packages
-# Required for AWS EKS deployments and S3 integration scripts
+# Required for AWS EKS deployments and S3 integration scripts.
 USER root
 
 ENV ROBOT_OUTPUT=/opt/robot/output \
