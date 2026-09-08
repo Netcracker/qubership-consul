@@ -133,13 +133,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := controllers.EnsureApplicationsAuthMethod(); err != nil {
-		setupLog.Error(err, "unable to ensure applications-k8s-m2m auth method")
-		os.Exit(1)
-	}
+	ctx := ctrl.SetupSignalHandler()
+	go controllers.EnsureApplicationsAuthMethodWithRetry(ctx)
 
 	setupLog.Info("starting ConsulACL manager")
-	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
+	if err := mgr.Start(ctx); err != nil {
 		setupLog.Error(err, "problem running ConsulACL manager")
 		os.Exit(1)
 	}

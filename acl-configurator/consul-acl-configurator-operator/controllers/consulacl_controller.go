@@ -816,39 +816,49 @@ func convertBindRuleAdapterToBindRule(bindRuleAdapter ACLBindingRuleAdapter, cus
 	if bindRuleAdapter.Selector != "" {
 		bindingRule.Selector = bindRuleAdapter.Selector
 	} else if bindRuleAdapter.ServiceAccountName != "" {
-		bindingRule.Selector = fmt.Sprintf("serviceaccount.namespace==\"%s\" and serviceaccount.name==\"%s\"",
+		bindingRule.Selector = fmt.Sprintf("value.namespace == \"%s\" and value.serviceaccount == \"%s\"",
 			customResourceNamespace,
 			bindRuleAdapter.ServiceAccountName)
 	}
 	return bindingRule
 }
 
+const k8sJWTPEMPath = "/etc/consul-acl-jwt/jwt-public-key.pem"
+
 // EnsureApplicationsAuthMethod creates or updates the applications-k8s-m2m auth method in Consul.
-// Called at every operator startup to keep the ServiceAccount JWT and CA cert fresh.
+// Called at every operator startup to keep the JWT validation keys fresh.
 func EnsureApplicationsAuthMethod() error {
 	const amName = "applications-k8s-m2m"
 	existing, _, err := aclClient.AuthMethodRead(amName, &consulApi.QueryOptions{})
 	if err != nil {
 		return fmt.Errorf("error reading auth method %q: %w", amName, err)
 	}
-	caCertPath := os.Getenv("SA_CA_CERT_PATH")
-	if caCertPath == "" {
-		caCertPath = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+
+	pemPath := os.Getenv("K8S_JWT_PEM_PATH")
+	if pemPath == "" {
+		pemPath = k8sJWTPEMPath
 	}
-	saJWTPath := os.Getenv("SA_JWT_PATH")
-	if saJWTPath == "" {
-		saJWTPath = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+	pemData, err := os.ReadFile(pemPath)
+	if err != nil {
+		return fmt.Errorf("error reading JWT public key PEM from %q: %w", pemPath, err)
 	}
-	caCert := readFileOrEmpty(caCertPath)
-	saJWT := readFileOrEmpty(saJWTPath)
+	if len(pemData) == 0 {
+		return fmt.Errorf("JWT public key PEM file %q is empty", pemPath)
+	}
+	pemKeys := []string{string(pemData)}
+
 	am := &consulApi.ACLAuthMethod{
 		Name:        amName,
-		Type:        "kubernetes",
+		Type:        "jwt",
 		Description: "Auth method for application M2M authentication",
 		Config: map[string]interface{}{
-			"Host":              "https://kubernetes.default.svc",
-			"CACert":            caCert,
-			"ServiceAccountJWT": saJWT,
+			"JWTValidationPubKeys": pemKeys,
+			"BoundIssuer":          "https://kubernetes.default.svc.cluster.local",
+			"BoundAudiences":       []string{"https://kubernetes.default.svc.cluster.local"},
+			"ClaimMappings": map[string]string{
+				"/kubernetes.io/namespace":           "namespace",
+				"/kubernetes.io/serviceaccount/name": "serviceaccount",
+			},
 		},
 	}
 	if existing == nil {
@@ -865,6 +875,28 @@ func EnsureApplicationsAuthMethod() error {
 		log.Info(fmt.Sprintf("Auth method %q updated", amName))
 	}
 	return nil
+}
+
+// EnsureApplicationsAuthMethodWithRetry calls EnsureApplicationsAuthMethod in a loop with
+// exponential backoff until it succeeds or ctx is cancelled. Intended to run as a goroutine.
+func EnsureApplicationsAuthMethodWithRetry(ctx context.Context) {
+	backoff := time.Second
+	for {
+		if err := EnsureApplicationsAuthMethod(); err != nil {
+			log.Error(err, "failed to ensure applications-k8s-m2m auth method, retrying", "backoff", backoff)
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(backoff):
+			}
+			if backoff < 5*time.Minute {
+				backoff *= 2
+			}
+			continue
+		}
+		log.Info("Auth method applications-k8s-m2m ensured successfully")
+		return
+	}
 }
 
 func readFileOrEmpty(path string) string {

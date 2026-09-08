@@ -65,6 +65,9 @@ spec:
             items:
               - key: {{ $aclBootstrapSecretKey }}
                 path: CONSUL_ACL_BOOTSTRAP_TOKEN
+        - name: k8s-jwt-pem
+          secret:
+            secretName: {{ template "consul-acl-configurator.name" . }}-k8s-jwt-pem
       {{- if not (eq (include "openshift.enabled" .) "true") }}
       securityContext:
         {{- include "consul.globalPodSecurityContext" . | nindent 8 }}
@@ -120,6 +123,9 @@ spec:
             {{- end }}
             - name: consul-acl-configurator-pod-secrets
               mountPath: {{ $aclConfiguratorPodSecretsMount }}
+              readOnly: true
+            - name: k8s-jwt-pem
+              mountPath: /etc/consul-acl-jwt
               readOnly: true
           env:
             - name: WATCH_NAMESPACE

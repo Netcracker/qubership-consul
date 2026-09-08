@@ -1,0 +1,118 @@
+{{- if .Values.consulAclConfigurator.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ template "consul-acl-configurator.name" . }}-jwks-prefetch
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "consul-service.defaultLabels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": hook-succeeded,hook-failed
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        {{- include "consul-service.defaultLabels" . | nindent 8 }}
+    spec:
+      restartPolicy: Never
+      serviceAccountName: {{ template "consul-acl-configurator.name" . }}-jwks-prefetch
+      {{- if not (eq (include "openshift.enabled" .) "true") }}
+      securityContext:
+        {{- include "consul.globalPodSecurityContext" . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: jwks-prefetch
+          image: {{ template "deployment-status-provisioner.image" . }}
+          securityContext:
+            {{- include "consul.globalContainerSecurityContext" . | nindent 12 }}
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "100m"
+              memory: "128Mi"
+          command:
+            - "/bin/bash"
+            - "-c"
+            - |
+              set -euo pipefail
+
+              TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
+              CA=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+              SECRET_NAME="{{ template "consul-acl-configurator.name" . }}-k8s-jwt-pem"
+              NAMESPACE="{{ .Release.Namespace }}"
+
+              echo "Fetching Kubernetes JWKS..."
+              curl -s --cacert "$CA" \
+                -H "Authorization: Bearer $TOKEN" \
+                https://kubernetes.default.svc/openid/v1/jwks \
+                > /tmp/jwks.json
+
+              echo "Converting JWK to PEM..."
+              python3 - <<'PYEOF'
+import json, base64, sys
+
+def asn1_length(n):
+    if n < 128:
+        return bytes([n])
+    elif n < 256:
+        return bytes([0x81, n])
+    else:
+        return bytes([0x82, (n >> 8) & 0xFF, n & 0xFF])
+
+def asn1_integer(n):
+    b = n.to_bytes((n.bit_length() + 7) // 8, 'big')
+    if b[0] & 0x80:
+        b = b'\x00' + b
+    return bytes([0x02]) + asn1_length(len(b)) + b
+
+def asn1_sequence(*items):
+    c = b''.join(items)
+    return bytes([0x30]) + asn1_length(len(c)) + c
+
+def asn1_bitstring(data):
+    p = bytes([0x00]) + data
+    return bytes([0x03]) + asn1_length(len(p)) + p
+
+RSA_OID = bytes([0x06,0x09,0x2a,0x86,0x48,0x86,0xf7,0x0d,0x01,0x01,0x01,0x05,0x00])
+
+def jwk_to_pem(k):
+    n = int.from_bytes(base64.urlsafe_b64decode(k['n'] + '=='), 'big')
+    e = int.from_bytes(base64.urlsafe_b64decode(k['e'] + '=='), 'big')
+    rsa_key = asn1_sequence(asn1_integer(n), asn1_integer(e))
+    spki = asn1_sequence(RSA_OID, asn1_bitstring(rsa_key))
+    b64 = base64.b64encode(spki).decode()
+    lines = '\n'.join(b64[i:i+64] for i in range(0, len(b64), 64))
+    return f'-----BEGIN PUBLIC KEY-----\n{lines}\n-----END PUBLIC KEY-----\n'
+
+with open('/tmp/jwks.json') as f:
+    jwks = json.load(f)
+
+keys = [jwk_to_pem(k) for k in jwks.get('keys', []) if k.get('kty') == 'RSA']
+if not keys:
+    print('ERROR: no RSA keys found in JWKS', file=sys.stderr)
+    sys.exit(1)
+
+with open('/tmp/jwt-public-key.pem', 'w') as f:
+    f.write('\n'.join(keys))
+
+print(f'Converted {len(keys)} RSA key(s) to PEM')
+PYEOF
+
+              if [ ! -s /tmp/jwt-public-key.pem ]; then
+                echo "ERROR: PEM file is empty after conversion"
+                exit 1
+              fi
+
+              echo "Writing secret $SECRET_NAME..."
+              kubectl create secret generic "$SECRET_NAME" \
+                --from-file=jwt-public-key.pem=/tmp/jwt-public-key.pem \
+                --namespace "$NAMESPACE" \
+                --dry-run=client -o yaml | kubectl apply -f -
+
+              echo "Done."
+{{- end }}
