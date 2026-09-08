@@ -549,6 +549,10 @@ server:
   # @type: string
   storageClass: null
 
+  # Annotations to attach to the server PVCs (volumeClaimTemplates). Merged with pvc.metadata.annotations.
+  persistence:
+    annotations: {}
+
   # The List of predefined Persistent Volumes for the Consul server. Should be specified as yaml list.
   # Consul nodes take name of these Persistent Volumes by order.
   persistentVolumes: []
@@ -2145,6 +2149,10 @@ backupDaemon:
   storage: 1Gi
   storageClass: null
 
+  # Annotations to attach to the backup-daemon PVC. Merged with pvc.metadata.annotations.
+  persistence:
+    annotations: {}
+
   # The predefined Persistent Volume for the Consul Backup Daemon.
   persistentVolume: null
 
@@ -2452,6 +2460,12 @@ integrationTests:
 
   # Enable Jira integration (writes to marker file for external processing)
   enableJiraIntegration: false
+
+# Annotations added to all Consul PVCs. Merged with per-component persistence.annotations.
+# @type: object
+pvc:
+  metadata:
+    annotations: {}
 
 # Cloud Release Integration
 # The name of the Service exposed for the database.

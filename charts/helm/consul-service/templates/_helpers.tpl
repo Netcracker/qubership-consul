@@ -1108,3 +1108,37 @@ Read-only mount for a pod-secrets projected volume.
   mountPath: {{ .mountPath }}
   readOnly: true
 {{- end -}}
+
+{{/*
+Coerce all annotation values to quoted strings (handles booleans/numbers).
+*/}}
+{{- define "consul.stringifyAnnotations" -}}
+{{- range $key, $value := . }}
+{{ $key }}: {{ $value | toString | quote }}
+{{- end }}
+{{- end -}}
+
+{{/*
+Merged annotations for server PVCs (volumeClaimTemplates): per-server + global.
+*/}}
+{{- define "consul.server.persistence.annotations" -}}
+{{- $global := default dict .Values.pvc.metadata.annotations -}}
+{{- $local := default dict .Values.server.persistence.annotations -}}
+{{- include "consul.stringifyAnnotations" (mustMerge $local $global) -}}
+{{- end -}}
+
+{{/*
+Merged annotations for backup-daemon PVC: per-component + global.
+*/}}
+{{- define "consul.backupDaemon.persistence.annotations" -}}
+{{- $global := default dict .Values.pvc.metadata.annotations -}}
+{{- $local := default dict .Values.backupDaemon.persistence.annotations -}}
+{{- include "consul.stringifyAnnotations" (mustMerge $local $global) -}}
+{{- end -}}
+
+{{/*
+Global-only PVC annotations for standalone PVCs (no per-component override).
+*/}}
+{{- define "consul.pvc.metadata.annotations" -}}
+{{- include "consul.stringifyAnnotations" (default dict .Values.pvc.metadata.annotations) -}}
+{{- end -}}
