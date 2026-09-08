@@ -3,7 +3,7 @@ module disaster-recovery
 go 1.26
 
 require (
-	github.com/Netcracker/qubership-disaster-recovery-daemon v0.4.14
+	github.com/Netcracker/qubership-disaster-recovery-daemon v0.4.19
 	github.com/sirupsen/logrus v1.9.3
 	k8s.io/api v0.35.0
 	k8s.io/apimachinery v0.35.0

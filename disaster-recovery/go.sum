@@ -2,6 +2,8 @@ github.com/Masterminds/semver/v3 v3.4.0 h1:Zog+i5UMtVoCU8oKka5P7i9q9HgrJeGzI9SA1
 github.com/Masterminds/semver/v3 v3.4.0/go.mod h1:4V+yj/TJE1HU9XfppCwVMZq3I84lprf4nC11bSS5beM=
 github.com/Netcracker/qubership-disaster-recovery-daemon v0.4.14 h1:FRM67l/80Ik31YsBEmeGM1YA7LQjzDJlZCLU0JVLqLk=
 github.com/Netcracker/qubership-disaster-recovery-daemon v0.4.14/go.mod h1:whPx1NxBqqefoaKQGsG+QQ8Q1UgVK9AgzxL4eazeNbU=
+github.com/Netcracker/qubership-disaster-recovery-daemon v0.4.19 h1:tderbdTFF3LDVBu6Z1srBhRjO/RN5XuMvOoYyDg3W6Y=
+github.com/Netcracker/qubership-disaster-recovery-daemon v0.4.19/go.mod h1:DXZWWJrOG8LSYQAoXKWzVoTgBNQrV+RzhkY1AVutt+U=
 github.com/avast/retry-go/v4 v4.7.0 h1:yjDs35SlGvKwRNSykujfjdMxMhMQQM0TnIjJaHB+Zio=
 github.com/avast/retry-go/v4 v4.7.0/go.mod h1:ZMPDa3sY2bKgpLtap9JRUgk2yTAba7cgiFhqxY2Sg6Q=
 github.com/creack/pty v1.1.9/go.mod h1:oKZEueFk5CKHvIhNR5MUki03XCEU+Q6VDXinZuGJ33E=
