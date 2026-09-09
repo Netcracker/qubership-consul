@@ -92,8 +92,12 @@ spec:
             - name: IS_SHORT_STATUS_MESSAGE
               value: "{{ .Values.integrationTests.isShortStatusMessage }}"
             {{- end }}
+            - name: CONSUL_FULLNAME
+              value: {{ template "consul.fullname" . }}
             - name: CONSUL_HOST
               value: {{ template "consul.fullname" . }}-server
+            - name: PVC_METADATA_ANNOTATIONS
+              value: {{ .Values.pvc.metadata.annotations | toJson | quote }}
             - name: CONSUL_PORT
               value: "{{ coalesce .Values.integrationTests.consulPort (include "consul.port" .) }}"
             - name: CONSUL_SCHEME
