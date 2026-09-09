@@ -1124,7 +1124,7 @@ Merged annotations for server PVCs (volumeClaimTemplates): per-server + global.
 {{- define "consul.server.persistence.annotations" -}}
 {{- $global := default dict .Values.pvc.metadata.annotations -}}
 {{- $local := deepCopy (default dict .Values.server.persistence.annotations) -}}
-{{- include "consul.stringifyAnnotations" (mustMerge $local $global) -}}
+{{- include "consul.stringifyAnnotations" (mustMerge $local $global) | trim -}}
 {{- end -}}
 
 {{/*
@@ -1133,6 +1133,6 @@ Merged annotations for backup-daemon PVC: per-component + global.
 {{- define "consul.backupDaemon.persistence.annotations" -}}
 {{- $global := default dict .Values.pvc.metadata.annotations -}}
 {{- $local := deepCopy (default dict .Values.backupDaemon.persistence.annotations) -}}
-{{- include "consul.stringifyAnnotations" (mustMerge $local $global) -}}
+{{- include "consul.stringifyAnnotations" (mustMerge $local $global) | trim -}}
 {{- end -}}
 
