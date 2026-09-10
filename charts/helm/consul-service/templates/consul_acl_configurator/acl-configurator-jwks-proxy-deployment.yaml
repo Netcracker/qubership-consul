@@ -1,0 +1,78 @@
+{{- if .Values.consulAclConfigurator.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ template "consul-acl-configurator.name" . }}-jwks-proxy
+  namespace: {{ .Release.Namespace }}
+  labels:
+    name: {{ template "consul-acl-configurator.name" . }}-jwks-proxy
+    {{- include "consul-service.defaultLabels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: {{ template "consul-acl-configurator.name" . }}-jwks-proxy
+  template:
+    metadata:
+      labels:
+        name: {{ template "consul-acl-configurator.name" . }}-jwks-proxy
+        {{- include "consul-service.defaultLabels" . | nindent 8 }}
+      annotations:
+        'consul.hashicorp.com/connect-inject': 'false'
+    spec:
+      serviceAccountName: {{ template "consul-acl-configurator.name" . }}-jwks-proxy
+      {{- if not (eq (include "openshift.enabled" .) "true") }}
+      securityContext:
+        {{- include "consul.globalPodSecurityContext" . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: kubectl-proxy
+          image: {{ .Values.consulAclConfigurator.jwksProxyImage }}
+          imagePullPolicy: Always
+          args:
+            - proxy
+            - --address=0.0.0.0
+            - --port=8080
+            - --accept-hosts=.*
+            - --accept-paths=^(?:/openid/v1/jwks)|(?:/.well-known/openid-configuration)$
+            - --reject-methods=^(POST|PUT|PATCH|DELETE|HEAD|OPTIONS|CONNECT|TRACE)$
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          securityContext:
+            {{- include "consul.globalContainerSecurityContext" . | nindent 12 }}
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: "20m"
+              memory: "32Mi"
+            limits:
+              cpu: "50m"
+              memory: "64Mi"
+          startupProbe:
+            httpGet:
+              path: /openid/v1/jwks
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 12
+          livenessProbe:
+            httpGet:
+              path: /openid/v1/jwks
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 15
+            timeoutSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /openid/v1/jwks
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 15
+            timeoutSeconds: 5
+{{- end }}

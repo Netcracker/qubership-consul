@@ -823,10 +823,9 @@ func convertBindRuleAdapterToBindRule(bindRuleAdapter ACLBindingRuleAdapter, cus
 	return bindingRule
 }
 
-const k8sJWTPEMPath = "/etc/consul-acl-jwt/jwt-public-key.pem"
+const defaultJWKSURL = "http://localhost:8080/openid/v1/jwks"
 
 // EnsureApplicationsAuthMethod creates or updates the applications-k8s-m2m auth method in Consul.
-// Called at every operator startup to keep the JWT validation keys fresh.
 func EnsureApplicationsAuthMethod() error {
 	const amName = "applications-k8s-m2m"
 	existing, _, err := aclClient.AuthMethodRead(amName, &consulApi.QueryOptions{})
@@ -834,27 +833,19 @@ func EnsureApplicationsAuthMethod() error {
 		return fmt.Errorf("error reading auth method %q: %w", amName, err)
 	}
 
-	pemPath := os.Getenv("K8S_JWT_PEM_PATH")
-	if pemPath == "" {
-		pemPath = k8sJWTPEMPath
+	jwksURL := os.Getenv("JWKS_URL")
+	if jwksURL == "" {
+		jwksURL = defaultJWKSURL
 	}
-	pemData, err := os.ReadFile(pemPath)
-	if err != nil {
-		return fmt.Errorf("error reading JWT public key PEM from %q: %w", pemPath, err)
-	}
-	if len(pemData) == 0 {
-		return fmt.Errorf("JWT public key PEM file %q is empty", pemPath)
-	}
-	pemKeys := []string{string(pemData)}
 
 	am := &consulApi.ACLAuthMethod{
 		Name:        amName,
 		Type:        "jwt",
 		Description: "Auth method for application M2M authentication",
 		Config: map[string]interface{}{
-			"JWTValidationPubKeys": pemKeys,
-			"BoundIssuer":          "https://kubernetes.default.svc.cluster.local",
-			"BoundAudiences":       []string{"https://kubernetes.default.svc.cluster.local"},
+			"JWKSURL":        jwksURL,
+			"BoundIssuer":    "https://kubernetes.default.svc.cluster.local",
+			"BoundAudiences": []string{"https://kubernetes.default.svc.cluster.local"},
 			"ClaimMappings": map[string]string{
 				"/kubernetes.io/namespace":           "namespace",
 				"/kubernetes.io/serviceaccount/name": "serviceaccount",
