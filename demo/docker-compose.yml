@@ -5,7 +5,7 @@ services:
     ports:
       - 8500:8500
   consul-backup-daemon:
-    image: ghcr.io/netcracker/qubership-consul-backup-daemon:latest
+    image: ghcr.io/netcracker/qubership-consul-backup-daemon:latest@sha256:59a40f8b065a8cc7faa83eb2bf30dd939787e2296cf3f562125d0d9f01363e57
     ports:
       - 8080:8080
     links:
