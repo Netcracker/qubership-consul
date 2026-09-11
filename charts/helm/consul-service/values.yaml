@@ -2467,6 +2467,12 @@ pvc:
   metadata:
     annotations: {}
 
+# PVC annotation migration: reconciles annotations on existing PVCs during helm upgrade.
+# When enabled, a pre-upgrade Job patches every Consul PVC to add new annotations and
+# remove stale ones (keys no longer present in pvc.metadata.annotations / persistence.annotations).
+resourceMigration:
+  enabled: false
+
 # Cloud Release Integration
 # The name of the Service exposed for the database.
 SERVICE_NAME: "consul-service"
