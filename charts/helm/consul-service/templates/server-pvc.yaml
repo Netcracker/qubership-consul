@@ -12,6 +12,7 @@ metadata:
     {{- include "consul-service.defaultLabels" $ | nindent 4 }}
   annotations:
     "helm.sh/resource-policy": keep
+    {{- include "consul.server.persistence.annotations" $ | nindent 4 }}
 spec:
   accessModes:
     - ReadWriteOnce

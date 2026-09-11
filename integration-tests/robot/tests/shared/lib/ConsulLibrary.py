@@ -1,7 +1,9 @@
+import json
 import os
 
 import consul
 import requests
+from kubernetes import client, config
 from robot.libraries.BuiltIn import BuiltIn
 
 CA_CERT_PATH = '/consul/tls/ca/tls.crt'
@@ -68,3 +70,36 @@ class ConsulLibrary(object):
         url = f'{self.consul_scheme}://{self.consul_host}:{self.consul_port}/v1/status/leader'
         leader_response = requests.get(url, verify=self.consul_cafile)
         return leader_response.status_code == 200 and str(leader_response.content) != ""
+
+    def _k8s_core_v1(self):
+        try:
+            config.load_incluster_config()
+        except config.ConfigException:
+            config.load_kube_config()
+        return client.CoreV1Api()
+
+    def get_pvc_annotations(self, pvc_name):
+        v1 = self._k8s_core_v1()
+        pvc = v1.read_namespaced_persistent_volume_claim(
+            name=pvc_name, namespace=self.consul_namespace
+        )
+        return pvc.metadata.annotations or {}
+
+    def pvc_exists(self, pvc_name):
+        from kubernetes.client.exceptions import ApiException
+        v1 = self._k8s_core_v1()
+        try:
+            v1.read_namespaced_persistent_volume_claim(
+                name=pvc_name, namespace=self.consul_namespace
+            )
+            return True
+        except ApiException as e:
+            if e.status == 404:
+                return False
+            raise
+
+    def parse_json_annotations(self, json_str):
+        try:
+            return json.loads(json_str)
+        except (json.JSONDecodeError, TypeError):
+            return {}

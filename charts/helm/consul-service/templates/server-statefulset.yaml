@@ -458,6 +458,9 @@ spec:
   volumeClaimTemplates:
     - metadata:
         name: data-{{ .Release.Namespace | trunc 58 | trimSuffix "-" }}
+        {{- if or .Values.server.persistence.annotations .Values.pvc.metadata.annotations }}
+        annotations: {{- include "consul.server.persistence.annotations" . | nindent 10 }}
+        {{- end }}
       spec:
         accessModes:
           - ReadWriteOnce

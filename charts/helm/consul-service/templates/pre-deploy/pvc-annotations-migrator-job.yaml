@@ -1,0 +1,117 @@
+{{- if .Values.resourceMigration.enabled }}
+{{- $serverAnnotations := mustMerge (deepCopy (default dict .Values.server.persistence.annotations)) (default dict .Values.pvc.metadata.annotations) }}
+{{- $backupAnnotations := mustMerge (deepCopy (default dict .Values.backupDaemon.persistence.annotations)) (default dict .Values.pvc.metadata.annotations) }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ template "consul.fullname" . }}-pvc-annotations-migrator
+  labels:
+    {{- include "consul-service.defaultLabels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-upgrade
+    "helm.sh/hook-weight": "2"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  template:
+    metadata:
+      name: {{ template "consul.fullname" . }}-pvc-annotations-migrator
+      labels:
+        app: {{ template "consul.name" . }}
+        chart: {{ template "consul.chart" . }}
+        release: {{ .Release.Name }}
+        component: pvc-annotations-migrator
+        {{- include "consul-service.defaultLabels" . | nindent 8 }}
+    spec:
+      {{- if not (eq (include "openshift.enabled" .) "true") }}
+      securityContext:
+        {{- include "consul.globalPodSecurityContext" . | nindent 8 }}
+        {{- with .Values.updateResourcesJob.securityContext }}
+        {{- toYaml . | nindent 8 -}}
+        {{- end }}
+      {{- end }}
+      restartPolicy: Never
+      serviceAccountName: {{ template "consul.fullname" . }}-pvc-annotations-migrator
+      containers:
+        - name: pvc-annotations-migrator
+          image: {{ .Values.podScheduler.dockerImage }}
+          command:
+            - "/bin/bash"
+            - "-c"
+            - |
+              set -euo pipefail
+              command -v jq >/dev/null 2>&1 || { echo "[pvc-annotations-migrator] jq is required"; exit 1; }
+
+              NAMESPACE="{{ .Release.Namespace }}"
+              FULLNAME="{{ template "consul.fullname" . }}"
+              SERVER_STS_NAME="${FULLNAME}-server"
+              DESIRED_SERVER='{{ $serverAnnotations | toJson }}'
+              DESIRED_BACKUP='{{ $backupAnnotations | toJson }}'
+
+              # Patches a PVC: applies desired annotations and nullifies stale ones.
+              # System-managed annotations (pv.kubernetes.io/*, helm.sh/resource-policy, etc.)
+              # are never touched.
+              annotate_pvc() {
+                local PVC_NAME="$1"
+                local DESIRED="$2"
+                if ! kubectl get pvc "$PVC_NAME" -n "$NAMESPACE" > /dev/null 2>&1; then
+                  echo "[pvc-annotations-migrator] PVC $PVC_NAME not found, skipping"
+                  return 0
+                fi
+                CURRENT=$(kubectl get pvc "$PVC_NAME" -n "$NAMESPACE" -o jsonpath='{.metadata.annotations}')
+                [ -z "$CURRENT" ] && CURRENT='{}'
+                PATCH=$(jq -cn --argjson desired "$DESIRED" --argjson old "$CURRENT" '
+                  def is_protected:
+                    startswith("pv.kubernetes.io/") or
+                    startswith("volume.kubernetes.io/") or
+                    startswith("kubectl.kubernetes.io/") or
+                    . == "argocd.argoproj.io/tracking-id" or
+                    . == "helm.sh/resource-policy";
+                  def stale: [($old | keys[]) | select(is_protected | not)] - ($desired | keys);
+                  reduce stale[] as $key ($desired; .[$key] = null)
+                  | { metadata: { annotations: . } }
+                ')
+                echo "[pvc-annotations-migrator] Patching PVC $PVC_NAME"
+                kubectl patch pvc "$PVC_NAME" -n "$NAMESPACE" --type=merge -p "$PATCH"
+              }
+
+              # Check whether StatefulSet volumeClaimTemplates annotations have drifted.
+              # If so: patch all owned PVCs and delete StatefulSet with --cascade=orphan
+              # so Helm recreates it with the new volumeClaimTemplates.
+              STS_JSON="$(kubectl -n "$NAMESPACE" get statefulset "$SERVER_STS_NAME" -o json 2>/dev/null || true)"
+              if [ -n "$STS_JSON" ]; then
+                HAS_VCT="$(printf '%s' "$STS_JSON" | jq -r '(.spec.volumeClaimTemplates // []) | length')"
+                if [ "$HAS_VCT" -gt 0 ]; then
+                  ACTUAL_VCT_ANN="$(printf '%s' "$STS_JSON" | jq -cS '.spec.volumeClaimTemplates[0].metadata.annotations // {}')"
+                  DESIRED_SERVER_SORTED="$(printf '%s' "$DESIRED_SERVER" | jq -cS '.')"
+                  if [ "$ACTUAL_VCT_ANN" != "$DESIRED_SERVER_SORTED" ]; then
+                    echo "[pvc-annotations-migrator] StatefulSet $SERVER_STS_NAME volumeClaimTemplates annotations changed (actual=$ACTUAL_VCT_ANN desired=$DESIRED_SERVER_SORTED)"
+                    for PVC in $(kubectl get pvc -n "$NAMESPACE" -o name 2>/dev/null \
+                        | grep "^persistentvolumeclaim/data-${NAMESPACE}-${FULLNAME}-server-" \
+                        | sed 's|persistentvolumeclaim/||'); do
+                      annotate_pvc "$PVC" "$DESIRED_SERVER"
+                    done
+                    echo "[pvc-annotations-migrator] Deleting StatefulSet $SERVER_STS_NAME with --cascade=orphan"
+                    kubectl -n "$NAMESPACE" delete statefulset "$SERVER_STS_NAME" --cascade=orphan --ignore-not-found=true
+                    echo "[pvc-annotations-migrator] StatefulSet $SERVER_STS_NAME deleted; Helm will recreate it"
+                  else
+                    echo "[pvc-annotations-migrator] StatefulSet $SERVER_STS_NAME: no annotation drift, skipping"
+                  fi
+                fi
+              else
+                echo "[pvc-annotations-migrator] StatefulSet $SERVER_STS_NAME not found, skipping"
+              fi
+
+              # Patch backup daemon PVC (standalone resource, no StatefulSet deletion needed)
+              annotate_pvc "data-${FULLNAME}-backup-daemon" "$DESIRED_BACKUP"
+
+              echo "[pvc-annotations-migrator] done"
+          resources:
+            requests:
+              cpu: {{ default "75m" .Values.updateResourcesJob.resources.requests.cpu }}
+              memory: {{ default "75Mi" .Values.updateResourcesJob.resources.requests.memory }}
+            limits:
+              cpu: {{ default "150m" .Values.updateResourcesJob.resources.limits.cpu }}
+              memory: {{ default "150Mi" .Values.updateResourcesJob.resources.limits.memory }}
+          securityContext:
+            {{- include "consul.globalContainerSecurityContext" . | nindent 12 }}
+{{- end }}
