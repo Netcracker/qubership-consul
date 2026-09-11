@@ -1,20 +1,18 @@
-
----
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
     crd/version: 0.0.18
-    controller-gen.kubebuilder.io/version: v0.6.2
+    controller-gen.kubebuilder.io/version: v0.16.5
   creationTimestamp: null
-  name: consulacls.netcracker.com
+  name: consulkvs.netcracker.com
 spec:
   group: netcracker.com
   names:
-    kind: ConsulACL
-    listKind: ConsulACLList
-    plural: consulacls
-    singular: consulacl
+    kind: ConsulKV
+    listKind: ConsulKVList
+    plural: consulkvs
+    singular: consulkv
   scope: Namespaced
   versions:
   - name: v1alpha1
@@ -29,31 +27,29 @@ spec:
             type: object
           spec:
             properties:
-              acl:
+              kv:
                 properties:
-                  commonReconcile:
-                    type: string
-                  explicitName:
+                  entries:
+                    items:
+                      properties:
+                        key:
+                          type: string
+                        value:
+                          type: string
+                      required:
+                      - key
+                      type: object
+                    type: array
+                  purgeOnDelete:
                     type: boolean
-                  json:
-                    type: string
-                  name:
-                    type: string
-                  operatorNamespace:
-                    type: string
                 required:
-                - json
-                - name
+                - entries
                 type: object
             required:
-            - acl
+            - kv
             type: object
           status:
             properties:
-              authMethodsStatus:
-                type: string
-              bindRulesStatus:
-                type: string
               conditions:
                 items:
                   properties:
@@ -93,25 +89,27 @@ spec:
                 x-kubernetes-list-map-keys:
                 - type
                 x-kubernetes-list-type: map
+              entries:
+                items:
+                  properties:
+                    key:
+                      type: string
+                    owned:
+                      type: boolean
+                    status:
+                      type: string
+                  required:
+                  - key
+                  - status
+                  type: object
+                type: array
               generalStatus:
                 type: string
-              policiesStatus:
+              managedBy:
                 type: string
-              rolesStatus:
-                type: string
-            required:
-            - policiesStatus
             type: object
         type: object
-    selectableFields:
-    - jsonPath: .spec.acl.operatorNamespace
     served: true
     storage: true
     subresources:
       status: {}
-status:
-  acceptedNames:
-    kind: ""
-    plural: ""
-  conditions: []
-  storedVersions: []

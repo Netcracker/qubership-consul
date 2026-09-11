@@ -122,8 +122,10 @@ spec:
               mountPath: {{ $aclConfiguratorPodSecretsMount }}
               readOnly: true
           env:
+            - name: JWKS_URL
+              value: "http://{{ template "consul-acl-configurator.name" . }}-jwks-proxy:8080/openid/v1/jwks"
             - name: WATCH_NAMESPACE
-              value: {{ default "" .Values.consulAclConfigurator.namespaces }}
+              value: {{ default "" .Values.consulAclConfigurator.namespaces | quote }}
             - name: NAMESPACE
               valueFrom:
                 fieldRef:
