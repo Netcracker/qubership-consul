@@ -27,7 +27,7 @@ spec:
       {{- end }}
       containers:
         - name: kubectl-proxy
-          image: {{ .Values.consulAclConfigurator.jwksProxyImage }}
+          image: {{ template "deployment-status-provisioner.image" . }}
           imagePullPolicy: Always
           args:
             - proxy

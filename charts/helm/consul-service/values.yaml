@@ -2257,8 +2257,6 @@ consulAclConfigurator:
   apiGroup: "netcracker.com"
   # The image of Consul ACL Configurator Kubernetes operator which implements collecting processing Consul ACL configuration custom resources.
   operatorImage: "ghcr.io/netcracker/qubership-consul-acl-configurator:main"
-  # The image used for the JWKS proxy that exposes the Kubernetes OIDC JWKS endpoint over plain HTTP.
-  jwksProxyImage: "docker.io/bitnami/kubectl:latest"
   # The image of Consul ACL Configurator HTTP server which allows execute common reconcile for Consul ACL configuration custom resources by HTTP request from any Kubernetes service account.
   restServerImage: "ghcr.io/netcracker/qubership-consul-rest-acl-configurator:main"
   resources:
@@ -2413,7 +2411,7 @@ integrationTests:
   # Available tags: crud, smoke, ha, backup, s3_storage, alerts, consul_images, consul_container_hardening
   # Leave empty ("") to run ALL tests
   tags: "crud"
-  statusWritingEnabled: true
+  statusWritingEnabled: false
   isShortStatusMessage: true
   # The parameter specifies Consul server port. Default value is 8500 for http, and 8501 for https.
   consulPort: ""
