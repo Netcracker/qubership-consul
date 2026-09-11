@@ -29,6 +29,7 @@ spec:
         - name: kubectl-proxy
           image: {{ template "deployment-status-provisioner.image" . }}
           imagePullPolicy: Always
+          command: ["kubectl"]
           args:
             - proxy
             - --address=0.0.0.0
