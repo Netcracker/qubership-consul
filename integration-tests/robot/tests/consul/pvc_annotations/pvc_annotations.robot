@@ -52,18 +52,24 @@ Test Backup Daemon PVC Has Configured Annotations
     [Tags]  smoke  pvc_annotations  backup
     Pass Execution If  '${CONSUL_BACKUP_DAEMON_HOST}' == ''
     ...  Skipped: backup daemon is not configured
+    ${pvc_name}=  Set Variable  data-${CONSUL_FULLNAME}-backup-daemon
+    ${exists}=  Pvc Exists  ${pvc_name}
+    Pass Execution If  not ${exists}
+    ...  Skipped: backup daemon PVC does not exist (no persistent storage configured)
     ${annotation_count}=  Get Length  ${expected_annotations}
     Pass Execution If  ${annotation_count} == 0
     ...  Skipped: no custom PVC annotations configured (unannotated path)
-    ${pvc_name}=  Set Variable  data-${CONSUL_FULLNAME}-backup-daemon
     Check PVC Has Expected Annotations  ${pvc_name}
 
 Test Backup Daemon PVC Has No Custom Annotations When Not Configured
     [Tags]  smoke  pvc_annotations  backup
     Pass Execution If  '${CONSUL_BACKUP_DAEMON_HOST}' == ''
     ...  Skipped: backup daemon is not configured
+    ${pvc_name}=  Set Variable  data-${CONSUL_FULLNAME}-backup-daemon
+    ${exists}=  Pvc Exists  ${pvc_name}
+    Pass Execution If  not ${exists}
+    ...  Skipped: backup daemon PVC does not exist (no persistent storage configured)
     ${annotation_count}=  Get Length  ${expected_annotations}
     Pass Execution If  ${annotation_count} > 0
     ...  Skipped: custom PVC annotations are configured (annotated path)
-    ${pvc_name}=  Set Variable  data-${CONSUL_FULLNAME}-backup-daemon
     Check PVC Has No Argocd Prune Annotation  ${pvc_name}

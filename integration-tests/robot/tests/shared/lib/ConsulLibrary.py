@@ -85,6 +85,19 @@ class ConsulLibrary(object):
         )
         return pvc.metadata.annotations or {}
 
+    def pvc_exists(self, pvc_name):
+        from kubernetes.client.exceptions import ApiException
+        v1 = self._k8s_core_v1()
+        try:
+            v1.read_namespaced_persistent_volume_claim(
+                name=pvc_name, namespace=self.consul_namespace
+            )
+            return True
+        except ApiException as e:
+            if e.status == 404:
+                return False
+            raise
+
     def parse_json_annotations(self, json_str):
         try:
             return json.loads(json_str)
