@@ -9,7 +9,10 @@ metadata:
     {{- include "consul-service.defaultLabels" . | nindent 4 }}
   annotations:
     "helm.sh/hook": pre-upgrade
-    "helm.sh/hook-weight": "2"
+    # Must run BEFORE the update-resources job (hook-weight "1"), which deletes the
+    # consul-server StatefulSet via --cascade=orphan. If this job ran after, the
+    # StatefulSet would already be gone and server PVCs would be skipped (not patched).
+    "helm.sh/hook-weight": "0"
     "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
 spec:
   template:
