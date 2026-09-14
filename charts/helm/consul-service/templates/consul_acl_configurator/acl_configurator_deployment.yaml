@@ -143,7 +143,7 @@ spec:
             - name: CONSUL_SCHEME
               value: "{{ template "consul.scheme" . }}"
             - name: CONSUL_AUTH_METHOD_NAME
-              value: {{ template "consul.fullname" . }}-k8s-auth-method
+              value: applications-k8s-m2m
             - name: RECONCILE_PERIOD_SECONDS
               value: {{ default "100" .Values.consulAclConfigurator.reconcilePeriod | quote }}
             - name: API_GROUP

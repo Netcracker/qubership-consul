@@ -7,7 +7,7 @@ Suite Teardown    Delete Override Auth Method
 
 *** Variables ***
 ${TEST_NAMESPACE}        %{CONSUL_NAMESPACE}
-${AUTH_METHOD}           consul-k8s-auth-method
+${AUTH_METHOD}           applications-k8s-m2m
 ${RECONCILE_TIMEOUT}     60s
 ${RECONCILE_INTERVAL}    2s
 ${GROUP}                 netcracker.com
@@ -38,7 +38,7 @@ Delete ConsulACL CR
     Delete Namespaced Custom Object    ${GROUP}    ${VERSION}    ${TEST_NAMESPACE}    consulacls    ${name}
 
 Create Override Auth Method
-    Create Auth Method    integration-override-auth-method    kubernetes    Auth method for per-rule override integration test
+    Create Auth Method    integration-override-auth-method    jwt    Auth method for per-rule override integration test
 
 Delete Override Auth Method
     Delete Auth Method    integration-override-auth-method
