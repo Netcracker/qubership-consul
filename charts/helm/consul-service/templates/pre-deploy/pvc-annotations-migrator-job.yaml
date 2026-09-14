@@ -77,9 +77,21 @@ spec:
                 kubectl patch pvc "$PVC_NAME" -n "$NAMESPACE" --type=merge -p "$PATCH"
               }
 
-              # Check whether StatefulSet volumeClaimTemplates annotations have drifted.
-              # If so: patch all owned PVCs and delete StatefulSet with --cascade=orphan
-              # so Helm recreates it with the new volumeClaimTemplates.
+              # Always reconcile annotations on existing server PVCs. The source of truth is
+              # each PVC's own annotations (annotate_pvc reads them and diffs against desired),
+              # NOT the StatefulSet volumeClaimTemplates: once the StatefulSet has been recreated
+              # without the annotation its templates already match desired, while orphaned PVCs
+              # still carry the stale annotation. Server PVC names are deterministic in this chart:
+              # data-<namespace>-<fullname>-server-<ordinal>.
+              for PVC in $(kubectl get pvc -n "$NAMESPACE" -o name 2>/dev/null \
+                  | grep "^persistentvolumeclaim/data-${NAMESPACE}-${FULLNAME}-server-" \
+                  | sed 's|persistentvolumeclaim/||'); do
+                annotate_pvc "$PVC" "$DESIRED_SERVER"
+              done
+
+              # Separately, if the live StatefulSet's volumeClaimTemplates annotations have
+              # drifted from desired, delete it with --cascade=orphan so Helm recreates it with
+              # the new templates (so future PVCs, e.g. on scale-up, get correct annotations).
               STS_JSON="$(kubectl -n "$NAMESPACE" get statefulset "$SERVER_STS_NAME" -o json 2>/dev/null || true)"
               if [ -n "$STS_JSON" ]; then
                 HAS_VCT="$(printf '%s' "$STS_JSON" | jq -r '(.spec.volumeClaimTemplates // []) | length')"
@@ -87,21 +99,15 @@ spec:
                   ACTUAL_VCT_ANN="$(printf '%s' "$STS_JSON" | jq -cS '.spec.volumeClaimTemplates[0].metadata.annotations // {}')"
                   DESIRED_SERVER_SORTED="$(printf '%s' "$DESIRED_SERVER" | jq -cS '.')"
                   if [ "$ACTUAL_VCT_ANN" != "$DESIRED_SERVER_SORTED" ]; then
-                    echo "[pvc-annotations-migrator] StatefulSet $SERVER_STS_NAME volumeClaimTemplates annotations changed (actual=$ACTUAL_VCT_ANN desired=$DESIRED_SERVER_SORTED)"
-                    for PVC in $(kubectl get pvc -n "$NAMESPACE" -o name 2>/dev/null \
-                        | grep "^persistentvolumeclaim/data-${NAMESPACE}-${FULLNAME}-server-" \
-                        | sed 's|persistentvolumeclaim/||'); do
-                      annotate_pvc "$PVC" "$DESIRED_SERVER"
-                    done
-                    echo "[pvc-annotations-migrator] Deleting StatefulSet $SERVER_STS_NAME with --cascade=orphan"
+                    echo "[pvc-annotations-migrator] StatefulSet $SERVER_STS_NAME volumeClaimTemplates annotations changed (actual=$ACTUAL_VCT_ANN desired=$DESIRED_SERVER_SORTED); deleting with --cascade=orphan"
                     kubectl -n "$NAMESPACE" delete statefulset "$SERVER_STS_NAME" --cascade=orphan --ignore-not-found=true
                     echo "[pvc-annotations-migrator] StatefulSet $SERVER_STS_NAME deleted; Helm will recreate it"
                   else
-                    echo "[pvc-annotations-migrator] StatefulSet $SERVER_STS_NAME: no annotation drift, skipping"
+                    echo "[pvc-annotations-migrator] StatefulSet $SERVER_STS_NAME: no volumeClaimTemplates drift"
                   fi
                 fi
               else
-                echo "[pvc-annotations-migrator] StatefulSet $SERVER_STS_NAME not found, skipping"
+                echo "[pvc-annotations-migrator] StatefulSet $SERVER_STS_NAME not found; server PVCs already reconciled above"
               fi
 
               # Patch backup daemon PVC (standalone resource, no StatefulSet deletion needed)
