@@ -1,4 +1,4 @@
-FROM ghcr.io/netcracker/qubership-backup-daemon-go:0.1.23@sha256:8559ff178e7054dbffc3b229ac6f3dbfd07c1fa1452d0b1691aab43f1752ed4f
+FROM ghcr.io/netcracker/qubership-backup-daemon-go:0.1.24@sha256:606da59eb10338756b22fd79099c08c27920632a8adefeb1a6d342552a4a2282
 
 ENV CONSUL_HOME=/opt/consul \
     CONSUL_BACKUP=/opt/consul/backup-storage
