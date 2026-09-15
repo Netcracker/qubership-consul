@@ -814,11 +814,21 @@ func convertBindRuleAdapterToBindRule(bindRuleAdapter ACLBindingRuleAdapter, cus
 	}
 	bindingRule.Description = bindRuleAdapter.Description
 	if bindRuleAdapter.Selector != "" {
+		// Explicit selector wins and is passed to Consul verbatim.
 		bindingRule.Selector = bindRuleAdapter.Selector
 	} else if bindRuleAdapter.ServiceAccountName != "" {
-		bindingRule.Selector = fmt.Sprintf("value.namespace == \"%s\" and value.serviceaccount == \"%s\"",
-			customResourceNamespace,
-			bindRuleAdapter.ServiceAccountName)
+		if strings.Contains(bindRuleAdapter.ServiceAccountName, "${") {
+			// Templated ServiceAccountName (e.g. "${value.serviceaccount}") describes a
+			// dynamic/global rule that must match any login, not a concrete SA. Building a
+			// "value.serviceaccount == \"${...}\"" selector would produce a dead literal that
+			// matches nothing, so leave the selector empty (match all).
+			log.Info(fmt.Sprintf("ServiceAccountName [%s] for BindName [%s] is a template, skipping selector generation (rule will match all logins)",
+				bindRuleAdapter.ServiceAccountName, bindingRule.BindName))
+		} else {
+			bindingRule.Selector = fmt.Sprintf("value.namespace == \"%s\" and value.serviceaccount == \"%s\"",
+				customResourceNamespace,
+				bindRuleAdapter.ServiceAccountName)
+		}
 	}
 	return bindingRule
 }

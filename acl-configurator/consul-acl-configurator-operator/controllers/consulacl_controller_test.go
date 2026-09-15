@@ -170,6 +170,45 @@ func TestConvertBindRuleAdapterToBindRule_Explicit(t *testing.T) {
 	}
 }
 
+// 3.4a: concrete ServiceAccountName → selector pins CR namespace + that SA
+func TestConvertBindRuleAdapterToBindRule_ConcreteServiceAccountSelector(t *testing.T) {
+	adapter := ACLBindingRuleAdapter{
+		BindName:           "${value.namespace}_${value.serviceaccount}",
+		ServiceAccountName: "kafka-service-operator",
+	}
+	rule := convertBindRuleAdapterToBindRule(adapter, "kafka-service", "kafka-service", true)
+	want := `value.namespace == "kafka-service" and value.serviceaccount == "kafka-service-operator"`
+	if rule.Selector != want {
+		t.Errorf("got %q, want %q", rule.Selector, want)
+	}
+}
+
+// 3.4b: templated ServiceAccountName → no selector (global/dynamic rule matches all)
+func TestConvertBindRuleAdapterToBindRule_TemplatedServiceAccountNoSelector(t *testing.T) {
+	adapter := ACLBindingRuleAdapter{
+		BindName:           "${serviceaccount.namespace}_${serviceaccount.name}",
+		ServiceAccountName: "${serviceaccount.name}",
+	}
+	rule := convertBindRuleAdapterToBindRule(adapter, "cloud-core", "cloud-core", true)
+	if rule.Selector != "" {
+		t.Errorf("got %q, want empty selector", rule.Selector)
+	}
+}
+
+// 3.4c: explicit Selector is passed through verbatim and wins over ServiceAccountName
+func TestConvertBindRuleAdapterToBindRule_ExplicitSelectorWins(t *testing.T) {
+	adapter := ACLBindingRuleAdapter{
+		BindName:           "${value.namespace}_${value.serviceaccount}",
+		ServiceAccountName: "kafka-service-operator",
+		Selector:           `value.namespace == "kafka-service"`,
+	}
+	rule := convertBindRuleAdapterToBindRule(adapter, "kafka-service", "kafka-service", true)
+	want := `value.namespace == "kafka-service"`
+	if rule.Selector != want {
+		t.Errorf("got %q, want %q", rule.Selector, want)
+	}
+}
+
 // --- Tests for AuthMethod per binding rule ---
 
 // 4.3a: empty AuthMethod falls back to global
@@ -370,7 +409,7 @@ func TestRemoveStaleEntities_StalePolicyDeleted(t *testing.T) {
 	defer func() { aclClient = orig }()
 
 	cfg := &ACLConfig{Policies: []consulApi.ACLPolicy{{Name: "reader"}}}
-	if err := removeStaleEntities(cfg, "myapp", "staging", false); err != nil {
+	if err := removeStaleEntities(cfg, "myapp", "staging", false, ""); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if len(mock.policyDeletedIDs) != 1 || mock.policyDeletedIDs[0] != "pol-stale" {
@@ -393,7 +432,7 @@ func TestRemoveStaleEntities_StaleRoleDeleted(t *testing.T) {
 	defer func() { aclClient = orig }()
 
 	cfg := &ACLConfig{Roles: []ACLRoleAdapter{{Name: "writer"}}}
-	if err := removeStaleEntities(cfg, "myapp", "staging", false); err != nil {
+	if err := removeStaleEntities(cfg, "myapp", "staging", false, ""); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if len(mock.roleDeletedIDs) != 1 || mock.roleDeletedIDs[0] != "role-stale" {
@@ -415,7 +454,7 @@ func TestRemoveStaleEntities_StaleBindingRuleDeleted(t *testing.T) {
 	defer func() { aclClient = orig }()
 
 	cfg := &ACLConfig{BindRules: []ACLBindingRuleAdapter{{BindName: "active"}}}
-	if err := removeStaleEntities(cfg, "myapp", "staging", false); err != nil {
+	if err := removeStaleEntities(cfg, "myapp", "staging", false, ""); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if len(mock.bindingRuleDeletedIDs) != 1 || mock.bindingRuleDeletedIDs[0] != "br-stale" {
@@ -694,7 +733,7 @@ func TestRemoveStaleEntities_DeclaredEntitiesNotDeleted(t *testing.T) {
 		Roles:     []ACLRoleAdapter{{Name: "writer"}},
 		BindRules: []ACLBindingRuleAdapter{{BindName: "svc"}},
 	}
-	if err := removeStaleEntities(cfg, "myapp", "staging", false); err != nil {
+	if err := removeStaleEntities(cfg, "myapp", "staging", false, ""); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if len(mock.policyDeletedIDs) != 0 {
