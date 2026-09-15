@@ -900,14 +900,6 @@ func EnsureApplicationsAuthMethodWithRetry(ctx context.Context) {
 	}
 }
 
-func readFileOrEmpty(path string) string {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return ""
-	}
-	return string(data)
-}
-
 func readRole(roleName string) (*consulApi.ACLRole, error) {
 	role, _, err := aclClient.RoleReadByName(roleName, &consulApi.QueryOptions{})
 	if role == nil || isErrNotFound(err) {
