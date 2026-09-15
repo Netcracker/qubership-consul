@@ -92,6 +92,8 @@ spec:
             - name: IS_SHORT_STATUS_MESSAGE
               value: "{{ .Values.integrationTests.isShortStatusMessage }}"
             {{- end }}
+            - name: JWKS_URL
+              value: "http://{{ template "consul-acl-configurator.name" . }}-jwks-proxy:8080/openid/v1/jwks"
             - name: CONSUL_HOST
               value: {{ template "consul.fullname" . }}-server
             - name: CONSUL_PORT
