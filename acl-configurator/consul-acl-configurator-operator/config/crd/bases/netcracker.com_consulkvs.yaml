@@ -40,6 +40,8 @@ spec:
                       - key
                       type: object
                     type: array
+                  operatorNamespace:
+                    type: string
                   purgeOnDelete:
                     type: boolean
                 required:
@@ -109,6 +111,8 @@ spec:
                 type: string
             type: object
         type: object
+    selectableFields:
+    - jsonPath: .spec.kv.operatorNamespace
     served: true
     storage: true
     subresources:

@@ -555,6 +555,7 @@ type mockKVClient struct {
 	deleteFunc     func(key string) error
 	deleteCASFunc  func(p *consulApi.KVPair) (bool, error)
 	deleteTreeFunc func(prefix string) error
+	txnFunc        func(ops consulApi.TxnOps) (bool, *consulApi.TxnResponse, error)
 }
 
 func (m *mockKVClient) initStore() {
@@ -645,12 +646,70 @@ func (m *mockKVClient) DeleteTree(prefix string, _ *consulApi.WriteOptions) (*co
 	return nil, nil
 }
 
+// Txn emulates a Consul KV transaction against the in-memory store. It is all-or-nothing:
+// first every KVCAS/KVDeleteCAS precondition (ModifyIndex) is verified, and only if all
+// match are the operations applied. Each op is executed through the existing CAS/DeleteCAS
+// methods so casPairs/deletedKeys bookkeeping and injected funcs keep working.
+func (m *mockKVClient) Txn(ops consulApi.TxnOps, _ *consulApi.QueryOptions) (bool, *consulApi.TxnResponse, *consulApi.QueryMeta, error) {
+	m.initStore()
+	if m.txnFunc != nil {
+		ok, resp, err := m.txnFunc(ops)
+		return ok, resp, nil, err
+	}
+
+	// Phase 1: precondition check. Skipped when an override func is set, so tests can
+	// inject errors during the apply phase below.
+	if m.casFunc == nil && m.deleteCASFunc == nil {
+		resp := &consulApi.TxnResponse{}
+		for i, op := range ops {
+			current := m.store[op.KV.Key]
+			var idx uint64
+			if current != nil {
+				idx = current.ModifyIndex
+			}
+			if op.KV.Index != idx {
+				resp.Errors = append(resp.Errors, &consulApi.TxnError{OpIndex: i, What: "index mismatch"})
+			}
+		}
+		if len(resp.Errors) > 0 {
+			return false, resp, nil, nil
+		}
+	}
+
+	// Phase 2: apply.
+	for _, op := range ops {
+		switch op.KV.Verb {
+		case consulApi.KVCAS:
+			ok, _, err := m.CAS(&consulApi.KVPair{
+				Key: op.KV.Key, Value: op.KV.Value, Flags: op.KV.Flags, ModifyIndex: op.KV.Index,
+			}, nil)
+			if err != nil {
+				return false, nil, nil, err
+			}
+			if !ok {
+				return false, &consulApi.TxnResponse{}, nil, nil
+			}
+		case consulApi.KVDeleteCAS:
+			ok, _, err := m.DeleteCAS(&consulApi.KVPair{Key: op.KV.Key, ModifyIndex: op.KV.Index}, nil)
+			if err != nil {
+				return false, nil, nil, err
+			}
+			if !ok {
+				return false, &consulApi.TxnResponse{}, nil, nil
+			}
+		}
+	}
+	return true, &consulApi.TxnResponse{}, nil, nil
+}
+
 // 14.1: deleteKVEntries deletes only owned entries via decrementOrDelete
 func TestDeleteKVEntries_CallsDeleteForEachOwnedEntry(t *testing.T) {
 	mock := &mockKVClient{}
 	origKV := kvClient
+	origTxn := txnClient
 	kvClient = mock
-	defer func() { kvClient = origKV }()
+	txnClient = mock
+	defer func() { kvClient = origKV; txnClient = origTxn }()
 
 	mock.initStore()
 	mock.store["config/ns/svc/"] = &consulApi.KVPair{Key: "config/ns/svc/", Flags: 1, ModifyIndex: 1}
@@ -672,8 +731,10 @@ func TestDeleteKVEntries_CallsDeleteForEachOwnedEntry(t *testing.T) {
 func TestDeleteKVEntries_NotOwnedEntries_Skipped(t *testing.T) {
 	mock := &mockKVClient{}
 	origKV := kvClient
+	origTxn := txnClient
 	kvClient = mock
-	defer func() { kvClient = origKV }()
+	txnClient = mock
+	defer func() { kvClient = origKV; txnClient = origTxn }()
 
 	statuses := []consulacl.ConsulKVEntryStatus{
 		{Key: "config/ns/svc/", Status: "synced", Owned: false},
@@ -686,7 +747,7 @@ func TestDeleteKVEntries_NotOwnedEntries_Skipped(t *testing.T) {
 	}
 }
 
-// 14.3: network error from Get is returned; remaining entries are still processed
+// 14.3: a Get error aborts the batch transaction and is returned to the caller
 func TestDeleteKVEntries_NetworkError_Returned(t *testing.T) {
 	netErr := fmt.Errorf("dial tcp: connection refused")
 	callCount := 0
@@ -700,8 +761,10 @@ func TestDeleteKVEntries_NetworkError_Returned(t *testing.T) {
 		},
 	}
 	origKV := kvClient
+	origTxn := txnClient
 	kvClient = mock
-	defer func() { kvClient = origKV }()
+	txnClient = mock
+	defer func() { kvClient = origKV; txnClient = origTxn }()
 
 	statuses := []consulacl.ConsulKVEntryStatus{
 		{Key: "key/one", Status: "synced", Owned: true},
@@ -711,9 +774,12 @@ func TestDeleteKVEntries_NetworkError_Returned(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error to be returned, got nil")
 	}
-	// all entries are attempted even on partial error
-	if callCount != 2 {
-		t.Errorf("expected Get called for both entries, got %d calls", callCount)
+	// The batch aborts on the first Get error; nothing is written.
+	if callCount != 1 {
+		t.Errorf("expected batch to abort after first Get, got %d calls", callCount)
+	}
+	if len(mock.deletedKeys) != 0 {
+		t.Errorf("no keys should be deleted when the batch aborts, got %v", mock.deletedKeys)
 	}
 }
 

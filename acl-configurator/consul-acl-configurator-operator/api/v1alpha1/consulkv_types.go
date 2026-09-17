@@ -26,6 +26,10 @@ type ConsulKVEntry struct {
 type ConsulKVConfig struct {
 	Entries       []ConsulKVEntry `json:"entries"`
 	PurgeOnDelete bool            `json:"purgeOnDelete,omitempty"`
+	// OperatorNamespace, when set, binds this CR to the operator whose own namespace
+	// matches this value, allowing the CR to live in a different namespace than the
+	// operator. When empty, the CR is owned by the operator running in its own namespace.
+	OperatorNamespace string `json:"operatorNamespace,omitempty"`
 }
 
 type ConsulKVSpec struct {

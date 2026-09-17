@@ -159,16 +159,17 @@ func getWatchNamespace() (string, error) {
 
 func configureMgrNamespaces(mgrOptions *ctrl.Options, namespace string, ownNamespace string) {
 	if strings.TrimSpace(namespace) == "*" {
-		// Cluster-wide watch: configure per-namespace cache filters for ConsulACL so each
-		// operator only caches its own CRs. Requires spec.acl.operatorNamespace declared as
-		// a CRD selectableField (k8s >= 1.30).
+		// Cluster-wide watch: configure per-namespace cache filters for ConsulACL and
+		// ConsulKV so each operator only caches its own CRs. Requires the
+		// spec.acl.operatorNamespace / spec.kv.operatorNamespace fields to be declared as
+		// CRD selectableFields (k8s >= 1.30).
 		//
 		// - ownNamespace: no field selector — the operator processes CRs here by default
 		//   (operatorNamespace typically absent for same-namespace deployments).
 		// - AllNamespaces: field selector so CRs from other namespaces are only cached when
-		//   spec.acl.operatorNamespace explicitly targets this operator.
+		//   operatorNamespace explicitly targets this operator.
 		//
-		// Without this, every operator would hold the full cluster's ConsulACL set in memory.
+		// Without this, every operator would hold the full cluster's CR set in memory.
 		mgrOptions.Cache.ByObject = map[client.Object]cache.ByObject{
 			&qubershiporgv1.ConsulACL{}: {
 				Namespaces: map[string]cache.Config{
@@ -176,6 +177,16 @@ func configureMgrNamespaces(mgrOptions *ctrl.Options, namespace string, ownNames
 					cache.AllNamespaces: {
 						FieldSelector: fields.SelectorFromSet(fields.Set{
 							"spec.acl.operatorNamespace": ownNamespace,
+						}),
+					},
+				},
+			},
+			&qubershiporgv1.ConsulKV{}: {
+				Namespaces: map[string]cache.Config{
+					ownNamespace: {},
+					cache.AllNamespaces: {
+						FieldSelector: fields.SelectorFromSet(fields.Set{
+							"spec.kv.operatorNamespace": ownNamespace,
 						}),
 					},
 				},

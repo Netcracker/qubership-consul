@@ -108,6 +108,13 @@ type consulKVClient interface {
 	DeleteTree(prefix string, q *consulApi.WriteOptions) (*consulApi.WriteMeta, error)
 }
 
+// consulTxnClient executes atomic Consul KV transactions. It is used to apply or
+// release a batch of KV entries in a single all-or-nothing request while keeping
+// per-key optimistic locking via KVCAS/KVDeleteCAS operations.
+type consulTxnClient interface {
+	Txn(txns consulApi.TxnOps, q *consulApi.QueryOptions) (bool, *consulApi.TxnResponse, *consulApi.QueryMeta, error)
+}
+
 func makeConsulClient() *consulApi.Client {
 	consulConfig := consulApi.DefaultConfig()
 	consulConfig.Address = fmt.Sprintf("%s:%s", ConsulClientService, ConsulClientPort)
@@ -129,4 +136,8 @@ func makeAclClient() consulACLClient {
 
 func makeKVClient() consulKVClient {
 	return makeConsulClient().KV()
+}
+
+func makeTxnClient() consulTxnClient {
+	return makeConsulClient().Txn()
 }

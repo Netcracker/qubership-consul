@@ -55,8 +55,10 @@ func newConsulKV(name, namespace string, finalizers []string, entries []consulac
 func TestApplyKVEntries_AllEntriesWrittenVerbatim(t *testing.T) {
 	mock := &mockKVClient{}
 	origKV := kvClient
+	origTxn := txnClient
 	kvClient = mock
-	defer func() { kvClient = origKV }()
+	txnClient = mock
+	defer func() { kvClient = origKV; txnClient = origTxn }()
 
 	entries := []consulacl.ConsulKVEntry{
 		{Key: "config/ns/app/", Value: ""},
@@ -95,8 +97,10 @@ func TestApplyKVEntries_AllEntriesWrittenVerbatim(t *testing.T) {
 func TestApplyKVEntries_EmptyKeySkippedWithErrorStatus(t *testing.T) {
 	mock := &mockKVClient{}
 	origKV := kvClient
+	origTxn := txnClient
 	kvClient = mock
-	defer func() { kvClient = origKV }()
+	txnClient = mock
+	defer func() { kvClient = origKV; txnClient = origTxn }()
 
 	entries := []consulacl.ConsulKVEntry{
 		{Key: ""},
@@ -124,8 +128,10 @@ func TestApplyKVEntries_EmptyKeySkippedWithErrorStatus(t *testing.T) {
 func TestApplyKVEntries_IdempotentReapply(t *testing.T) {
 	mock := &mockKVClient{}
 	origKV := kvClient
+	origTxn := txnClient
 	kvClient = mock
-	defer func() { kvClient = origKV }()
+	txnClient = mock
+	defer func() { kvClient = origKV; txnClient = origTxn }()
 
 	entries := []consulacl.ConsulKVEntry{{Key: "data/ns/svc", Value: "x"}}
 
@@ -170,8 +176,10 @@ func TestApplyKVEntries_NetworkErrorReturned(t *testing.T) {
 		},
 	}
 	origKV := kvClient
+	origTxn := txnClient
 	kvClient = mock
-	defer func() { kvClient = origKV }()
+	txnClient = mock
+	defer func() { kvClient = origKV; txnClient = origTxn }()
 
 	entries := []consulacl.ConsulKVEntry{
 		{Key: "key/one"},
@@ -195,15 +203,17 @@ func TestApplyKVEntries_NetworkErrorReturned(t *testing.T) {
 func TestOwnership_KeyNotDeletedUntilLastOwner(t *testing.T) {
 	mock := &mockKVClient{}
 	origKV := kvClient
+	origTxn := txnClient
 	kvClient = mock
-	defer func() { kvClient = origKV }()
+	txnClient = mock
+	defer func() { kvClient = origKV; txnClient = origTxn }()
 
 	// Simulate key with flags=2 (two owners)
 	mock.initStore()
 	mock.store["shared/key"] = &consulApi.KVPair{Key: "shared/key", Value: []byte("v"), Flags: 2, ModifyIndex: 5}
 
 	// First owner releases
-	if err := decrementOrDelete("shared/key"); err != nil {
+	if err := deleteKVBatch([]string{"shared/key"}); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
@@ -219,13 +229,15 @@ func TestOwnership_KeyNotDeletedUntilLastOwner(t *testing.T) {
 func TestOwnership_KeyDeletedByLastOwner(t *testing.T) {
 	mock := &mockKVClient{}
 	origKV := kvClient
+	origTxn := txnClient
 	kvClient = mock
-	defer func() { kvClient = origKV }()
+	txnClient = mock
+	defer func() { kvClient = origKV; txnClient = origTxn }()
 
 	mock.initStore()
 	mock.store["shared/key"] = &consulApi.KVPair{Key: "shared/key", Value: []byte("v"), Flags: 1, ModifyIndex: 3}
 
-	if err := decrementOrDelete("shared/key"); err != nil {
+	if err := deleteKVBatch([]string{"shared/key"}); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
@@ -237,18 +249,131 @@ func TestOwnership_KeyDeletedByLastOwner(t *testing.T) {
 	}
 }
 
-// 16.2c: already absent key — decrementOrDelete is a no-op
+// 16.2c: already absent key — deleteKVBatch is a no-op
 func TestOwnership_AlreadyAbsentKey(t *testing.T) {
 	mock := &mockKVClient{}
 	origKV := kvClient
+	origTxn := txnClient
 	kvClient = mock
-	defer func() { kvClient = origKV }()
+	txnClient = mock
+	defer func() { kvClient = origKV; txnClient = origTxn }()
 
-	if err := decrementOrDelete("missing/key"); err != nil {
+	if err := deleteKVBatch([]string{"missing/key"}); err != nil {
 		t.Errorf("expected no error for absent key, got %v", err)
 	}
 	if len(mock.deletedKeys) != 0 {
 		t.Errorf("no deletions expected, got %v", mock.deletedKeys)
+	}
+}
+
+// ---- 16.4: transaction behavior ----
+
+// 16.4a: a CAS conflict (txn ok=false) retries the whole batch until it succeeds.
+func TestWriteKVChunk_RetriesOnCASConflict(t *testing.T) {
+	mock := &mockKVClient{}
+	attempts := 0
+	mock.txnFunc = func(ops consulApi.TxnOps) (bool, *consulApi.TxnResponse, error) {
+		attempts++
+		if attempts == 1 {
+			return false, &consulApi.TxnResponse{Errors: consulApi.TxnErrors{{OpIndex: 0, What: "index mismatch"}}}, nil
+		}
+		return true, &consulApi.TxnResponse{}, nil
+	}
+	origKV := kvClient
+	origTxn := txnClient
+	kvClient = mock
+	txnClient = mock
+	defer func() { kvClient = origKV; txnClient = origTxn }()
+
+	owned := map[string]bool{}
+	if err := writeKVChunk([]consulacl.ConsulKVEntry{{Key: "k", Value: "v"}}, nil, owned); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if attempts != 2 {
+		t.Errorf("expected 2 attempts (1 conflict + 1 success), got %d", attempts)
+	}
+	if !owned["k"] {
+		t.Error("key should be owned after a successful apply")
+	}
+}
+
+// 16.4b: entries beyond txnBatchSize are split into multiple transactions.
+func TestWriteKVBatch_SplitsByTxnBatchSize(t *testing.T) {
+	mock := &mockKVClient{}
+	var sizes []int
+	mock.txnFunc = func(ops consulApi.TxnOps) (bool, *consulApi.TxnResponse, error) {
+		sizes = append(sizes, len(ops))
+		return true, &consulApi.TxnResponse{}, nil
+	}
+	origKV := kvClient
+	origTxn := txnClient
+	kvClient = mock
+	txnClient = mock
+	defer func() { kvClient = origKV; txnClient = origTxn }()
+
+	entries := make([]consulacl.ConsulKVEntry, txnBatchSize+5)
+	for i := range entries {
+		entries[i] = consulacl.ConsulKVEntry{Key: fmt.Sprintf("k/%d", i)}
+	}
+	if _, err := writeKVBatchWithOwnership(entries, nil); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(sizes) != 2 || sizes[0] != txnBatchSize || sizes[1] != 5 {
+		t.Errorf("expected batches [%d, 5], got %v", txnBatchSize, sizes)
+	}
+}
+
+// 16.4c: one transaction both decrements a shared key and deletes a last-owner key.
+func TestDeleteKVBatch_DecrementAndDeleteMixed(t *testing.T) {
+	mock := &mockKVClient{}
+	origKV := kvClient
+	origTxn := txnClient
+	kvClient = mock
+	txnClient = mock
+	defer func() { kvClient = origKV; txnClient = origTxn }()
+
+	mock.initStore()
+	mock.store["shared"] = &consulApi.KVPair{Key: "shared", Value: []byte("v"), Flags: 2, ModifyIndex: 7}
+	mock.store["solo"] = &consulApi.KVPair{Key: "solo", Value: []byte("v"), Flags: 1, ModifyIndex: 9}
+
+	if err := deleteKVBatch([]string{"shared", "solo"}); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if mock.store["shared"] == nil || mock.store["shared"].Flags != 1 {
+		t.Errorf("shared should be decremented to Flags=1, got %v", mock.store["shared"])
+	}
+	if _, ok := mock.store["solo"]; ok {
+		t.Error("solo should be deleted once its counter reaches 0")
+	}
+	if len(mock.deletedKeys) != 1 || mock.deletedKeys[0] != "solo" {
+		t.Errorf("expected only \"solo\" deleted, got %v", mock.deletedKeys)
+	}
+}
+
+// 16.4d: a pre-existing external key (Flags=0) gets its value written but is not owned.
+func TestApplyKVEntries_ExternalKeyFlagsZero_NotOwned(t *testing.T) {
+	mock := &mockKVClient{}
+	origKV := kvClient
+	origTxn := txnClient
+	kvClient = mock
+	txnClient = mock
+	defer func() { kvClient = origKV; txnClient = origTxn }()
+
+	mock.initStore()
+	mock.store["ext/key"] = &consulApi.KVPair{Key: "ext/key", Value: []byte("old"), Flags: 0, ModifyIndex: 4}
+
+	statuses, err := applyKVEntries([]consulacl.ConsulKVEntry{{Key: "ext/key", Value: "new"}}, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if statuses[0].Owned {
+		t.Error("external key with Flags=0 must not be owned")
+	}
+	if mock.store["ext/key"].Flags != 0 {
+		t.Errorf("Flags must stay 0 for external key, got %d", mock.store["ext/key"].Flags)
+	}
+	if string(mock.store["ext/key"].Value) != "new" {
+		t.Errorf("value should be updated, got %q", string(mock.store["ext/key"].Value))
 	}
 }
 
@@ -280,8 +405,10 @@ func TestReconcile_FinalizerAddedOnFirstReconcile(t *testing.T) {
 func TestReconcile_ActiveReconcileCallsApplyAndWritesStatus(t *testing.T) {
 	mock := &mockKVClient{}
 	origKV := kvClient
+	origTxn := txnClient
 	kvClient = mock
-	defer func() { kvClient = origKV }()
+	txnClient = mock
+	defer func() { kvClient = origKV; txnClient = origTxn }()
 
 	cr := newConsulKV("test-kv", "default", []string{consulKVFinalizer}, []consulacl.ConsulKVEntry{
 		{Key: "config/ns/app", Value: "val"},
@@ -325,8 +452,10 @@ func TestReconcile_ActiveReconcileCallsApplyAndWritesStatus(t *testing.T) {
 func TestReconcile_DeletionCallsDeleteAndRemovesFinalizer(t *testing.T) {
 	mock := &mockKVClient{}
 	origKV := kvClient
+	origTxn := txnClient
 	kvClient = mock
-	defer func() { kvClient = origKV }()
+	txnClient = mock
+	defer func() { kvClient = origKV; txnClient = origTxn }()
 
 	// Pre-populate the Consul store with the key (flags=1, only owner)
 	mock.initStore()
@@ -374,8 +503,10 @@ func TestReconcile_StatusOnlyUpdate_DoesNotCallApplyTwice(t *testing.T) {
 		},
 	}
 	origKV := kvClient
+	origTxn := txnClient
 	kvClient = mock
-	defer func() { kvClient = origKV }()
+	txnClient = mock
+	defer func() { kvClient = origKV; txnClient = origTxn }()
 
 	cr := newConsulKV("test-kv", "default", []string{consulKVFinalizer}, []consulacl.ConsulKVEntry{
 		{Key: "data/ns/svc"},
