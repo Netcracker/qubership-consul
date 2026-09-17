@@ -19,7 +19,6 @@ import base64
 import logging
 import os
 import sys
-import time
 
 import requests
 
@@ -32,33 +31,6 @@ REQUEST_HEADERS = {
 
 TLS_CRT_PATH = '/consul/tls/ca/tls.crt'
 CA_CERT_PATH = '/consul/tls/ca/ca.crt'
-
-# Consul can transiently drop RPC connections while the raft cluster is settling
-# (leader election, follower catch-up, user-snapshot restore, rolling restart).
-# Such errors are retryable; retrying a few times lets a single backup survive them
-# instead of failing the whole run. Non-transient errors (ACL, bad config) are not
-# retried. Attempts and backoff step (seconds) are overridable via env vars.
-CONSUL_REQUEST_MAX_ATTEMPTS = int(os.getenv("CONSUL_REQUEST_MAX_ATTEMPTS", "5"))
-CONSUL_REQUEST_RETRY_BACKOFF = int(os.getenv("CONSUL_REQUEST_RETRY_BACKOFF", "5"))
-CONSUL_REQUEST_TIMEOUT = int(os.getenv("CONSUL_REQUEST_TIMEOUT", "120"))
-_TRANSIENT_ERROR_MARKERS = (
-    'connection reset',
-    'connection refused',
-    'connection aborted',
-    'broken pipe',
-    'eof',
-    'timed out',
-    'no cluster leader',
-    'rpc error',
-    'failed to decode response',
-    'leadership lost',
-    'stream closed',
-)
-
-
-def _is_transient_error(detail):
-    detail = (detail or '').lower()
-    return any(marker in detail for marker in _TRANSIENT_ERROR_MARKERS)
 
 loggingLevel = logging.DEBUG if os.getenv(
     'CONSUL_BACKUP_DAEMON_DEBUG') else logging.INFO
@@ -90,39 +62,13 @@ class Backup:
         if self._acl_enabled:
             REQUEST_HEADERS['X-Consul-Token'] = self._acl_token
 
-    def __consul_get(self, url, error_context, params=None):
-        """Perform a GET against Consul, retrying transient RPC/connection errors.
-
-        Returns the successful response. On a non-transient error, or after the
-        retries are exhausted, logs ``error_context`` with the last error detail
-        and exits with code 1 (preserving the original failure semantics).
-        """
-        detail = None
-        for attempt in range(1, CONSUL_REQUEST_MAX_ATTEMPTS + 1):
-            try:
-                response = requests.get(url, params=params, headers=REQUEST_HEADERS,
-                                        verify=self._consul_cafile, timeout=CONSUL_REQUEST_TIMEOUT)
-                if response.ok:
-                    return response
-                detail = response.text
-                transient = _is_transient_error(response.text)
-            except requests.exceptions.RequestException as e:
-                detail = str(e)
-                transient = True
-            if attempt < CONSUL_REQUEST_MAX_ATTEMPTS and transient:
-                delay = CONSUL_REQUEST_RETRY_BACKOFF * attempt
-                logging.warning(f'{error_context} failed on attempt {attempt}/{CONSUL_REQUEST_MAX_ATTEMPTS} '
-                                f'(transient), retrying in {delay}s. Details: {detail}')
-                time.sleep(delay)
-                continue
-            break
-        logging.error(f'{error_context}, details: {detail}')
-        sys.exit(1)
-
     def __get_datacenters(self):
-        dc_response = self.__consul_get(
-            f'{self._consul_url}/v1/catalog/datacenters',
-            f'There is problem with getting datacenters from Consul server {self._consul_url}')
+        dc_response = requests.get(f'{self._consul_url}/v1/catalog/datacenters', headers=REQUEST_HEADERS,
+                                   verify=self._consul_cafile)
+        if not dc_response.ok:
+            logging.error(f'There is problem with getting datacenters from Consul server {self._consul_url}, '
+                          f'details: {dc_response.text}')
+            sys.exit(1)
         return dc_response.json()
 
     def backup(self, folder, datacenters=None):
@@ -135,10 +81,12 @@ class Backup:
         for datacenter in datacenters:
             snapshot_folder = f'{folder}/{datacenter}'
             os.makedirs(snapshot_folder)
-            snapshot_resp = self.__consul_get(
-                f'{self._consul_url}/v1/snapshot',
-                f'There is problem with getting snapshot from datacenter: {datacenter}',
-                params={'dc': datacenter})
+            snapshot_resp = requests.get(f'{self._consul_url}/v1/snapshot', params={'dc': datacenter},
+                                         headers=REQUEST_HEADERS, verify=self._consul_cafile)
+            if not snapshot_resp.ok:
+                logging.error(f'There is problem with getting snapshot from datacenter: {datacenter}, '
+                              f'details: {snapshot_resp.text}')
+                sys.exit(1)
             with open(f'{snapshot_folder}/snapshot.gz', 'wb') as snapshot_file:
                 snapshot_file.write(snapshot_resp.content)
             logging.info(f'Snapshot for datacenter "{datacenter}" completed successfully.')
