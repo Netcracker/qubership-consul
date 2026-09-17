@@ -589,17 +589,10 @@ server:
   # endpoint and is not configurable, but its timing parameters can be tuned here.
   # @type: map
   livenessProbe:
-    # Enable/disable the liveness probe for the server container.
-    enabled: true
-    # Number of seconds after the container has started before the probe is initiated.
     initialDelaySeconds: 0
-    # How often (in seconds) to perform the probe.
     periodSeconds: 10
-    # Number of seconds after which the probe times out.
     timeoutSeconds: 1
-    # Minimum consecutive successes for the probe to be considered successful after having failed.
     successThreshold: 1
-    # Number of consecutive failures for the probe to be considered failed.
     failureThreshold: 3
 
   # Configures the readiness probe (https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/)
@@ -607,17 +600,10 @@ server:
   # endpoint and is not configurable, but its timing parameters can be tuned here.
   # @type: map
   readinessProbe:
-    # Enable/disable the readiness probe for the server container.
-    enabled: true
-    # Number of seconds after the container has started before the probe is initiated.
     initialDelaySeconds: 5
-    # How often (in seconds) to perform the probe.
     periodSeconds: 3
-    # Number of seconds after which the probe times out.
     timeoutSeconds: 5
-    # Minimum consecutive successes for the probe to be considered successful after having failed.
     successThreshold: 1
-    # Number of consecutive failures for the probe to be considered failed.
     failureThreshold: 2
 
   # The security context for the server pods. This should be a YAML map corresponding to a
