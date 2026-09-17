@@ -584,6 +584,28 @@ server:
       memory: "1024Mi"
       cpu: "400m"
 
+  # Configures the liveness probe (https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/)
+  # for the server container. The probe command itself checks the Consul leader status
+  # endpoint and is not configurable, but its timing parameters can be tuned here.
+  # @type: map
+  livenessProbe:
+    initialDelaySeconds: 0
+    periodSeconds: 10
+    timeoutSeconds: 1
+    successThreshold: 1
+    failureThreshold: 3
+
+  # Configures the readiness probe (https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/)
+  # for the server container. The probe command itself checks the Consul leader status
+  # endpoint and is not configurable, but its timing parameters can be tuned here.
+  # @type: map
+  readinessProbe:
+    initialDelaySeconds: 5
+    periodSeconds: 3
+    timeoutSeconds: 5
+    successThreshold: 1
+    failureThreshold: 2
+
   # The security context for the server pods. This should be a YAML map corresponding to a
   # Kubernetes [SecurityContext](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/) object.
   # By default, servers will run as non-root, with user ID `100` and group ID `1000`,
