@@ -1,10 +1,12 @@
 import os
+import time
 
 import consul
 import requests
 from robot.libraries.BuiltIn import BuiltIn
 
 CA_CERT_PATH = '/consul/tls/ca/tls.crt'
+BACKUP_CA_CERT_PATH = '/consul/tls/backup/ca.crt'
 
 
 class ConsulLibrary(object):
@@ -68,3 +70,68 @@ class ConsulLibrary(object):
         url = f'{self.consul_scheme}://{self.consul_host}:{self.consul_port}/v1/status/leader'
         leader_response = requests.get(url, verify=self.consul_cafile)
         return leader_response.status_code == 200 and str(leader_response.content) != ""
+
+    def create_backup_with_retry(self, base_url, username, password, verify=None,
+                                 attempts=3, backup_timeout=120, poll_interval=10):
+        """Create a full backup, retrying the whole backup up to ``attempts`` times.
+
+        A backup attempt is considered failed when the POST fails / is not 200,
+        when the backup is reported as failed, or when it does not reach a
+        successful state within ``backup_timeout`` seconds. On such a failure the
+        backup is re-issued (a new POST /backup), up to ``attempts`` times.
+
+        Backup completion is polled via ``/listbackups/<id>`` (the ``failed`` /
+        ``valid`` fields) -- the backup counterpart of ``/jobstatus/<task_id>``
+        used for restore. Returns the backup id on success; fails otherwise.
+        """
+        attempts = int(attempts)
+        auth = (username, password)
+        if verify is None:
+            verify = BACKUP_CA_CERT_PATH if str(base_url).startswith('https') else True
+        last_error = 'no attempt was made'
+        for attempt in range(1, attempts + 1):
+            try:
+                response = requests.post(f'{base_url}/backup', auth=auth, verify=verify, timeout=30)
+            except requests.exceptions.RequestException as e:
+                last_error = f'POST /backup failed: {e}'
+                self.builtin.log(f'Backup attempt {attempt}/{attempts}: {last_error}', 'WARN')
+                continue
+            if response.status_code != 200:
+                last_error = f'POST /backup returned {response.status_code}: {response.text}'
+                self.builtin.log(f'Backup attempt {attempt}/{attempts}: {last_error}', 'WARN')
+                continue
+            backup_id = response.text.strip()
+            succeeded, status_error = self._wait_backup_completed(
+                base_url, auth, verify, backup_id, backup_timeout, poll_interval)
+            if succeeded:
+                self.builtin.log(f'Backup {backup_id} succeeded on attempt {attempt}/{attempts}')
+                return backup_id
+            last_error = status_error
+            self.builtin.log(
+                f'Backup attempt {attempt}/{attempts} (id={backup_id}) not successful: {status_error}', 'WARN')
+        raise AssertionError(f'Backup did not succeed after {attempts} attempts. Last error: {last_error}')
+
+    def _wait_backup_completed(self, base_url, auth, verify, backup_id, timeout, interval):
+        deadline = time.time() + float(timeout)
+        last = 'no status received'
+        while time.time() < deadline:
+            try:
+                response = requests.get(f'{base_url}/listbackups/{backup_id}',
+                                        auth=auth, verify=verify, timeout=30)
+            except requests.exceptions.RequestException as e:
+                last = f'status request failed: {e}'
+                time.sleep(float(interval))
+                continue
+            if response.status_code == 200:
+                content = response.json()
+                if content.get('failed') is True:
+                    return False, f'backup {backup_id} reported failed=True: {content}'
+                if content.get('failed') is False and content.get('valid') is True:
+                    return True, ''
+                last = f'not ready yet: {content}'
+            else:
+                # 404 while the backup is still running, or after a failed backup
+                # that was never stored -- keep polling until timeout.
+                last = f'HTTP {response.status_code}: {response.text}'
+            time.sleep(float(interval))
+        return False, f'backup {backup_id} not successful within {timeout}s ({last})'
