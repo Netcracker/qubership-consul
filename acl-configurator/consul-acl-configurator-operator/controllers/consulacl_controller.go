@@ -242,7 +242,17 @@ func collectRoleNames(aclConfig *ACLConfig, name, namespace string, explicitName
 // Errors are logged but do not block deletion.
 func revokeRoleTokens(roleNames []string) {
 	for _, roleName := range roleNames {
-		tokens, _, err := aclClient.TokenListFiltered(consulApi.ACLTokenFilterOptions{Role: roleName}, &consulApi.QueryOptions{})
+		// The token list filter expects a role ID (UUID), not a name, so resolve it first.
+		role, err := readRole(roleName)
+		if err != nil {
+			log.Error(err, "Error reading role for token revocation", "role", roleName)
+			continue
+		}
+		if role == nil {
+			// Role no longer exists in Consul — nothing to revoke.
+			continue
+		}
+		tokens, _, err := aclClient.TokenListFiltered(consulApi.ACLTokenFilterOptions{Role: role.ID}, &consulApi.QueryOptions{})
 		if err != nil {
 			log.Error(err, "Error listing tokens for role", "role", roleName)
 			continue

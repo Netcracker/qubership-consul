@@ -41,6 +41,9 @@ type mockACLClient struct {
 	// Policy
 	policyListFunc   func(*consulApi.QueryOptions) ([]*consulApi.ACLPolicyListEntry, *consulApi.QueryMeta, error)
 	policyDeletedIDs []string
+	// Token
+	tokenListFilteredFunc func(consulApi.ACLTokenFilterOptions, *consulApi.QueryOptions) ([]*consulApi.ACLTokenListEntry, *consulApi.QueryMeta, error)
+	tokenDeletedIDs       []string
 }
 
 func (m *mockACLClient) PolicyCreate(p *consulApi.ACLPolicy, q *consulApi.WriteOptions) (*consulApi.ACLPolicy, *consulApi.WriteMeta, error) {
@@ -120,10 +123,69 @@ func (m *mockACLClient) AuthMethodUpdate(am *consulApi.ACLAuthMethod, q *consulA
 	return am, nil, nil
 }
 func (m *mockACLClient) TokenListFiltered(f consulApi.ACLTokenFilterOptions, q *consulApi.QueryOptions) ([]*consulApi.ACLTokenListEntry, *consulApi.QueryMeta, error) {
+	if m.tokenListFilteredFunc != nil {
+		return m.tokenListFilteredFunc(f, q)
+	}
 	return nil, nil, nil
 }
 func (m *mockACLClient) TokenDelete(accessorID string, q *consulApi.WriteOptions) (*consulApi.WriteMeta, error) {
+	m.tokenDeletedIDs = append(m.tokenDeletedIDs, accessorID)
 	return nil, nil
+}
+
+// --- Tests for revokeRoleTokens ---
+
+// The token list filter must use the role ID (UUID), not its name.
+func TestRevokeRoleTokens_ResolvesRoleIDBeforeFiltering(t *testing.T) {
+	const roleID = "11111111-1111-1111-1111-111111111111"
+	var capturedFilter consulApi.ACLTokenFilterOptions
+	mock := &mockACLClient{
+		roleReadByNameFunc: func(name string, _ *consulApi.QueryOptions) (*consulApi.ACLRole, *consulApi.QueryMeta, error) {
+			if name == "my_role" {
+				return &consulApi.ACLRole{ID: roleID, Name: name}, nil, nil
+			}
+			return nil, nil, nil
+		},
+		tokenListFilteredFunc: func(f consulApi.ACLTokenFilterOptions, _ *consulApi.QueryOptions) ([]*consulApi.ACLTokenListEntry, *consulApi.QueryMeta, error) {
+			capturedFilter = f
+			return []*consulApi.ACLTokenListEntry{{AccessorID: "acc-1"}}, nil, nil
+		},
+	}
+	orig := aclClient
+	aclClient = mock
+	defer func() { aclClient = orig }()
+
+	revokeRoleTokens([]string{"my_role"})
+
+	if capturedFilter.Role != roleID {
+		t.Errorf("filter must use role ID, got %q", capturedFilter.Role)
+	}
+	if len(mock.tokenDeletedIDs) != 1 || mock.tokenDeletedIDs[0] != "acc-1" {
+		t.Errorf("expected token acc-1 revoked, got %v", mock.tokenDeletedIDs)
+	}
+}
+
+// A role that no longer exists is skipped without calling the token filter.
+func TestRevokeRoleTokens_RoleNotFound_Skips(t *testing.T) {
+	called := false
+	mock := &mockACLClient{
+		roleReadByNameFunc: func(string, *consulApi.QueryOptions) (*consulApi.ACLRole, *consulApi.QueryMeta, error) {
+			return nil, nil, nil // not found
+		},
+		tokenListFilteredFunc: func(consulApi.ACLTokenFilterOptions, *consulApi.QueryOptions) ([]*consulApi.ACLTokenListEntry, *consulApi.QueryMeta, error) {
+			called = true
+			return nil, nil, nil
+		},
+	}
+	orig := aclClient
+	aclClient = mock
+	defer func() { aclClient = orig }()
+
+	revokeRoleTokens([]string{"missing"})
+
+	if called {
+		t.Error("TokenListFiltered must not be called when the role is not found")
+	}
 }
 
 // --- Tests for convertRoleAdapterToRole ---
