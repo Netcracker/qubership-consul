@@ -17,6 +17,7 @@ package util
 import (
 	"context"
 	consulacl "github.com/Netcracker/consul-acl-configurator/consul-acl-configurator-operator/api/v1alpha1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -53,9 +54,18 @@ func (cru CustomResourceUpdater) updateWithRetry(updateFunc func(*consulacl.Cons
 		instance := &consulacl.ConsulACL{}
 		if err := cru.client.Get(context.TODO(),
 			types.NamespacedName{Name: cru.name, Namespace: cru.namespace}, instance); err != nil {
+			if k8serrors.IsNotFound(err) {
+				return nil
+			}
 			return err
 		}
 		updateFunc(instance)
-		return doUpdate(context.TODO(), instance)
+		if err := doUpdate(context.TODO(), instance); err != nil {
+			if k8serrors.IsNotFound(err) {
+				return nil
+			}
+			return err
+		}
+		return nil
 	})
 }

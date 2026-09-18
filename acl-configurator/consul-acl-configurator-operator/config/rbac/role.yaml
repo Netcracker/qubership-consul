@@ -1,15 +1,14 @@
-
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  creationTimestamp: null
   name: manager-role
 rules:
 - apiGroups:
   - netcracker.com
   resources:
   - consulacls
+  - consulkvs
   verbs:
   - create
   - delete
@@ -22,12 +21,14 @@ rules:
   - netcracker.com
   resources:
   - consulacls/finalizers
+  - consulkvs/finalizers
   verbs:
   - update
 - apiGroups:
   - netcracker.com
   resources:
   - consulacls/status
+  - consulkvs/status
   verbs:
   - get
   - patch
