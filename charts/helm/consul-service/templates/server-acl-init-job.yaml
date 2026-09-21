@@ -33,7 +33,7 @@ metadata:
   annotations:
     "argocd.argoproj.io/hook": Sync
     "argocd.argoproj.io/sync-wave": "0"
-    "argocd.argoproj.io/hook-delete-policy": HookSucceeded,BeforeHookCreation
+    "argocd.argoproj.io/hook-delete-policy": HookSucceeded,HookFailed,BeforeHookCreation
 spec:
   backoffLimit: 10
   template:
