@@ -33,42 +33,22 @@ CONSUL_CA_CERT_PATH = '/consul/tls/ca/tls.crt'
 timeout = 500
 
 
-def _rolling_update_partition(stateful_set):
-    """The ``updateStrategy.rollingUpdate.partition`` value, defaulting to 0.
-
-    The field is absent unless a partitioned (canary) update is configured, so a
-    missing strategy / rollingUpdate means "no partition" -> 0.
-    """
-    strategy = stateful_set.spec.update_strategy
-    if strategy is None or strategy.rolling_update is None:
-        return 0
-    return strategy.rolling_update.partition or 0
-
-
 def stateful_set_rolled_out(stateful_set):
     """True when the StatefulSet is fully rolled out and every replica is Ready.
 
-    The correct "done" signal depends on the update strategy, so we branch on the
-    rollingUpdate partition:
+    Mirrors ``kubectl rollout status statefulset``: the controller has observed
+    the current spec, the update has converged onto a single (latest) revision,
+    and all desired replicas are both updated to that revision and Ready.
 
-    * partition == 0 (normal upgrade): require the update to fully converge --
-      the controller observed the current spec, ``currentRevision`` equals
-      ``updateRevision``, and all replicas are both updated to that revision and
-      Ready. Readiness alone is not enough here: during an upgrade the old pods
-      stay Ready while the new ones roll out, so ``ready == desired`` would pass
-      against a not-yet-upgraded cluster. Requiring revision convergence closes
-      that gap.
+    This is what makes the check correct during a rolling upgrade. Counting Ready
+    pods is not enough: the old-revision pods stay Ready while the new ones roll
+    out, so a plain ``ready == desired`` comparison passes against a cluster that
+    has not been upgraded yet. Requiring ``updatedReplicas`` and revision
+    convergence closes that gap.
 
-    * partition > 0 (canary upgrade): only pods with ordinal >= partition are
-      updated, so two revisions coexist on purpose -- ``currentRevision`` never
-      catches up to ``updateRevision`` and ``updatedReplicas`` never reaches
-      ``replicas``. There is no status field that means "partitioned rollout
-      finished", so we fall back to the strongest pod-level signal: every replica
-      Ready.
-
-    Either way, "all replicas Ready" also means Consul itself is serving: the
-    server readiness probe only passes once the pod sees an elected leader
-    (``/v1/status/leader``).
+    It also gives us "Consul is ready" for free: the Consul server readiness probe
+    only passes once the pod sees an elected leader (``/v1/status/leader``), so
+    "all replicas Ready" means the cluster itself is serving.
     """
     status = stateful_set.status
     desired = stateful_set.spec.replicas or 0
@@ -76,10 +56,6 @@ def stateful_set_rolled_out(stateful_set):
         return False
     if (status.observed_generation or 0) < (stateful_set.metadata.generation or 0):
         return False
-    if _rolling_update_partition(stateful_set) > 0:
-        # Canary rollout: revision/updatedReplicas can never fully converge, so
-        # gate on readiness only.
-        return (status.ready_replicas or 0) == desired
     if status.update_revision and status.current_revision != status.update_revision:
         return False
     return (status.updated_replicas or 0) == desired and (status.ready_replicas or 0) == desired
