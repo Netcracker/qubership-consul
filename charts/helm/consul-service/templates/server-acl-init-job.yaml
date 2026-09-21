@@ -31,6 +31,21 @@ metadata:
     app.kubernetes.io/instance: {{ cat (printf "%s-server-acl-init"  (include "consul.fullname" .)) .Values.DELIMITER .Release.Namespace | nospace | trunc 63 }}
     app.kubernetes.io/technology: python
   annotations:
+    {{- /* On upgrade, render this job as a Helm pre-upgrade hook with
+       before-hook-creation so Helm deletes any leftover job (completed, failed
+       or hung) before recreating it. This removes the "spec.template ... field
+       is immutable" error when the job spec changes between releases, and also
+       clears a hung job that the post-upgrade delete-completed-job cleanup
+       cannot remove (it only deletes *completed* jobs).
+       We intentionally hook ONLY on upgrade: server-acl-init must talk to
+       running Consul servers, so a pre-install hook would block the server
+       StatefulSet from being created and deadlock a fresh install. On install
+       the job stays a normal resource applied alongside the servers. */ -}}
+    {{- if .Release.IsUpgrade }}
+    "helm.sh/hook": pre-upgrade
+    "helm.sh/hook-weight": "10"
+    "helm.sh/hook-delete-policy": before-hook-creation
+    {{- end }}
     "argocd.argoproj.io/hook": Sync
     "argocd.argoproj.io/sync-wave": "0"
     "argocd.argoproj.io/hook-delete-policy": HookSucceeded,BeforeHookCreation
