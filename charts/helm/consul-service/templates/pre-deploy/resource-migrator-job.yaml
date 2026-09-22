@@ -1,0 +1,106 @@
+{{- if .Values.resourceMigration.enabled }}
+{{- $serverAnnotations := mustMerge (dict) .Values.server.persistence.annotations (default dict .Values.pvc.metadata.annotations) }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ template "consul.fullname" . }}-resource-migrator
+  labels:
+    {{- include "consul-service.defaultLabels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-upgrade
+    # Must run BEFORE the update-resources job (hook-weight "1"), which deletes the
+    # consul-server StatefulSet via --cascade=orphan. This job reads the StatefulSet's
+    # volumeClaimTemplates annotations (the clean source of truth) and patches the existing
+    # server PVCs to match; update-resources then recreates the StatefulSet with the new
+    # templates. If this job ran after, the StatefulSet would already be gone.
+    "helm.sh/hook-weight": "0"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  template:
+    metadata:
+      name: {{ template "consul.fullname" . }}-resource-migrator
+      labels:
+        app: {{ template "consul.name" . }}
+        chart: {{ template "consul.chart" . }}
+        release: {{ .Release.Name }}
+        component: resource-migrator
+        {{- include "consul-service.defaultLabels" . | nindent 8 }}
+    spec:
+      {{- if not (eq (include "openshift.enabled" .) "true") }}
+      securityContext:
+        {{- include "consul.globalPodSecurityContext" . | nindent 8 }}
+        {{- with .Values.updateResourcesJob.securityContext }}
+        {{- toYaml . | nindent 8 -}}
+        {{- end }}
+      {{- end }}
+      restartPolicy: Never
+      serviceAccountName: {{ template "consul.fullname" . }}-resource-migrator
+      containers:
+        - name: resource-migrator
+          image: {{ .Values.podScheduler.dockerImage }}
+          command:
+            - "/bin/bash"
+            - "-c"
+            - |
+              set -euo pipefail
+              command -v jq >/dev/null 2>&1 || { echo "[resource-migrator] jq is required"; exit 1; }
+
+              NAMESPACE="{{ .Release.Namespace }}"
+              FULLNAME="{{ template "consul.fullname" . }}"
+              SERVER_STS_NAME="${FULLNAME}-server"
+              DESIRED_SERVER='{{ $serverAnnotations | toJson }}'
+
+              # The CURRENT annotations are read from the StatefulSet's volumeClaimTemplates, which
+              # contain only the annotations set by this chart. A live PVC also carries annotations
+              # added automatically by Kubernetes, which must not be treated as stale.
+              STS_JSON="$(kubectl -n "$NAMESPACE" get statefulset "$SERVER_STS_NAME" -o json 2>/dev/null || true)"
+              if [ -z "$STS_JSON" ]; then
+                echo "[resource-migrator] StatefulSet $SERVER_STS_NAME not found; nothing to reconcile"
+                echo "[resource-migrator] done"
+                exit 0
+              fi
+
+              HAS_VCT="$(printf '%s' "$STS_JSON" | jq -r '(.spec.volumeClaimTemplates // []) | length')"
+              if [ "$HAS_VCT" -eq 0 ]; then
+                echo "[resource-migrator] StatefulSet $SERVER_STS_NAME has no volumeClaimTemplates; nothing to reconcile"
+                echo "[resource-migrator] done"
+                exit 0
+              fi
+
+              ACTUAL_SERVER="$(printf '%s' "$STS_JSON" | jq -cS '.spec.volumeClaimTemplates[0].metadata.annotations // {}')"
+              DESIRED_SERVER="$(printf '%s' "$DESIRED_SERVER" | jq -cS '.')"
+
+              if [ "$ACTUAL_SERVER" = "$DESIRED_SERVER" ]; then
+                echo "[resource-migrator] Server PVC annotations already up to date"
+                echo "[resource-migrator] done"
+                exit 0
+              fi
+
+              echo "[resource-migrator] Server PVC annotations changed (actual=$ACTUAL_SERVER desired=$DESIRED_SERVER)"
+
+              # Desired annotations, plus null for keys previously set by the chart but no longer desired.
+              PATCH=$(jq -cn --argjson desired "$DESIRED_SERVER" --argjson old "$ACTUAL_SERVER" '
+                def stale: ($old | keys) - ($desired | keys);
+                reduce stale[] as $key ($desired; .[$key] = null)
+                | { metadata: { annotations: . } }
+              ')
+
+              # Server PVC names are deterministic in this chart: data-<namespace>-<fullname>-server-<ordinal>.
+              for PVC in $(kubectl get pvc -n "$NAMESPACE" -o name 2>/dev/null \
+                  | grep "^persistentvolumeclaim/data-${NAMESPACE}-${FULLNAME}-server-" \
+                  | sed 's|persistentvolumeclaim/||'); do
+                echo "[resource-migrator] Patching PVC $PVC"
+                kubectl patch pvc "$PVC" -n "$NAMESPACE" --type=merge -p "$PATCH"
+              done
+
+              echo "[resource-migrator] done"
+          resources:
+            requests:
+              cpu: {{ default "75m" .Values.updateResourcesJob.resources.requests.cpu }}
+              memory: {{ default "75Mi" .Values.updateResourcesJob.resources.requests.memory }}
+            limits:
+              cpu: {{ default "150m" .Values.updateResourcesJob.resources.limits.cpu }}
+              memory: {{ default "150Mi" .Values.updateResourcesJob.resources.limits.memory }}
+          securityContext:
+            {{- include "consul.globalContainerSecurityContext" . | nindent 12 }}
+{{- end }}

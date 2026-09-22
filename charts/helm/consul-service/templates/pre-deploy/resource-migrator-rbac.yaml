@@ -1,0 +1,55 @@
+{{- if .Values.resourceMigration.enabled }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ template "consul.fullname" . }}-resource-migrator
+  labels:
+    {{- include "consul-service.defaultLabels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-upgrade
+    "helm.sh/hook-weight": "-190"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+{{- with .Values.global.imagePullSecrets }}
+imagePullSecrets:
+{{- range . }}
+  - name: {{ .name }}
+{{- end }}
+{{- end }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ template "consul.fullname" . }}-resource-migrator
+  labels:
+    {{- include "consul-service.defaultLabels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-upgrade
+    "helm.sh/hook-weight": "-180"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+rules:
+  - apiGroups: ["apps"]
+    resources: ["statefulsets"]
+    verbs: ["get", "list"]
+  - apiGroups: [""]
+    resources: ["persistentvolumeclaims"]
+    verbs: ["get", "list", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ template "consul.fullname" . }}-resource-migrator
+  labels:
+    {{- include "consul-service.defaultLabels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-upgrade
+    "helm.sh/hook-weight": "-170"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+subjects:
+  - kind: ServiceAccount
+    name: {{ template "consul.fullname" . }}-resource-migrator
+    namespace: {{ .Release.Namespace }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ template "consul.fullname" . }}-resource-migrator
+{{- end }}
