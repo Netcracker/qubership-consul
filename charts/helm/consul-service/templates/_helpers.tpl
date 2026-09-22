@@ -1119,20 +1119,17 @@ Coerce all annotation values to quoted strings (handles booleans/numbers).
 {{- end -}}
 
 {{/*
-Merged annotations for server PVCs (volumeClaimTemplates): per-server + global.
+Annotations for server PVCs (volumeClaimTemplates): per-server merged with global; per-server wins.
 */}}
 {{- define "consul.server.persistence.annotations" -}}
-{{- $global := default dict .Values.pvc.metadata.annotations -}}
-{{- $local := deepCopy (default dict .Values.server.persistence.annotations) -}}
-{{- include "consul.stringifyAnnotations" (mustMerge $local $global) | trim -}}
+{{- include "consul.stringifyAnnotations" (mustMerge (dict) .Values.server.persistence.annotations .Values.pvc.metadata.annotations) | trim -}}
 {{- end -}}
 
 {{/*
-Merged annotations for backup-daemon PVC: per-component + global.
+Global annotations applied to standalone Consul PVCs (backup-daemon) that only receive the
+global 'pvc.metadata.annotations'.
 */}}
-{{- define "consul.backupDaemon.persistence.annotations" -}}
-{{- $global := default dict .Values.pvc.metadata.annotations -}}
-{{- $local := deepCopy (default dict .Values.backupDaemon.persistence.annotations) -}}
-{{- include "consul.stringifyAnnotations" (mustMerge $local $global) | trim -}}
+{{- define "consul.pvc.metadata.annotations" -}}
+{{- include "consul.stringifyAnnotations" (.Values.pvc.metadata.annotations | default (dict)) | trim -}}
 {{- end -}}
 

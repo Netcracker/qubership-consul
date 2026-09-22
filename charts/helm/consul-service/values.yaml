@@ -549,7 +549,7 @@ server:
   # @type: string
   storageClass: null
 
-  # Annotations to attach to the server PVCs (volumeClaimTemplates). Merged with pvc.metadata.annotations.
+  # Annotations to attach to the server PVCs (volumeClaimTemplates). Merged with pvc.metadata.annotations; server-specific values take precedence.
   persistence:
     annotations: {}
 
@@ -2149,10 +2149,6 @@ backupDaemon:
   storage: 1Gi
   storageClass: null
 
-  # Annotations to attach to the backup-daemon PVC. Merged with pvc.metadata.annotations.
-  persistence:
-    annotations: {}
-
   # The predefined Persistent Volume for the Consul Backup Daemon.
   persistentVolume: null
 
@@ -2461,15 +2457,19 @@ integrationTests:
   # Enable Jira integration (writes to marker file for external processing)
   enableJiraIntegration: false
 
-# Annotations added to all Consul PVCs. Merged with per-component persistence.annotations.
+# Annotations added to all Consul PVCs (server and backup daemon). Server PVCs additionally
+# merge in server.persistence.annotations (server-specific values take precedence).
 # @type: object
 pvc:
   metadata:
     annotations: {}
+#      argocd.argoproj.io/sync-options: Prune=false
 
-# PVC annotation migration: reconciles annotations on existing PVCs during helm upgrade.
-# When enabled, a pre-upgrade Job patches every Consul PVC to add new annotations and
-# remove stale ones (keys no longer present in pvc.metadata.annotations / persistence.annotations).
+# Server PVC annotation migration during helm upgrade. The backup-daemon PVC is helm-managed,
+# so its annotations are reconciled automatically on upgrade and need no migration job.
+# When enabled, a pre-upgrade resource-migrator Job patches the existing consul-server PVCs
+# (which are owned by the StatefulSet, not by Helm) to add new annotations and remove stale
+# ones (keys no longer present in pvc.metadata.annotations / server.persistence.annotations).
 resourceMigration:
   enabled: false
 
