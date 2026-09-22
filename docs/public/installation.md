@@ -102,8 +102,8 @@ The following Custom Resource Definitions should be installed to the cloud befor
 
 * `ConsulACL` - When you deploy with restricted rights or the CRDs' creation is disabled by the Deployer job.
   For more information, see [Automatic CRD Upgrade](#automatic-crd-upgrade).
-* `GrafanaDashboard`, `PrometheusRule`, and `ServiceMonitor` - They should be installed when you deploy Consul monitoring with
-  `monitoring.enabled=true` and `monitoring.monitoringType=prometheus`.
+* `GrafanaDashboard`, `PrometheusRule`, and `ServiceMonitor` - They should be installed when you deploy Consul 
+monitoring with `monitoring.enabled=true` and `monitoring.monitoringType=prometheus`.
   You need to install the Monitoring Operator service before the Consul installation.
 * `SiteManager` - It is installed when you deploy Consul with Disaster Recovery support (`global.disasterRecovery.mode`).
   You have to install the SiteManager service before the Consul installation.
@@ -428,7 +428,7 @@ The `AWS S3` bucket is created if a backup is necessary.
 The provided values do not guarantee that these values are correct for all cases. It is a general recommendation
 . Resources should be calculated and estimated for each project case with test load on the SVT stand, especially the HDD size.
 
-The Hashicorp recommends starting resources configuration from 
+The Hashicorp recommends starting resources configuration from
 [System Requirements](https://developer.hashicorp.com/consul/tutorials/production-deploy/reference-architecture#system-requirements) guide.
 
 ### Tiny
@@ -1001,8 +1001,8 @@ ACLs operate by grouping rules into policies and then associating one or more po
 
 Consul provides ability to federate with another Consul datacenter.
 
-**Important**: If during `upgrade` process you change parameters for [Mesh Gateway](#mesh-gateway), 
-you need to wait until all services go to the `ready` status and run the `upgrade` again with the same parameters for 
+**Important**: If during `upgrade` process you change parameters for [Mesh Gateway](#mesh-gateway),
+you need to wait until all services go to the `ready` status and run the `upgrade` again with the same parameters for
 the correct formation of the `federation` secret.
 
 | Parameter                                  | Type    | Mandatory | Default value | Description                                                                                                                                                                                                                                                                                                                  |
@@ -1014,7 +1014,7 @@ the correct formation of the `federation` secret.
 | `global.federation.k8sAuthMethodHost`      | string  | no        | null          | The address of the Kubernetes API server. It should be filled only on secondary datacenters if `global.federation.enabled` parameter is set to `true`. This address must be reachable from the Consul servers. For example, `https://k8s-2.openshift.sdntest.example.com:6443`.                                              |
 | `global.federation.securityContext`        | object  | no        | {}            | The pod-level security attributes and common container settings for Federation job pod.                                                                                                                                                                                                                                      |
 
-The federation secret is automatically generated if `createFederationSecret` parameter is set to `true`. 
+The federation secret is automatically generated if `createFederationSecret` parameter is set to `true`.
 It contains the following information:
 
 * `Server certificate authority certificate` (`caCert`) is the certificate authority used to sign Consul server-to-server communication.
@@ -1072,15 +1072,15 @@ They are installed on separate Kubernetes/OpenShift clusters.
 | `global.disasterRecovery.extraLabels`                                      | object  | no        | {}                       | The custom labels for Consul Disaster Recovery pod.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | `global.disasterRecovery.securityContext`                                  | object  | no        | {}                       | The pod-level security attributes and common container settings for Disaster Recovery pod.                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 
-For more information, see [Consul Disaster Recovery](/docs/public/disaster-recovery.md) section in 
+For more information, see [Consul Disaster Recovery](/docs/public/disaster-recovery.md) section in
 the _Cloud Platform Disaster Recovery Guide_.
 
 ## Servers
 
-For production deployments, you need to deploy 3 or 5 Consul servers for quorum and failure tolerance. 
+For production deployments, you need to deploy 3 or 5 Consul servers for quorum and failure tolerance.
 For most deployments 3 servers are adequate.
 
-In the server section, set `replicas` to 3. This deploys three servers and can cause Consul to wait to perform leader election 
+In the server section, set `replicas` to 3. This deploys three servers and can cause Consul to wait to perform leader election
 until all 3 are healthy. The resources depend on your environment.
 
 | Parameter                                  | Type    | Mandatory | Default value                                                                 | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
@@ -1173,14 +1173,14 @@ This section describes configuration for Consul servers when the servers are run
 
 ## Clients
 
-A Consul client is deployed on every Kubernetes node, so you do not need to specify the number of clients for your deployments. 
-You need to specify resources and enable `gRPC`. 
-For most production scenarios, the Consul clients are designed for horizontal scalability. 
-Enabling `gRPC` enables the gRPC listener on port `8502` and exposes it to the host. 
-It is required when you use Consul Connect. 
+A Consul client is deployed on every Kubernetes node, so you do not need to specify the number of clients for your deployments.
+You need to specify resources and enable `gRPC`.
+For most production scenarios, the Consul clients are designed for horizontal scalability.
+Enabling `gRPC` enables the gRPC listener on port `8502` and exposes it to the host.
+It is required when you use Consul Connect.
 This port is opened on Kubernetes node, so you need to have corresponding RBAC and security policies.
 
-If your security policy denies opening such ports, you need to set the `enablePodSecurityPolicies` parameter to `true` for creating 
+If your security policy denies opening such ports, you need to set the `enablePodSecurityPolicies` parameter to `true` for creating
 necessary pod security policies. For Kubernetes 1.25+ you need to follow the [Kubernetes 1.25](#kubernetes-125) guide.
 
 | Parameter                           | Type    | Mandatory | Default value                                                                 | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
@@ -1224,7 +1224,7 @@ necessary pod security policies. For Kubernetes 1.25+ you need to follow the [Ku
 You can create configuration for DNS within the Kubernetes cluster. This creates a service that routes to all agents, client or server,
 for serving DNS requests.
 It does not automatically configure kube-dns, you must manually configure a `stubDomain` with kube-dns for this to have an effect.
-For more information, refer to 
+For more information, refer to
 [Configuration of Stub-domain and upstream nameserver using CoreDNS](https://kubernetes.io/docs/tasks/administer-cluster/dns-custom-nameservers/#configuration-of-stub-domain-and-upstream-nameserver-using-coredns)
 .
 
@@ -1526,11 +1526,11 @@ execute common reconcile process (reload each configuration from all CRs) via RE
 
 Deployment Status Provisioner is a component to provide overall Consul service status.
 
-If Deployment Status Provisioner is enabled, the separate job is created during the deployment. 
-This job waits until all monitored resources are ready or completed. 
+If Deployment Status Provisioner is enabled, the separate job is created during the deployment.
+This job waits until all monitored resources are ready or completed.
 If integration tests are running, this job also waits for the integration tests to complete and writes the final result to the job status.
 
-For more information, refer to the 
+For more information, refer to the
 [Deployment Status Provisioner](https://github.com/Netcracker/qubership-deployment-status-provisioner/blob/main/Readme.md).
 
 | Parameter                                     | Type    | Mandatory | Default value            | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
@@ -1842,7 +1842,7 @@ The same as [On-Prem Examples DR Scheme](#on-prem-examples).
 
 ## Common
 
-In the common way, the upgrade procedure is the same as the initial deployment. You need to follow `Release Notes` and 
+In the common way, the upgrade procedure is the same as the initial deployment. You need to follow `Release Notes` and
 `Breaking Changes` in the version you install to find details.
 If you upgrade to a version which has several major diff changes from the installed version (e.g. `0.3.1` over `0.1.4`),
 you need to check `Release Notes` and `Breaking Changes` sections for `0.2.0` and `0.3.0` versions.
@@ -1962,8 +1962,8 @@ Where:
 
 #### Replicas More Than Availability Zones
 
-For cases when the number of Consul server pods (value of the `server.replicas` parameter) is greater than 
-the number of availability zones, you need to restrict the start of pods to one pod per node and specify the preferred rule to 
+For cases when the number of Consul server pods (value of the `server.replicas` parameter) is greater than
+the number of availability zones, you need to restrict the start of pods to one pod per node and specify the preferred rule to
 start on different availability zones. You can also specify an additional node affinity rule to start the pods on allowed Kubernetes nodes.
 
 For this, you can use the following affinity rules:
@@ -2049,7 +2049,7 @@ For more information, refer to [Federation Between Kubernetes Clusters](/docs/pu
 
 ### Federate Multiple Datacenters Using WAN Gossip
 
-Consul Service supports multiple datacenters. To get started, you need to install two separate datacenters and 
+Consul Service supports multiple datacenters. To get started, you need to install two separate datacenters and
 join them via single WAN gossip pool. You can do this manually during installation process.
 
 #### Create Multi-DC Configuration Manually
