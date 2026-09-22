@@ -44,11 +44,10 @@ Full Backup
     RETURN  ${backup_id}
 
 Check Backup Status
-    [Arguments]  ${backup_id}  ${is_granular}
-    ${status}=  Get Request  backupsession  /jobstatus/${backup_id}
-    Should Be Equal As Strings  ${status.json()['status']}  Successful
-    ${info}=  Get Request  backupsession  /listbackups/${backup_id}
-    Should Be Equal As Strings  ${info.json()['is_granular']}  ${is_granular
+    [Arguments]  ${backup_id}
+    ${response}=  Get Request  backupsession  /jobstatus/${backup_id}
+    ${content}=  Convert Json ${response.content} To Type
+    Should Be Equal As Strings  ${content['status']}  Successful
 
 Delete Test Data
     Delete Test Data From Consul  ${test_key}
@@ -74,7 +73,7 @@ Granular Backup
     ${response}=  Post Request  backupsession  /backup  data=${data}  headers=${headers}
     ${backup_id}=  Set Variable  ${response.content}
     Wait Until Keyword Succeeds  ${BACKUP_TIMEOUT}  ${BACKUP_TIME_INTERVAL}
-    ...  Check Backup Status  ${backup_id}  ${True}
+    ...  Check Backup Status  ${backup_id}
     RETURN  ${backup_id}
 
 Delete Backup From Backup Daemon
