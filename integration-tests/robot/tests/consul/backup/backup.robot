@@ -44,10 +44,11 @@ Full Backup
     RETURN  ${backup_id}
 
 Check Backup Status
-    [Arguments]  ${backup_id}
-    ${response}=  GET On Session  curatorsession  /jobstatus/${backup_id}
-    ${content}=  Convert Json ${response.content} To Type
-    Should Be Equal As Strings  ${content['status']}  Successful
+    [Arguments]  ${backup_id}  ${is_granular}
+    ${status}=  Get Request  backupsession  /jobstatus/${backup_id}
+    Should Be Equal As Strings  ${status.json()['status']}  Successful
+    ${info}=  Get Request  backupsession  /listbackups/${backup_id}
+    Should Be Equal As Strings  ${info.json()['is_granular']}  ${is_granular
 
 Delete Test Data
     Delete Test Data From Consul  ${test_key}
