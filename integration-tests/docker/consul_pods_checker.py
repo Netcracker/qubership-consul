@@ -22,30 +22,22 @@ from PlatformLibrary import PlatformLibrary
 environ = os.environ
 namespace = environ.get("CONSUL_NAMESPACE")
 service = environ.get("CONSUL_HOST")
-backup_daemon = environ.get("CONSUL_BACKUP_DAEMON_HOST")
+self_deployment = environ.get("STATUS_CUSTOM_RESOURCE_NAME")
 timeout = 500
 
 
-def stateful_set_rolled_out(stateful_set):
-    status = stateful_set.status
-    desired = stateful_set.spec.replicas or 0
-    if desired == 0:
+def components_ready(k8s_library):
+    if not k8s_library.is_stateful_set_rolled_out(service, namespace):
         return False
-    if (status.observed_generation or 0) < (stateful_set.metadata.generation or 0):
-        return False
-    if status.update_revision and status.current_revision != status.update_revision:
-        return False
-    return (status.updated_replicas or 0) == desired and (status.ready_replicas or 0) == desired
-
-
-def deployment_rolled_out(deployment):
-    status = deployment.status
-    desired = deployment.spec.replicas or 0
-    if desired == 0:
-        return False
-    if (status.observed_generation or 0) < (deployment.metadata.generation or 0):
-        return False
-    return (status.updated_replicas or 0) == desired and (status.ready_replicas or 0) == desired
+    for deployment in k8s_library.get_deployment_entities(namespace):
+        name = deployment.metadata.name
+        if name == self_deployment:
+            continue
+        if (deployment.spec.replicas or 0) == 0:
+            continue
+        if not k8s_library.is_deployment_rolled_out(name, namespace):
+            return False
+    return True
 
 
 if __name__ == '__main__':
@@ -56,15 +48,11 @@ if __name__ == '__main__':
     timeout_start = time.time()
     while time.time() < timeout_start + timeout:
         try:
-            consul_ready = stateful_set_rolled_out(
-                k8s_library.get_stateful_set(service, namespace))
-            backup_daemon_ready = backup_daemon is None or deployment_rolled_out(
-                k8s_library.get_deployment_entity(backup_daemon, namespace))
+            ready = components_ready(k8s_library)
         except:
             time.sleep(10)
             continue
-        if consul_ready and backup_daemon_ready:
-            time.sleep(60)
+        if ready:
             exit(0)
         time.sleep(10)
     exit(1)
