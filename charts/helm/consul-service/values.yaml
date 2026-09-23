@@ -549,10 +549,6 @@ server:
   # @type: string
   storageClass: null
 
-  # Annotations to attach to the server PVCs (volumeClaimTemplates). Merged with pvc.metadata.annotations; server-specific values take precedence.
-  persistence:
-    annotations: {}
-
   # The List of predefined Persistent Volumes for the Consul server. Should be specified as yaml list.
   # Consul nodes take name of these Persistent Volumes by order.
   persistentVolumes: []
@@ -2479,8 +2475,7 @@ integrationTests:
   # Enable Jira integration (writes to marker file for external processing)
   enableJiraIntegration: false
 
-# Annotations added to all Consul PVCs (server and backup daemon). Server PVCs additionally
-# merge in server.persistence.annotations (server-specific values take precedence).
+# Annotations added to all Consul PVCs (server and backup daemon).
 # @type: object
 pvc:
   metadata:
@@ -2489,11 +2484,22 @@ pvc:
 
 # Server PVC annotation migration during helm upgrade. The backup-daemon PVC is helm-managed,
 # so its annotations are reconciled automatically on upgrade and need no migration job.
-# When enabled, a pre-upgrade resource-migrator Job patches the existing consul-server PVCs
-# (which are owned by the StatefulSet, not by Helm) to add new annotations and remove stale
-# ones (keys no longer present in pvc.metadata.annotations / server.persistence.annotations).
+# When enabled, a pre-upgrade resource-migrator Job compares the actual annotations from the server
+# StatefulSet volumeClaimTemplates with the desired pvc.metadata.annotations. If they differ, it patches
+# the existing consul-server PVCs (which are owned by the StatefulSet, not by Helm) to add new annotations
+# and remove stale ones, and then deletes the server StatefulSet with '--cascade=orphan' (pods and PVCs
+# are kept), because volumeClaimTemplates are immutable and the upgrade would fail otherwise.
+# Helm recreates the StatefulSet with the new volumeClaimTemplates during the upgrade.
 resourceMigration:
   enabled: false
+  resources:
+    requests:
+      memory: "75Mi"
+      cpu: "75m"
+    limits:
+      memory: "150Mi"
+      cpu: "150m"
+  securityContext: {}
 
 # Cloud Release Integration
 # The name of the Service exposed for the database.

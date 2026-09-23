@@ -1,5 +1,5 @@
 {{- if .Values.resourceMigration.enabled }}
-{{- $serverAnnotations := mustMerge (dict) .Values.server.persistence.annotations (default dict .Values.pvc.metadata.annotations) }}
+{{- $desiredAnnotations := .Values.pvc.metadata.annotations | default (dict) }}
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -24,7 +24,7 @@ spec:
       {{- if not (eq (include "openshift.enabled" .) "true") }}
       securityContext:
         {{- include "consul.globalPodSecurityContext" . | nindent 8 }}
-        {{- with .Values.updateResourcesJob.securityContext }}
+        {{- with .Values.resourceMigration.securityContext }}
         {{- toYaml . | nindent 8 -}}
         {{- end }}
       {{- end }}
@@ -43,7 +43,7 @@ spec:
               NAMESPACE="{{ .Release.Namespace }}"
               FULLNAME="{{ template "consul.fullname" . }}"
               SERVER_STS_NAME="${FULLNAME}-server"
-              DESIRED_SERVER='{{ $serverAnnotations | toJson }}'
+              DESIRED_ANNOTATIONS='{{ $desiredAnnotations | toJson }}'
 
               # The CURRENT annotations are read from the StatefulSet's volumeClaimTemplates, which
               # contain only the annotations set by this chart. A live PVC also carries annotations
@@ -62,19 +62,19 @@ spec:
                 exit 0
               fi
 
-              ACTUAL_SERVER="$(printf '%s' "$STS_JSON" | jq -cS '.spec.volumeClaimTemplates[0].metadata.annotations // {}')"
-              DESIRED_SERVER="$(printf '%s' "$DESIRED_SERVER" | jq -cS '.')"
+              ACTUAL_ANNOTATIONS="$(printf '%s' "$STS_JSON" | jq -cS '.spec.volumeClaimTemplates[0].metadata.annotations // {}')"
+              DESIRED_ANNOTATIONS="$(printf '%s' "$DESIRED_ANNOTATIONS" | jq -cS 'with_entries(.value |= tostring)')"
 
-              if [ "$ACTUAL_SERVER" = "$DESIRED_SERVER" ]; then
+              if [ "$ACTUAL_ANNOTATIONS" = "$DESIRED_ANNOTATIONS" ]; then
                 echo "[resource-migrator] Server PVC annotations already up to date"
                 echo "[resource-migrator] done"
                 exit 0
               fi
 
-              echo "[resource-migrator] Server PVC annotations changed (actual=$ACTUAL_SERVER desired=$DESIRED_SERVER)"
+              echo "[resource-migrator] Server PVC annotations changed (actual=$ACTUAL_ANNOTATIONS desired=$DESIRED_ANNOTATIONS)"
 
               # Desired annotations, plus null for keys previously set by the chart but no longer desired.
-              PATCH=$(jq -cn --argjson desired "$DESIRED_SERVER" --argjson old "$ACTUAL_SERVER" '
+              PATCH=$(jq -cn --argjson desired "$DESIRED_ANNOTATIONS" --argjson old "$ACTUAL_ANNOTATIONS" '
                 def stale: ($old | keys) - ($desired | keys);
                 reduce stale[] as $key ($desired; .[$key] = null)
                 | { metadata: { annotations: . } }
@@ -88,14 +88,19 @@ spec:
                 kubectl patch pvc "$PVC" -n "$NAMESPACE" --type=merge -p "$PATCH"
               done
 
+              # volumeClaimTemplates are immutable, so the upgrade would fail on the changed annotations.
+              # Delete the StatefulSet keeping its pods and PVCs; Helm recreates it during the upgrade.
+              echo "[resource-migrator] Deleting StatefulSet $SERVER_STS_NAME with --cascade=orphan"
+              kubectl delete statefulset "$SERVER_STS_NAME" -n "$NAMESPACE" --cascade=orphan --wait=true
+
               echo "[resource-migrator] done"
           resources:
             requests:
-              cpu: {{ default "75m" .Values.updateResourcesJob.resources.requests.cpu }}
-              memory: {{ default "75Mi" .Values.updateResourcesJob.resources.requests.memory }}
+              cpu: {{ default "75m" .Values.resourceMigration.resources.requests.cpu }}
+              memory: {{ default "75Mi" .Values.resourceMigration.resources.requests.memory }}
             limits:
-              cpu: {{ default "150m" .Values.updateResourcesJob.resources.limits.cpu }}
-              memory: {{ default "150Mi" .Values.updateResourcesJob.resources.limits.memory }}
+              cpu: {{ default "150m" .Values.resourceMigration.resources.limits.cpu }}
+              memory: {{ default "150Mi" .Values.resourceMigration.resources.limits.memory }}
           securityContext:
             {{- include "consul.globalContainerSecurityContext" . | nindent 12 }}
 {{- end }}

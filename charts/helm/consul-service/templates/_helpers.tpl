@@ -1119,15 +1119,7 @@ Coerce all annotation values to quoted strings (handles booleans/numbers).
 {{- end -}}
 
 {{/*
-Annotations for server PVCs (volumeClaimTemplates): per-server merged with global; per-server wins.
-*/}}
-{{- define "consul.server.persistence.annotations" -}}
-{{- include "consul.stringifyAnnotations" (mustMerge (dict) .Values.server.persistence.annotations .Values.pvc.metadata.annotations) | trim -}}
-{{- end -}}
-
-{{/*
-Global annotations applied to standalone Consul PVCs (backup-daemon) that only receive the
-global 'pvc.metadata.annotations'.
+Global annotations applied to all Consul PVCs (server volumeClaimTemplates, server PVCs and backup-daemon PVC).
 */}}
 {{- define "consul.pvc.metadata.annotations" -}}
 {{- include "consul.stringifyAnnotations" (.Values.pvc.metadata.annotations | default (dict)) | trim -}}
