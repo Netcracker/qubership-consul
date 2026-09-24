@@ -109,7 +109,7 @@ spec:
           {{- end }}
           env:
             - name: WATCH_NAMESPACE
-              value: {{ default "" .Values.consulAclConfigurator.namespaces }}
+              value: {{ default "*" .Values.consulAclConfigurator.namespaces }}
             - name: NAMESPACE
               valueFrom:
                 fieldRef:
