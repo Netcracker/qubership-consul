@@ -22,20 +22,16 @@ from PlatformLibrary import PlatformLibrary
 environ = os.environ
 namespace = environ.get("CONSUL_NAMESPACE")
 service = environ.get("CONSUL_HOST")
-self_deployment = environ.get("STATUS_CUSTOM_RESOURCE_NAME")
+deployments = [name for name in (environ.get("CONSUL_BACKUP_DAEMON_HOST"),
+                                 environ.get("CONSUL_ACL_CONFIGURATOR_HOST")) if name]
 timeout = 500
 
 
 def components_ready(k8s_library):
     if not k8s_library.is_stateful_set_rolled_out(service, namespace):
         return False
-    for deployment in k8s_library.get_deployment_entities(namespace):
-        name = deployment.metadata.name
-        if name == self_deployment:
-            continue
-        if (deployment.spec.replicas or 0) == 0:
-            continue
-        if not k8s_library.is_deployment_rolled_out(name, namespace):
+    for name in deployments:
+        if not k8s_library.is_deployment_rolled_out(name, namespace, "app.kubernetes.io/name"):
             return False
     return True
 
