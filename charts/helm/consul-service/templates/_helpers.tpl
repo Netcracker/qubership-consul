@@ -1108,3 +1108,20 @@ Read-only mount for a pod-secrets projected volume.
   mountPath: {{ .mountPath }}
   readOnly: true
 {{- end -}}
+
+{{/*
+Coerce all annotation values to quoted strings (handles booleans/numbers).
+*/}}
+{{- define "consul.stringifyAnnotations" -}}
+{{- range $key, $value := . }}
+{{ $key }}: {{ $value | toString | quote }}
+{{- end }}
+{{- end -}}
+
+{{/*
+Global annotations applied to all Consul PVCs (server volumeClaimTemplates, server PVCs and backup-daemon PVC).
+*/}}
+{{- define "consul.pvc.metadata.annotations" -}}
+{{- include "consul.stringifyAnnotations" (.Values.pvc.metadata.annotations | default (dict)) | trim -}}
+{{- end -}}
+
