@@ -45,11 +45,10 @@ Full Backup
 
 Check Backup Status
     [Arguments]  ${backup_id}  ${is_granular}
-    ${status}=  Get Request  backupsession  /listbackups/${backup_id}
-    ${content}=  Set Variable  ${status.json()}
-    Should Be Equal As Strings  ${content['failed']}  False
-    Should Be Equal As Strings  ${content['valid']}  True
-    Should Be Equal As Strings  ${content['is_granular']}  ${is_granular}
+    ${status}=  Get Request  backupsession  /jobstatus/${backup_id}
+    Should Be Equal As Strings  ${status.json()['status']}  Successful
+    ${info}=  Get Request  backupsession  /listbackups/${backup_id}
+    Should Be Equal As Strings  ${info.json()['is_granular']}  ${is_granular}
 
 Delete Test Data
     Delete Test Data From Consul  ${test_key}
