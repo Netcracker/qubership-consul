@@ -268,11 +268,11 @@
                                                     "description": "The minimum amount of memory the TLS init job container should use"
                                                 },
                                                 "cpu": {
-                                                    "type": "string",
                                                     "default": "50m",
                                                     "$id": "#/properties/global/properties/tls/properties/init/properties/resources/properties/requests/properties/cpu",
                                                     "title": "The global.tls.init.resources.requests.cpu schema",
-                                                    "description": "The minimum number of CPUs the TLS init job container should use"
+                                                    "description": "The minimum number of CPUs the TLS init job container should use",
+                                                    "comment": "don't use type field, because it breaks backward compatibility"
                                                 }
                                             },
                                             "$id": "#/properties/global/properties/tls/properties/init/properties/resources/properties/requests",
@@ -290,11 +290,11 @@
                                                     "description": "The maximum amount of memory the TLS init job container should use"
                                                 },
                                                 "cpu": {
-                                                    "type": "string",
                                                     "default": "50m",
                                                     "$id": "#/properties/global/properties/tls/properties/init/properties/resources/properties/limits/properties/cpu",
                                                     "title": "The global.tls.init.resources.limits.cpu schema",
-                                                    "description": "The maximum number of CPUs the TLS init job container should use"
+                                                    "description": "The maximum number of CPUs the TLS init job container should use",
+                                                    "comment": "don't use type field, because it breaks backward compatibility"
                                                 }
                                             },
                                             "$id": "#/properties/global/properties/tls/properties/init/properties/resources/properties/limits",
@@ -430,11 +430,11 @@
                                                     "description": "The minimum amount of memory the ACLs init job container should use"
                                                 },
                                                 "cpu": {
-                                                    "type": "string",
                                                     "default": "50m",
                                                     "$id": "#/properties/global/properties/acls/properties/init/properties/resources/properties/requests/properties/cpu",
                                                     "title": "The global.acls.init.resources.requests.cpu schema",
-                                                    "description": "The minimum number of CPUs the ACLs init job container should use"
+                                                    "description": "The minimum number of CPUs the ACLs init job container should use",
+                                                    "comment": "don't use type field, because it breaks backward compatibility"
                                                 }
                                             },
                                             "$id": "#/properties/global/properties/acls/properties/init/properties/resources/properties/requests",
@@ -452,11 +452,11 @@
                                                     "description": "The maximum amount of memory the ACLs init job container should use"
                                                 },
                                                 "cpu": {
-                                                    "type": "string",
                                                     "default": "50m",
                                                     "$id": "#/properties/global/properties/acls/properties/init/properties/resources/properties/limits/properties/cpu",
                                                     "title": "The global.acls.init.resources.limits.cpu schema",
-                                                    "description": "The maximum number of CPUs the ACLs init job container should use"
+                                                    "description": "The maximum number of CPUs the ACLs init job container should use",
+                                                    "comment": "don't use type field, because it breaks backward compatibility"
                                                 }
                                             },
                                             "$id": "#/properties/global/properties/acls/properties/init/properties/resources/properties/limits",
@@ -774,11 +774,11 @@
                                     "type": "object",
                                     "properties": {
                                         "cpu": {
-                                            "type": "string",
                                             "default": "25m",
                                             "$id": "#/properties/global/properties/disasterRecovery/properties/resources/properties/requests/properties/cpu",
                                             "title": "The global.disasterRecovery.resources.requests.cpu schema",
-                                            "description": "The minimum number of CPUs the disaster recovery daemon container should use"
+                                            "description": "The minimum number of CPUs the disaster recovery daemon container should use",
+                                            "comment": "don't use type field, because it breaks backward compatibility"
                                         },
                                         "memory": {
                                             "type": "string",
@@ -796,11 +796,11 @@
                                     "type": "object",
                                     "properties": {
                                         "cpu": {
-                                            "type": "string",
                                             "default": "100m",
                                             "$id": "#/properties/global/properties/disasterRecovery/properties/resources/properties/limits/properties/cpu",
                                             "title": "The global.disasterRecovery.resources.limits.cpu schema",
-                                            "description": "The maximum number of CPUs the disaster recovery daemon container should use"
+                                            "description": "The maximum number of CPUs the disaster recovery daemon container should use",
+                                            "comment": "don't use type field, because it breaks backward compatibility"
                                         },
                                         "memory": {
                                             "type": "string",
@@ -883,7 +883,6 @@
                     "description": "global.velero parameters"
                 }
             },
-            "additionalProperties": true,
             "$id": "#/properties/global",
             "title": "The global schema",
             "description": "global parameters"
@@ -1078,11 +1077,11 @@
                                     "description": "The minimum amount of memory the Consul server container should use"
                                 },
                                 "cpu": {
-                                    "type": "string",
                                     "default": "50m",
                                     "$id": "#/properties/server/properties/resources/properties/requests/properties/cpu",
                                     "title": "The server.resources.requests.cpu schema",
-                                    "description": "The minimum number of CPUs the Consul server container should use"
+                                    "description": "The minimum number of CPUs the Consul server container should use",
+                                    "comment": "don't use type field, because it breaks backward compatibility"
                                 }
                             },
                             "$id": "#/properties/server/properties/resources/properties/requests",
@@ -1100,11 +1099,11 @@
                                     "description": "The maximum amount of memory the Consul server container should use"
                                 },
                                 "cpu": {
-                                    "type": "string",
                                     "default": "400m",
                                     "$id": "#/properties/server/properties/resources/properties/limits/properties/cpu",
                                     "title": "The server.resources.limits.cpu schema",
-                                    "description": "The maximum number of CPUs the Consul server container should use"
+                                    "description": "The maximum number of CPUs the Consul server container should use",
+                                    "comment": "don't use type field, because it breaks backward compatibility"
                                 }
                             },
                             "$id": "#/properties/server/properties/resources/properties/limits",
@@ -1404,11 +1403,11 @@
                                             "description": "The minimum amount of memory the ACL init job container should use"
                                         },
                                         "cpu": {
-                                            "type": "string",
                                             "default": "50m",
                                             "$id": "#/properties/server/properties/aclInit/properties/resources/properties/requests/properties/cpu",
                                             "title": "The server.aclInit.resources.requests.cpu schema",
-                                            "description": "The minimum number of CPUs the ACL init job container should use"
+                                            "description": "The minimum number of CPUs the ACL init job container should use",
+                                            "comment": "don't use type field, because it breaks backward compatibility"
                                         }
                                     },
                                     "$id": "#/properties/server/properties/aclInit/properties/resources/properties/requests",
@@ -1426,11 +1425,11 @@
                                             "description": "The maximum amount of memory the ACL init job container should use"
                                         },
                                         "cpu": {
-                                            "type": "string",
                                             "default": "100m",
                                             "$id": "#/properties/server/properties/aclInit/properties/resources/properties/limits/properties/cpu",
                                             "title": "The server.aclInit.resources.limits.cpu schema",
-                                            "description": "The maximum number of CPUs the ACL init job container should use"
+                                            "description": "The maximum number of CPUs the ACL init job container should use",
+                                            "comment": "don't use type field, because it breaks backward compatibility"
                                         }
                                     },
                                     "$id": "#/properties/server/properties/aclInit/properties/resources/properties/limits",
@@ -1651,11 +1650,11 @@
                                     "description": "The minimum amount of memory the Consul client container should use"
                                 },
                                 "cpu": {
-                                    "type": "string",
                                     "default": "25m",
                                     "$id": "#/properties/client/properties/resources/properties/requests/properties/cpu",
                                     "title": "The client.resources.requests.cpu schema",
-                                    "description": "The minimum number of CPUs the Consul client container should use"
+                                    "description": "The minimum number of CPUs the Consul client container should use",
+                                    "comment": "don't use type field, because it breaks backward compatibility"
                                 }
                             },
                             "$id": "#/properties/client/properties/resources/properties/requests",
@@ -1673,11 +1672,11 @@
                                     "description": "The maximum amount of memory the Consul client container should use"
                                 },
                                 "cpu": {
-                                    "type": "string",
                                     "default": "200m",
                                     "$id": "#/properties/client/properties/resources/properties/limits/properties/cpu",
                                     "title": "The client.resources.limits.cpu schema",
-                                    "description": "The maximum number of CPUs the Consul client container should use"
+                                    "description": "The maximum number of CPUs the Consul client container should use",
+                                    "comment": "don't use type field, because it breaks backward compatibility"
                                 }
                             },
                             "$id": "#/properties/client/properties/resources/properties/limits",
@@ -2261,11 +2260,11 @@
                                     "description": "The minimum amount of memory the Sync Catalog container should use"
                                 },
                                 "cpu": {
-                                    "type": "string",
                                     "default": "50m",
                                     "$id": "#/properties/syncCatalog/properties/resources/properties/requests/properties/cpu",
                                     "title": "The syncCatalog.resources.requests.cpu schema",
-                                    "description": "The minimum number of CPUs the Sync Catalog container should use"
+                                    "description": "The minimum number of CPUs the Sync Catalog container should use",
+                                    "comment": "don't use type field, because it breaks backward compatibility"
                                 }
                             },
                             "$id": "#/properties/syncCatalog/properties/resources/properties/requests",
@@ -2283,11 +2282,11 @@
                                     "description": "The maximum amount of memory the Sync Catalog container should use"
                                 },
                                 "cpu": {
-                                    "type": "string",
                                     "default": "50m",
                                     "$id": "#/properties/syncCatalog/properties/resources/properties/limits/properties/cpu",
                                     "title": "The syncCatalog.resources.limits.cpu schema",
-                                    "description": "The maximum number of CPUs the Sync Catalog container should use"
+                                    "description": "The maximum number of CPUs the Sync Catalog container should use",
+                                    "comment": "don't use type field, because it breaks backward compatibility"
                                 }
                             },
                             "$id": "#/properties/syncCatalog/properties/resources/properties/limits",
@@ -2493,11 +2492,11 @@
                                     "description": "The minimum amount of memory the Connect Injector container should use"
                                 },
                                 "cpu": {
-                                    "type": "string",
                                     "default": "50m",
                                     "$id": "#/properties/connectInject/properties/resources/properties/requests/properties/cpu",
                                     "title": "The connectInject.resources.requests.cpu schema",
-                                    "description": "The minimum number of CPUs the Connect Injector container should use"
+                                    "description": "The minimum number of CPUs the Connect Injector container should use",
+                                    "comment": "don't use type field, because it breaks backward compatibility"
                                 }
                             },
                             "$id": "#/properties/connectInject/properties/resources/properties/requests",
@@ -2515,11 +2514,11 @@
                                     "description": "The maximum amount of memory the Connect Injector container should use"
                                 },
                                 "cpu": {
-                                    "type": "string",
                                     "default": "50m",
                                     "$id": "#/properties/connectInject/properties/resources/properties/limits/properties/cpu",
                                     "title": "The connectInject.resources.limits.cpu schema",
-                                    "description": "The maximum number of CPUs the Connect Injector container should use"
+                                    "description": "The maximum number of CPUs the Connect Injector container should use",
+                                    "comment": "don't use type field, because it breaks backward compatibility"
                                 }
                             },
                             "$id": "#/properties/connectInject/properties/resources/properties/limits",
@@ -2674,11 +2673,11 @@
                                             "description": "The minimum amount of memory the Consul DataPlane sidecar proxy container injected into each Connect pod should use"
                                         },
                                         "cpu": {
-                                            "type": "string",
                                             "default": null,
                                             "$id": "#/properties/connectInject/properties/sidecarProxy/properties/resources/properties/requests/properties/cpu",
                                             "title": "The connectInject.sidecarProxy.resources.requests.cpu schema",
-                                            "description": "The minimum number of CPUs the Consul DataPlane sidecar proxy container injected into each Connect pod should use"
+                                            "description": "The minimum number of CPUs the Consul DataPlane sidecar proxy container injected into each Connect pod should use",
+                                            "comment": "don't use type field, because it breaks backward compatibility"
                                         }
                                     },
                                     "$id": "#/properties/connectInject/properties/sidecarProxy/properties/resources/properties/requests",
@@ -2696,11 +2695,11 @@
                                             "description": "The maximum amount of memory the Consul DataPlane sidecar proxy container injected into each Connect pod should use"
                                         },
                                         "cpu": {
-                                            "type": "string",
                                             "default": null,
                                             "$id": "#/properties/connectInject/properties/sidecarProxy/properties/resources/properties/limits/properties/cpu",
                                             "title": "The connectInject.sidecarProxy.resources.limits.cpu schema",
-                                            "description": "The maximum number of CPUs the Consul DataPlane sidecar proxy container injected into each Connect pod should use"
+                                            "description": "The maximum number of CPUs the Consul DataPlane sidecar proxy container injected into each Connect pod should use",
+                                            "comment": "don't use type field, because it breaks backward compatibility"
                                         }
                                     },
                                     "$id": "#/properties/connectInject/properties/sidecarProxy/properties/resources/properties/limits",
@@ -2734,11 +2733,11 @@
                                             "description": "The minimum amount of memory the Connect injected init container should use"
                                         },
                                         "cpu": {
-                                            "type": "string",
                                             "default": "50m",
                                             "$id": "#/properties/connectInject/properties/initContainer/properties/resources/properties/requests/properties/cpu",
                                             "title": "The connectInject.initContainer.resources.requests.cpu schema",
-                                            "description": "The minimum number of CPUs the Connect injected init container should use"
+                                            "description": "The minimum number of CPUs the Connect injected init container should use",
+                                            "comment": "don't use type field, because it breaks backward compatibility"
                                         }
                                     },
                                     "$id": "#/properties/connectInject/properties/initContainer/properties/resources/properties/requests",
@@ -2756,11 +2755,11 @@
                                             "description": "The maximum amount of memory the Connect injected init container should use"
                                         },
                                         "cpu": {
-                                            "type": "string",
                                             "default": "50m",
                                             "$id": "#/properties/connectInject/properties/initContainer/properties/resources/properties/limits/properties/cpu",
                                             "title": "The connectInject.initContainer.resources.limits.cpu schema",
-                                            "description": "The maximum number of CPUs the Connect injected init container should use"
+                                            "description": "The maximum number of CPUs the Connect injected init container should use",
+                                            "comment": "don't use type field, because it breaks backward compatibility"
                                         }
                                     },
                                     "$id": "#/properties/connectInject/properties/initContainer/properties/resources/properties/limits",
@@ -2942,11 +2941,11 @@
                                     "description": "The minimum amount of memory the Mesh Gateway container should use"
                                 },
                                 "cpu": {
-                                    "type": "string",
                                     "default": "50m",
                                     "$id": "#/properties/meshGateway/properties/resources/properties/requests/properties/cpu",
                                     "title": "The meshGateway.resources.requests.cpu schema",
-                                    "description": "The minimum number of CPUs the Mesh Gateway container should use"
+                                    "description": "The minimum number of CPUs the Mesh Gateway container should use",
+                                    "comment": "don't use type field, because it breaks backward compatibility"
                                 }
                             },
                             "$id": "#/properties/meshGateway/properties/resources/properties/requests",
@@ -2964,11 +2963,11 @@
                                     "description": "The maximum amount of memory the Mesh Gateway container should use"
                                 },
                                 "cpu": {
-                                    "type": "string",
                                     "default": "400m",
                                     "$id": "#/properties/meshGateway/properties/resources/properties/limits/properties/cpu",
                                     "title": "The meshGateway.resources.limits.cpu schema",
-                                    "description": "The maximum number of CPUs the Mesh Gateway container should use"
+                                    "description": "The maximum number of CPUs the Mesh Gateway container should use",
+                                    "comment": "don't use type field, because it breaks backward compatibility"
                                 }
                             },
                             "$id": "#/properties/meshGateway/properties/resources/properties/limits",
@@ -2997,11 +2996,11 @@
                                             "description": "The minimum amount of memory the Mesh Gateway `copy-consul-bin` init container should use"
                                         },
                                         "cpu": {
-                                            "type": "string",
                                             "default": "50m",
                                             "$id": "#/properties/meshGateway/properties/initServiceInitContainer/properties/resources/properties/requests/properties/cpu",
                                             "title": "The meshGateway.initServiceInitContainer.resources.requests.cpu schema",
-                                            "description": "The minimum number of CPUs the Mesh Gateway `copy-consul-bin` init container should use"
+                                            "description": "The minimum number of CPUs the Mesh Gateway `copy-consul-bin` init container should use",
+                                            "comment": "don't use type field, because it breaks backward compatibility"
                                         }
                                     },
                                     "$id": "#/properties/meshGateway/properties/initServiceInitContainer/properties/resources/properties/requests",
@@ -3019,11 +3018,11 @@
                                             "description": "The maximum amount of memory the Mesh Gateway `copy-consul-bin` init container should use"
                                         },
                                         "cpu": {
-                                            "type": "string",
                                             "default": "50m",
                                             "$id": "#/properties/meshGateway/properties/initServiceInitContainer/properties/resources/properties/limits/properties/cpu",
                                             "title": "The meshGateway.initServiceInitContainer.resources.limits.cpu schema",
-                                            "description": "The maximum number of CPUs the Mesh Gateway `copy-consul-bin` init container should use"
+                                            "description": "The maximum number of CPUs the Mesh Gateway `copy-consul-bin` init container should use",
+                                            "comment": "don't use type field, because it breaks backward compatibility"
                                         }
                                     },
                                     "$id": "#/properties/meshGateway/properties/initServiceInitContainer/properties/resources/properties/limits",
@@ -3141,11 +3140,11 @@
                             "type": "object",
                             "properties": {
                                 "cpu": {
-                                    "type": "string",
                                     "default": "15m",
                                     "$id": "#/properties/podScheduler/properties/resources/properties/requests/properties/cpu",
                                     "title": "The podScheduler.resources.requests.cpu schema",
-                                    "description": "The minimum number of CPUs the Pod Scheduler container should use"
+                                    "description": "The minimum number of CPUs the Pod Scheduler container should use",
+                                    "comment": "don't use type field, because it breaks backward compatibility"
                                 },
                                 "memory": {
                                     "type": "string",
@@ -3163,11 +3162,11 @@
                             "type": "object",
                             "properties": {
                                 "cpu": {
-                                    "type": "string",
                                     "default": "50m",
                                     "$id": "#/properties/podScheduler/properties/resources/properties/limits/properties/cpu",
                                     "title": "The podScheduler.resources.limits.cpu schema",
-                                    "description": "The maximum number of CPUs the Pod Scheduler container should use"
+                                    "description": "The maximum number of CPUs the Pod Scheduler container should use",
+                                    "comment": "don't use type field, because it breaks backward compatibility"
                                 },
                                 "memory": {
                                     "type": "string",
@@ -3458,11 +3457,11 @@
                                     "description": "The minimum amount of memory the Consul backup daemon container should use"
                                 },
                                 "cpu": {
-                                    "type": "string",
                                     "default": "25m",
                                     "$id": "#/properties/backupDaemon/properties/resources/properties/requests/properties/cpu",
                                     "title": "The backupDaemon.resources.requests.cpu schema",
-                                    "description": "The minimum number of CPUs the Consul backup daemon container should use"
+                                    "description": "The minimum number of CPUs the Consul backup daemon container should use",
+                                    "comment": "don't use type field, because it breaks backward compatibility"
                                 }
                             },
                             "$id": "#/properties/backupDaemon/properties/resources/properties/requests",
@@ -3480,11 +3479,11 @@
                                     "description": "The maximum amount of memory the Consul backup daemon container should use"
                                 },
                                 "cpu": {
-                                    "type": "string",
                                     "default": "200m",
                                     "$id": "#/properties/backupDaemon/properties/resources/properties/limits/properties/cpu",
                                     "title": "The backupDaemon.resources.limits.cpu schema",
-                                    "description": "The maximum number of CPUs the Consul backup daemon container should use"
+                                    "description": "The maximum number of CPUs the Consul backup daemon container should use",
+                                    "comment": "don't use type field, because it breaks backward compatibility"
                                 }
                             },
                             "$id": "#/properties/backupDaemon/properties/resources/properties/limits",
@@ -3577,11 +3576,11 @@
                                     "description": "The minimum amount of memory the Consul ACL Configurator containers should use"
                                 },
                                 "cpu": {
-                                    "type": "string",
                                     "default": "25m",
                                     "$id": "#/properties/consulAclConfigurator/properties/resources/properties/requests/properties/cpu",
                                     "title": "The consulAclConfigurator.resources.requests.cpu schema",
-                                    "description": "The minimum number of CPUs the Consul ACL Configurator containers should use"
+                                    "description": "The minimum number of CPUs the Consul ACL Configurator containers should use",
+                                    "comment": "don't use type field, because it breaks backward compatibility"
                                 }
                             },
                             "$id": "#/properties/consulAclConfigurator/properties/resources/properties/requests",
@@ -3599,11 +3598,11 @@
                                     "description": "The maximum amount of memory the Consul ACL Configurator containers should use"
                                 },
                                 "cpu": {
-                                    "type": "string",
                                     "default": "100m",
                                     "$id": "#/properties/consulAclConfigurator/properties/resources/properties/limits/properties/cpu",
                                     "title": "The consulAclConfigurator.resources.limits.cpu schema",
-                                    "description": "The maximum number of CPUs the Consul ACL Configurator containers should use"
+                                    "description": "The maximum number of CPUs the Consul ACL Configurator containers should use",
+                                    "comment": "don't use type field, because it breaks backward compatibility"
                                 }
                             },
                             "$id": "#/properties/consulAclConfigurator/properties/resources/properties/limits",
@@ -3736,11 +3735,11 @@
                                     "description": "The minimum amount of memory the container should use"
                                 },
                                 "cpu": {
-                                    "type": "string",
                                     "default": "50m",
                                     "$id": "#/properties/statusProvisioner/properties/resources/properties/requests/properties/cpu",
                                     "title": "The statusProvisioner.resources.requests.cpu schema",
-                                    "description": "The minimum number of CPUs the container should use"
+                                    "description": "The minimum number of CPUs the container should use",
+                                    "comment": "don't use type field, because it breaks backward compatibility"
                                 }
                             },
                             "$id": "#/properties/statusProvisioner/properties/resources/properties/requests",
@@ -3758,11 +3757,11 @@
                                     "description": "The maximum amount of memory the container should use"
                                 },
                                 "cpu": {
-                                    "type": "string",
                                     "default": "100m",
                                     "$id": "#/properties/statusProvisioner/properties/resources/properties/limits/properties/cpu",
                                     "title": "The statusProvisioner.resources.limits.cpu schema",
-                                    "description": "The maximum number of CPUs the container should use"
+                                    "description": "The maximum number of CPUs the container should use",
+                                    "comment": "don't use type field, because it breaks backward compatibility"
                                 }
                             },
                             "$id": "#/properties/statusProvisioner/properties/resources/properties/limits",
@@ -3809,11 +3808,11 @@
                                     "description": "The minimum amount of memory the container should use"
                                 },
                                 "cpu": {
-                                    "type": "string",
                                     "default": "75m",
                                     "$id": "#/properties/updateResourcesJob/properties/resources/properties/requests/properties/cpu",
                                     "title": "The updateResourcesJob.resources.requests.cpu schema",
-                                    "description": "The minimum number of CPUs the container should use"
+                                    "description": "The minimum number of CPUs the container should use",
+                                    "comment": "don't use type field, because it breaks backward compatibility"
                                 }
                             },
                             "$id": "#/properties/updateResourcesJob/properties/resources/properties/requests",
@@ -3831,11 +3830,11 @@
                                     "description": "The maximum amount of memory the container should use"
                                 },
                                 "cpu": {
-                                    "type": "string",
                                     "default": "150m",
                                     "$id": "#/properties/updateResourcesJob/properties/resources/properties/limits/properties/cpu",
                                     "title": "The updateResourcesJob.resources.limits.cpu schema",
-                                    "description": "The maximum number of CPUs the container should use"
+                                    "description": "The maximum number of CPUs the container should use",
+                                    "comment": "don't use type field, because it breaks backward compatibility"
                                 }
                             },
                             "$id": "#/properties/updateResourcesJob/properties/resources/properties/limits",
@@ -3985,11 +3984,11 @@
                                     "description": "The minimum amount of memory the container should use"
                                 },
                                 "cpu": {
-                                    "type": "string",
                                     "default": "50m",
                                     "$id": "#/properties/integrationTests/properties/resources/properties/requests/properties/cpu",
                                     "title": "The integrationTests.resources.requests.cpu schema",
-                                    "description": "The minimum number of CPUs the container should use"
+                                    "description": "The minimum number of CPUs the container should use",
+                                    "comment": "don't use type field, because it breaks backward compatibility"
                                 }
                             },
                             "$id": "#/properties/integrationTests/properties/resources/properties/requests",
@@ -4007,11 +4006,11 @@
                                     "description": "The maximum amount of memory the container should use"
                                 },
                                 "cpu": {
-                                    "type": "string",
                                     "default": "400m",
                                     "$id": "#/properties/integrationTests/properties/resources/properties/limits/properties/cpu",
                                     "title": "The integrationTests.resources.limits.cpu schema",
-                                    "description": "The maximum number of CPUs the container should use"
+                                    "description": "The maximum number of CPUs the container should use",
+                                    "comment": "don't use type field, because it breaks backward compatibility"
                                 }
                             },
                             "$id": "#/properties/integrationTests/properties/resources/properties/limits",
