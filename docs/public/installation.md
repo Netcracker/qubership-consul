@@ -432,6 +432,7 @@ It is recommended for single environment development purposes, PoC and demos. Di
 | TLS init cleanup job    | 0.1   | 0.1     | 0           |
 | **Total (Rounded)**     | **2** | **8**   | **200**     |
 
+<!-- markdownlint-disable MD033 -->
 <details>
 <summary>Click to expand YAML</summary>
 
@@ -513,6 +514,7 @@ statusProvisioner:
 ```
 
 </details>
+<!-- markdownlint-enable MD033 -->
 
 ### Small
 
@@ -533,6 +535,7 @@ It is recommended for development purposes, PoC, demos and not heavy loaded prod
 | TLS init cleanup job    | 0.1   | 0.1     | 0           |
 | **Total (Rounded)**     | **6** | **15**  | **200**     |
 
+<!-- markdownlint-disable MD033 -->
 <details>
 <summary>Click to expand YAML</summary>
 
@@ -614,6 +617,7 @@ statusProvisioner:
 ```
 
 </details>
+<!-- markdownlint-enable MD033 -->
 
 ### Medium
 
@@ -634,6 +638,7 @@ It is recommended for deployments with average load. Disk throughput is about 75
 | TLS init cleanup job    | 0.1   | 0.1     | 0           |
 | **Total (Rounded)**     | **9** | **27**  | **400**     |
 
+<!-- markdownlint-disable MD033 -->
 <details>
 <summary>Click to expand YAML</summary>
 
@@ -715,6 +720,7 @@ statusProvisioner:
 ```
 
 </details>
+<!-- markdownlint-enable MD033 -->
 
 ### Large
 
@@ -735,6 +741,7 @@ It is recommended for deployments with high workload and large amount of data. D
 | TLS init cleanup job    | 0.1    | 0.1     | 0           |
 | **Total (Rounded)**     | **27** | **99**  | **800**     |
 
+<!-- markdownlint-disable MD033 -->
 <details>
 <summary>Click to expand YAML</summary>
 
@@ -816,6 +823,7 @@ statusProvisioner:
 ```
 
 </details>
+<!-- markdownlint-enable MD033 -->
 
 ### Additional components
 
@@ -828,6 +836,7 @@ statusProvisioner:
 | Consul Mesh Gateway     | 0.5   | 0.4     | 0           |
 | **Total (Rounded)**     | **1** | **1**   | **0**       |
 
+<!-- markdownlint-disable MD033 -->
 <details>
 <summary>Click to expand YAML</summary>
 
@@ -877,6 +886,7 @@ meshGateway:
 ```
 
 </details>
+<!-- markdownlint-enable MD033 -->
 
 # Parameters
 
@@ -1750,6 +1760,7 @@ See [Consul Disaster Recovery](/docs/public/disaster-recovery.md) guide.
 
 ### HA Scheme
 
+<!-- markdownlint-disable MD033 -->
 <details>
 <summary>Click to expand YAML</summary>
 
@@ -1818,6 +1829,7 @@ ESCAPE_SEQUENCE: true
 ```
 
 </details>
+<!-- markdownlint-enable MD033 -->
 
 ### DR Scheme
 
@@ -1923,6 +1935,7 @@ affinity rule to start pods on allowed Kubernetes nodes.
 
 For this, you can use the following affinity rules:
 
+<!-- markdownlint-disable MD033 -->
 <details>
 <summary>Click to expand YAML</summary>
 
@@ -1964,6 +1977,7 @@ server:
 ```
 
 </details>
+<!-- markdownlint-enable MD033 -->
 
 Where:
 
@@ -1982,6 +1996,7 @@ allowed Kubernetes nodes.
 
 For this, you can use the following affinity rules:
 
+<!-- markdownlint-disable MD033 -->
 <details>
 <summary>Click to expand YAML</summary>
 
@@ -2038,6 +2053,7 @@ server:
 ```
 
 </details>
+<!-- markdownlint-enable MD033 -->
 
 Where:
 
