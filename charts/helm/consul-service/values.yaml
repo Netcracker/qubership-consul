@@ -2255,7 +2255,7 @@ consulAclConfigurator:
   reconcilePeriod: 100
 
   # The parameter specifies the list of Kubernetes namespaces watched by the Consul ACL Configurator operator. Use "*" to watch all namespaces.
-  namespaces: "*"
+  namespaces: ""
 
   # The name of Kubernetes service for Consul ACL Configurator HTTP server.
   serviceName: "consul-acl-configurator-reconcile"
