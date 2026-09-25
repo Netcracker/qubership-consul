@@ -18,6 +18,8 @@ ${BACKUP_TIMEOUT}                 2min
 ${BACKUP_TIME_INTERVAL}           10s
 ${RESTORE_TIMEOUT}                2min
 ${RESTORE_TIME_INTERVAL}          10s
+${EVICT_TIMEOUT}                  1min
+${EVICT_TIME_INTERVAL}            5s
 ${S3_BUCKET}                      %{S3_BUCKET}
 ${BACKUP_STORAGE_PATH}            /opt/consul/backup-storage
 
@@ -84,10 +86,15 @@ Granular Backup
 
 Delete Backup From Backup Daemon
     [Arguments]  ${backup_id}
-    ${resp_delete}=  Post Request  backupsession  /evict/${backup_id}
-    Should Be Equal As Strings  ${resp_delete.status_code}   200
+    Wait Until Keyword Succeeds  ${EVICT_TIMEOUT}  ${EVICT_TIME_INTERVAL}
+    ...  Evict Backup  ${backup_id}
     ${list_backups} =  Get Request  backupsession  /listbackups
     Should Not Contain  ${list_backups.text}  ${backup_id}
+
+Evict Backup
+    [Arguments]  ${backup_id}
+    ${resp_delete}=  Post Request  backupsession  /evict/${backup_id}
+    Should Be Equal As Strings  ${resp_delete.status_code}   200
 
 *** Test Cases ***
 Test Full Backup And Restore On S3 Storage
