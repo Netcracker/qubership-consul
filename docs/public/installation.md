@@ -99,13 +99,13 @@ Note the following terms:
 
 The following Custom Resource Definitions should be installed to the cloud before the installation of Consul:
 
-* `ConsulACL` - When you deploy with restricted rights or the CRDs' creation is disabled by the Deployer job.
-  For more information, see [Automatic CRD Upgrade](#automatic-crd-upgrade).
-* `GrafanaDashboard`, `PrometheusRule`, and `ServiceMonitor` - They should be installed when you deploy Consul monitoring with
-  `monitoring.enabled=true` and `monitoring.monitoringType=prometheus`.
-  You need to install the Monitoring Operator service before the Consul installation.
-* `SiteManager` - It is installed when you deploy Consul with Disaster Recovery support (`global.disasterRecovery.mode`).
-  You have to install the SiteManager service before the Consul installation.
+* `ConsulACL` - When you deploy with restricted rights or the CRDs' creation is disabled by the Deployer job. For more
+  information, see [Automatic CRD Upgrade](#automatic-crd-upgrade).
+* `GrafanaDashboard`, `PrometheusRule`, and `ServiceMonitor` - They should be installed when you deploy Consul
+  monitoring with `monitoring.enabled=true` and `monitoring.monitoringType=prometheus`. You need to install the
+  Monitoring Operator service before the Consul installation.
+* `SiteManager` - It is installed when you deploy Consul with Disaster Recovery support
+  (`global.disasterRecovery.mode`). You have to install the SiteManager service before the Consul installation.
 
 **Important**: To create CRDs, you must have cloud rights for `CustomResourceDefinitions`.
 If the deployment user does not have the necessary rights, you need to perform the steps described in
@@ -285,8 +285,9 @@ To avoid using `cluster-wide` rights during the deployment, the following condit
 
 ### Multiple Availability Zone
 
-If Kubernetes cluster has several availability zones, it is more reliable to start Consul server pods in different availability zones.
-For more information, refer to [Multiple Availability Zone Deployment](#multiple-availability-zone-deployment).
+If Kubernetes cluster has several availability zones, it is more reliable to start Consul server pods in different
+availability zones. For more information, refer to [Multiple Availability Zone
+Deployment](#multiple-availability-zone-deployment).
 
 ### Storage Types
 
@@ -337,12 +338,12 @@ For more information, refer to [Pod Scheduler](#pod-scheduler) section.
 
 ### Kubernetes 1.25
 
-Kubernetes 1.25+ does not contain Pod Security Policies in its API. It is replaced with Pod Security Standards.
-In most cases it is enough to disable PSP in deployment parameters (`global.enablePodSecurityPolicies: false`)
-to allow installation to 1.25 version, but Consul Client (`client.enabled: true`) requires `hostPort` access which is not covered by
-OOB Pod Admission Control and `baseline` [Pod Security Standard](https://kubernetes.io/docs/concepts/security/pod-security-standards/).
-To be able to deploy Consul cluster with enabled `clients` you need to provide `privileged` policy to Consul namespace as prerequisite
-step.
+Kubernetes 1.25+ does not contain Pod Security Policies in its API. It is replaced with Pod Security Standards. In most
+cases it is enough to disable PSP in deployment parameters (`global.enablePodSecurityPolicies: false`) to allow
+installation to 1.25 version, but Consul Client (`client.enabled: true`) requires `hostPort` access which is not
+covered by OOB Pod Admission Control and `baseline` [Pod Security
+Standard](https://kubernetes.io/docs/concepts/security/pod-security-standards/). To be able to deploy Consul cluster
+with enabled `clients` you need to provide `privileged` policy to Consul namespace as prerequisite step.
 
 It can be performed with the following command:
 
@@ -363,21 +364,22 @@ It requires the following cluster rights for deployment user:
 
 #### Migration to Kubernetes 1.25
 
-When you have Consul with enabled `clients` and `global.enablePodSecurityPolicies: true` installed to Kubernetes 1.23+ version with
-enabled PSP admission control you need to prepare Consul service **before** Kubernetes 1.25 upgrade with the following steps:
+When you have Consul with enabled `clients` and `global.enablePodSecurityPolicies: true` installed to Kubernetes 1.23+
+version with enabled PSP admission control you need to prepare Consul service **before** Kubernetes 1.25 upgrade with
+the following steps:
 
 1. Upgrade Consul to `0.2.0+` version with enabled `privileged` PSS for namespace.
    Refer to [Deployment to Kubernetes 1.25](#kubernetes-125) guide.
 2. Enable PSS for Kubernetes `rbac.admission: pss`.
-   [KubeMarine:RBAC Admission](https://github.com/Netcracker/KubeMarine/blob/main/documentation/Installation.md#configuring-default-profiles)
+   [KubeMarine:RBAC Admission](https://github.com/Netcracker/KubeMarine/blob/main/docs/public/Installation.md#configuring-default-profiles)
   .
 3. Upgrade Consul with disabled PSP `global.enablePodSecurityPolicies: false`.
 4. Upgrade Kubernetes to 1.25.
 
 ## OpenShift
 
-* It is required to upgrade the component before upgrading OpenShift. Follow the information in tags regarding OpenShift certified
-  versions.
+* It is required to upgrade the component before upgrading OpenShift. Follow the information in tags regarding
+  OpenShift certified versions.
 * `global.openshift.enabled` parameter should be set to `true`.
 * The following annotations should be specified for the project:
 
@@ -398,11 +400,13 @@ The `AWS S3` bucket is created if a backup is necessary.
 
 ## HWE
 
-The provided values do not guarantee that these values are correct for all cases. It is a general recommendation
-. Resources should be calculated and estimated for each project case with test load on the SVT stand, especially the HDD size.
+The provided values do not guarantee that these values are correct for all cases. It is a general recommendation .
+Resources should be calculated and estimated for each project case with test load on the SVT stand, especially the HDD
+size.
 
-The Hashicorp recommends starting resources configuration from 
-[System Requirements](https://developer.hashicorp.com/consul/tutorials/production-deploy/reference-architecture#system-requirements) guide.
+The Hashicorp recommends starting resources configuration from [System
+Requirements](https://developer.hashicorp.com/consul/tutorials/production-deploy/reference-architecture#system-requirements)
+guide.
 
 ### Tiny
 
@@ -423,8 +427,10 @@ It is recommended for single environment development purposes, PoC and demos. Di
 | TLS init cleanup job    | 0.1   | 0.1     | 0           |
 | **Total (Rounded)**     | **2** | **8**   | **200**     |
 
+<!-- markdownlint-disable MD033 -->
 <details>
 <summary>Click to expand YAML</summary>
+<!-- markdownlint-enable MD033 -->
 
 ```yaml
 global:
@@ -524,8 +530,10 @@ It is recommended for development purposes, PoC, demos and not heavy loaded prod
 | TLS init cleanup job    | 0.1   | 0.1     | 0           |
 | **Total (Rounded)**     | **6** | **15**  | **200**     |
 
+<!-- markdownlint-disable MD033 -->
 <details>
 <summary>Click to expand YAML</summary>
+<!-- markdownlint-enable MD033 -->
 
 ```yaml
 global:
@@ -625,8 +633,10 @@ It is recommended for deployments with average load. Disk throughput is about 75
 | TLS init cleanup job    | 0.1   | 0.1     | 0           |
 | **Total (Rounded)**     | **9** | **27**  | **400**     |
 
+<!-- markdownlint-disable MD033 -->
 <details>
 <summary>Click to expand YAML</summary>
+<!-- markdownlint-enable MD033 -->
 
 ```yaml
 global:
@@ -726,8 +736,10 @@ It is recommended for deployments with high workload and large amount of data. D
 | TLS init cleanup job    | 0.1    | 0.1     | 0           |
 | **Total (Rounded)**     | **27** | **99**  | **800**     |
 
+<!-- markdownlint-disable MD033 -->
 <details>
 <summary>Click to expand YAML</summary>
+<!-- markdownlint-enable MD033 -->
 
 ```yaml
 global:
@@ -819,8 +831,10 @@ statusProvisioner:
 | Consul Mesh Gateway     | 0.5   | 0.4     | 0           |
 | **Total (Rounded)**     | **1** | **1**   | **0**       |
 
+<!-- markdownlint-disable MD033 -->
 <details>
 <summary>Click to expand YAML</summary>
+<!-- markdownlint-enable MD033 -->
 
 ```yaml
 global:
@@ -890,44 +904,44 @@ The global values affect all the other parameters in the chart. To enable all th
 
 You should also set the global parameters based on your specific environment requirements.
 
-| Parameter                                  | Type    | Mandatory | Default value            | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-|--------------------------------------------|---------|-----------|--------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `global.enabled`                           | boolean | no        | true                     | Whether all the components within this chart are to be enabled by default. Each component can be overridden using the component-specific `enabled` value.                                                                                                                                                                                                                                                                                                                          |
-| `global.extraLabels`                       | object  | no        | {}                       | The custom labels for all pods which are related to the Consul service. These labels can be overridden by local custom labels.                                                                                                                                                                                                                                                                                                                                                     |
-| `global.name`                              | string  | no        | consul                   | The prefix used for all resources in the Helm chart. If it is not set, the prefix is "{{ .Release.Name }}-consul". This value must be unique for all Consul clusters installed to one Kubernetes environment. It is not recommended to place multiple Consul clusters in the same Kubernetes environment but if you want to deploy Consul to Kubernetes where another Consul is already installed (e.g., for `development` purposes), you need to change this value.               |
-| `global.domain`                            | string  | no        | consul                   | The domain to register the Consul DNS server to listen for.                                                                                                                                                                                                                                                                                                                                                                                                                        |
-| `global.ipv6`                              | boolean | no        | false                    | Whether the Consul services REST API is to be started on `IPv6` interface. Set the parameter to `true` if you deploy Consul in Kubernetes environment with IPv6 network interfaces.                                                                                                                                                                                                                                                                                                |
-| `global.restrictedEnvironment`             | boolean | no        | false                    | Whether the Consul service is to be deployed in restricted environment. If it is set to `true`, necessary cluster entities (`Cluster Role`, `Cluster Role Binding`, `Pod Security Policy`) are not created automatically.                                                                                                                                                                                                                                                          |
-| `global.image`                             | string  | no        | Calculates automatically | The image of the Consul docker image for clients and servers.                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| `global.imagePullSecrets`                  | list    | no        | []                       | The list of references to secrets in the same namespace to use for pulling any of the images used by any container.                                                                                                                                                                                                                                                                                                                                                                |
-| `global.imageK8S`                          | string  | no        | Calculates automatically | The image of the `consul-k8s` docker image that is used for functionality such as the catalog sync.                                                                                                                                                                                                                                                                                                                                                                                |
-| `global.imageConsulDataplane`              | string  | no        | Calculates automatically | The image of the Consul DataPlane docker image that is used for ingress and terminating gateways.                                                                                                                                                                                                                                                                                                                                                                                  |
-| `global.datacenter`                        | string  | no        | dc1                      | The name of the datacenter that the agents should register. It should not be changed after the Consul cluster is up and running since Consul does not support an automatic way to change this value. For more information, refer to [https://github.com/hashicorp/consul/issues/1858](https://github.com/hashicorp/consul/issues/1858).                                                                                                                                            |
-| `global.enablePodSecurityPolicies`         | boolean | no        | false                    | Whether pod security policies are to be created for the Consul components created by the chart. For more information, refer to [https://kubernetes.io/docs/concepts/policy/pod-security-policy/](https://kubernetes.io/docs/concepts/policy/pod-security-policy/). **Note:** Pod security policies are not available starting from Kubernetes `1.25`. For more information, refer to [Kubernetes 1.25](#kubernetes-125).                                                           |
-| `global.gossipEncryption.secretName`       | string  | no        | ""                       | The name of the Kubernetes secret that holds the gossip encryption key. The secret must be in the same namespace that Consul is installed into.                                                                                                                                                                                                                                                                                                                                    |
-| `global.gossipEncryption.secretKey`        | string  | no        | ""                       | The key within the Kubernetes secret that holds the gossip encryption key.                                                                                                                                                                                                                                                                                                                                                                                                         |
-| `global.recursors`                         | list    | no        | []                       | The list of addresses of upstream DNS servers that are used to recursively resolve DNS queries. If this is an empty array (the default), then Consul DNS only resolves queries for the Consul top level domain (by default `.consul`).                                                                                                                                                                                                                                             |
-| `global.metrics.enabled`                   | boolean | no        | true                     | Whether the components to expose Prometheus metrics for the Consul service mesh are to be configured. By default, it includes gateway metrics and sidecar metrics.                                                                                                                                                                                                                                                                                                                 |
-| `global.metrics.enableAgentMetrics`        | boolean | no        | true                     | Whether the metrics for Consul agent are to be configured. It is applicable only if `global.metrics.enabled` is set to `true`.                                                                                                                                                                                                                                                                                                                                                     |
-| `global.metrics.agentMetricsRetentionTime` | string  | no        | 24h                      | The retention time for metrics in Consul clients and servers. It must be greater than 0 for Consul clients and servers to expose any metrics at all. It is applicable only if `global.metrics.enabled` is set to `true`.                                                                                                                                                                                                                                                           |
-| `global.metrics.enableGatewayMetrics`      | boolean | no        | true                     | Whether the `mesh`, `terminating`, and `ingress` gateways are to expose their Consul DataPlane metrics on port `20200` at the `/metrics` path and all gateway pods are to have Prometheus scrape annotations. It is applicable only if `global.metrics.enabled` is set to `true`.                                                                                                                                                                                                  |
-| `global.metrics.disableHostname`           | boolean | no        | true                     | Whether the runtime telemetry with the machine hostname is to be prepended.                                                                                                                                                                                                                                                                                                                                                                                                        |
-| `global.logLevel`                          | string  | no        | info                     | The default log level to apply to all components which do not override this setting. It is recommended to generally not set this below "info" unless actively debugging due to logging verbosity. The possible values are `debug`, `info`, `warn`, `error`.                                                                                                                                                                                                                        |
-| `global.logJSON`                           | boolean | no        | false                    | Whether the output in JSON format for all component logs is to be enabled.                                                                                                                                                                                                                                                                                                                                                                                                         |
-| `global.openshift.enabled`                 | boolean | no        | false                    | Whether the necessary configuration for running Consul components on OpenShift is to be created.                                                                                                                                                                                                                                                                                                                                                                                   |
-| `global.consulAPITimeout`                  | string  | no        | 5s                       | The time in seconds that the Consul API client waits for a response from the API before cancelling the request.                                                                                                                                                                                                                                                                                                                                                                    |
-| `global.securityContext`                   | object  | no        | {}                       | The pod-level security attributes and common container settings for all pods that are related to the Consul service. This security context can be overridden by component `securityContext` parameter.                                                                                                                                                                                                                                                                             |
-| `global.velero.postHookRestoreEnabled`     | boolean | no        | true                     | Whether Velero restore post-hook with Auth Method restore command is to be enabled. If parameter is set to `true`, Consul Backup Daemon initiates update of Consul Auth Methods with actual tokens after Velero restore procedure. For more information about Velero restore hooks, see [Restore Hooks](https://velero.io/docs/v1.9/restore-hooks/). **NOTE**: Backup Daemon should be enabled for Velero integration (`backupDaemon.enabled: true`).                              |
-| `global.cloudIntegrationEnabled`           | boolean | no        | true                     | This parameter specifies whether to apply [Cloud Integration Parameters](#cloud-integration-parameters) instead of parameters described in Consul. If it is set to false or global parameter is absent, corresponding parameter from Consul is applied.                                                                                                                                                                                                                            |
-| `global.ports.https`                       | string  | no        | ""                       | This parameter specifies custom global https port providing the ability to deploy two Consul instances with enabled Clients to one cluster. This parameter affects both servers and clients unless the corresponding values are overridden in the server or client configuration sections.                                                                                                                                                                                         |
-| `global.ports.http`                        | string  | no        | ""                       | This parameter specifies custom global http port providing the ability to deploy two Consul instances with enabled Clients to one cluster. This parameter affects both servers and clients unless the corresponding values are overridden in the server or client configuration sections.                                                                                                                                                                                          |
-| `global.ports.grpc`                        | string  | no        | ""                       | This parameter specifies custom global grpc port providing the ability to deploy two Consul instances with enabled Clients to one cluster. This parameter affects both servers and clients unless the corresponding values are overridden in the server or client configuration sections.                                                                                                                                                                                          |
+| Parameter                                  | Type    | Mandatory | Default value            | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+|--------------------------------------------|---------|-----------|--------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `global.enabled`                           | boolean | no        | true                     | Whether all the components within this chart are to be enabled by default. Each component can be overridden using the component-specific `enabled` value.                                                                                                                                                                                                                                                                                                            |
+| `global.extraLabels`                       | object  | no        | {}                       | The custom labels for all pods which are related to the Consul service. These labels can be overridden by local custom labels.                                                                                                                                                                                                                                                                                                                                       |
+| `global.name`                              | string  | no        | consul                   | The prefix used for all resources in the Helm chart. If it is not set, the prefix is "{{ .Release.Name }}-consul". This value must be unique for all Consul clusters installed to one Kubernetes environment. It is not recommended to place multiple Consul clusters in the same Kubernetes environment but if you want to deploy Consul to Kubernetes where another Consul is already installed (e.g., for `development` purposes), you need to change this value. |
+| `global.domain`                            | string  | no        | consul                   | The domain to register the Consul DNS server to listen for.                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `global.ipv6`                              | boolean | no        | false                    | Whether the Consul services REST API is to be started on `IPv6` interface. Set the parameter to `true` if you deploy Consul in Kubernetes environment with IPv6 network interfaces.                                                                                                                                                                                                                                                                                  |
+| `global.restrictedEnvironment`             | boolean | no        | false                    | Whether the Consul service is to be deployed in restricted environment. If it is set to `true`, necessary cluster entities (`Cluster Role`, `Cluster Role Binding`, `Pod Security Policy`) are not created automatically.                                                                                                                                                                                                                                            |
+| `global.image`                             | string  | no        | Calculates automatically | The image of the Consul docker image for clients and servers.                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `global.imagePullSecrets`                  | list    | no        | []                       | The list of references to secrets in the same namespace to use for pulling any of the images used by any container.                                                                                                                                                                                                                                                                                                                                                  |
+| `global.imageK8S`                          | string  | no        | Calculates automatically | The image of the `consul-k8s` docker image that is used for functionality such as the catalog sync.                                                                                                                                                                                                                                                                                                                                                                  |
+| `global.imageConsulDataplane`              | string  | no        | Calculates automatically | The image of the Consul DataPlane docker image that is used for ingress and terminating gateways.                                                                                                                                                                                                                                                                                                                                                                    |
+| `global.datacenter`                        | string  | no        | dc1                      | The name of the datacenter that the agents should register. It should not be changed after the Consul cluster is up and running since Consul does not support an automatic way to change this value. For more information, refer to [https://github.com/hashicorp/consul/issues/1858](https://github.com/hashicorp/consul/issues/1858).                                                                                                                              |
+| `global.enablePodSecurityPolicies`         | boolean | no        | false                    | Whether pod security policies are to be created for the Consul components created by the chart. For more information, refer to [https://kubernetes.io/docs/concepts/policy/pod-security-policy/](https://kubernetes.io/docs/concepts/policy/pod-security-policy/). **Note:** Pod security policies are not available starting from Kubernetes `1.25`. For more information, refer to [Kubernetes 1.25](#kubernetes-125).                                             |
+| `global.gossipEncryption.secretName`       | string  | no        | ""                       | The name of the Kubernetes secret that holds the gossip encryption key. The secret must be in the same namespace that Consul is installed into.                                                                                                                                                                                                                                                                                                                      |
+| `global.gossipEncryption.secretKey`        | string  | no        | ""                       | The key within the Kubernetes secret that holds the gossip encryption key.                                                                                                                                                                                                                                                                                                                                                                                           |
+| `global.recursors`                         | list    | no        | []                       | The list of addresses of upstream DNS servers that are used to recursively resolve DNS queries. If this is an empty array (the default), then Consul DNS only resolves queries for the Consul top level domain (by default `.consul`).                                                                                                                                                                                                                               |
+| `global.metrics.enabled`                   | boolean | no        | true                     | Whether the components to expose Prometheus metrics for the Consul service mesh are to be configured. By default, it includes gateway metrics and sidecar metrics.                                                                                                                                                                                                                                                                                                   |
+| `global.metrics.enableAgentMetrics`        | boolean | no        | true                     | Whether the metrics for Consul agent are to be configured. It is applicable only if `global.metrics.enabled` is set to `true`.                                                                                                                                                                                                                                                                                                                                       |
+| `global.metrics.agentMetricsRetentionTime` | string  | no        | 24h                      | The retention time for metrics in Consul clients and servers. It must be greater than 0 for Consul clients and servers to expose any metrics at all. It is applicable only if `global.metrics.enabled` is set to `true`.                                                                                                                                                                                                                                             |
+| `global.metrics.enableGatewayMetrics`      | boolean | no        | true                     | Whether the `mesh`, `terminating`, and `ingress` gateways are to expose their Consul DataPlane metrics on port `20200` at the `/metrics` path and all gateway pods are to have Prometheus scrape annotations. It is applicable only if `global.metrics.enabled` is set to `true`.                                                                                                                                                                                    |
+| `global.metrics.disableHostname`           | boolean | no        | true                     | Whether the runtime telemetry with the machine hostname is to be prepended.                                                                                                                                                                                                                                                                                                                                                                                          |
+| `global.logLevel`                          | string  | no        | info                     | The default log level to apply to all components which do not override this setting. It is recommended to generally not set this below "info" unless actively debugging due to logging verbosity. The possible values are `debug`, `info`, `warn`, `error`.                                                                                                                                                                                                          |
+| `global.logJSON`                           | boolean | no        | false                    | Whether the output in JSON format for all component logs is to be enabled.                                                                                                                                                                                                                                                                                                                                                                                           |
+| `global.openshift.enabled`                 | boolean | no        | false                    | Whether the necessary configuration for running Consul components on OpenShift is to be created.                                                                                                                                                                                                                                                                                                                                                                     |
+| `global.consulAPITimeout`                  | string  | no        | 5s                       | The time in seconds that the Consul API client waits for a response from the API before cancelling the request.                                                                                                                                                                                                                                                                                                                                                      |
+| `global.securityContext`                   | object  | no        | {}                       | The pod-level security attributes and common container settings for all pods that are related to the Consul service. This security context can be overridden by component `securityContext` parameter.                                                                                                                                                                                                                                                               |
+| `global.velero.postHookRestoreEnabled`     | boolean | no        | true                     | Whether Velero restore post-hook with Auth Method restore command is to be enabled. If parameter is set to `true`, Consul Backup Daemon initiates update of Consul Auth Methods with actual tokens after Velero restore procedure. For more information about Velero restore hooks, see [Restore Hooks](https://velero.io/docs/v1.9/restore-hooks/). **NOTE**: Backup Daemon should be enabled for Velero integration (`backupDaemon.enabled: true`).                |
+| `global.cloudIntegrationEnabled`           | boolean | no        | true                     | This parameter specifies whether to apply [Cloud Integration Parameters](#cloud-integration-parameters) instead of parameters described in Consul. If it is set to false or global parameter is absent, corresponding parameter from Consul is applied.                                                                                                                                                                                                              |
+| `global.ports.https`                       | string  | no        | ""                       | This parameter specifies custom global https port providing the ability to deploy two Consul instances with enabled Clients to one cluster. This parameter affects both servers and clients unless the corresponding values are overridden in the server or client configuration sections.                                                                                                                                                                           |
+| `global.ports.http`                        | string  | no        | ""                       | This parameter specifies custom global http port providing the ability to deploy two Consul instances with enabled Clients to one cluster. This parameter affects both servers and clients unless the corresponding values are overridden in the server or client configuration sections.                                                                                                                                                                            |
+| `global.ports.grpc`                        | string  | no        | ""                       | This parameter specifies custom global grpc port providing the ability to deploy two Consul instances with enabled Clients to one cluster. This parameter affects both servers and clients unless the corresponding values are overridden in the server or client configuration sections.                                                                                                                                                                            |
 
 ### TLS
 
-Consul uses Transport Layer Security (TLS) encryption across the cluster to verify authenticity of the servers and clients that connect.
-HTTPS (TLS) port is `8501`, while HTTP port is `8500`.
-You can find additional information regarding TLS certificates and examples of deployment in [Encrypted Access](/docs/public/tls.md) guide.
+Consul uses Transport Layer Security (TLS) encryption across the cluster to verify authenticity of the servers and
+clients that connect. HTTPS (TLS) port is `8501`, while HTTP port is `8500`. You can find additional information
+regarding TLS certificates and examples of deployment in [Encrypted Access](/docs/public/tls.md) guide.
 
 | Parameter                                   | Type    | Mandatory | Default value | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 |---------------------------------------------|---------|-----------|---------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -974,8 +988,8 @@ ACLs operate by grouping rules into policies and then associating one or more po
 
 Consul provides ability to federate with another Consul datacenter.
 
-**Important**: If during `upgrade` process you change parameters for [Mesh Gateway](#mesh-gateway), 
-you need to wait until all services go to the `ready` status and run the `upgrade` again with the same parameters for 
+**Important**: If during `upgrade` process you change parameters for [Mesh Gateway](#mesh-gateway),
+you need to wait until all services go to the `ready` status and run the `upgrade` again with the same parameters for
 the correct formation of the `federation` secret.
 
 | Parameter                                  | Type    | Mandatory | Default value | Description                                                                                                                                                                                                                                                                                                                  |
@@ -987,33 +1001,33 @@ the correct formation of the `federation` secret.
 | `global.federation.k8sAuthMethodHost`      | string  | no        | null          | The address of the Kubernetes API server. It should be filled only on secondary datacenters if `global.federation.enabled` parameter is set to `true`. This address must be reachable from the Consul servers. For example, `https://k8s-2.openshift.sdntest.example.com:6443`.                                              |
 | `global.federation.securityContext`        | object  | no        | {}            | The pod-level security attributes and common container settings for Federation job pod.                                                                                                                                                                                                                                      |
 
-The federation secret is automatically generated if `createFederationSecret` parameter is set to `true`. 
+The federation secret is automatically generated if `createFederationSecret` parameter is set to `true`.
 It contains the following information:
 
-* `Server certificate authority certificate` (`caCert`) is the certificate authority used to sign Consul server-to-server communication.
-  This is required by `secondary` clusters because they must communicate with the Consul servers in the `primary` cluster.
-* `Server certificate authority key` (`caKey`) is the signing key for the server certificate authority.
-  This is required by `secondary` clusters because they need to create server certificates for each Consul server
-  using the same certificate authority as the `primary`.
-* `Consul server config` (`serverConfigJSON`) is a JSON snippet that must be used as part of the server config for `secondary` datacenters.
-  It sets:
+* `Server certificate authority certificate` (`caCert`) is the certificate authority used to sign Consul
+  server-to-server communication. This is required by `secondary` clusters because they must communicate with the
+  Consul servers in the `primary` cluster.
+* `Server certificate authority key` (`caKey`) is the signing key for the server certificate authority. This is
+  required by `secondary` clusters because they need to create server certificates for each Consul server using the
+  same certificate authority as the `primary`.
+* `Consul server config` (`serverConfigJSON`) is a JSON snippet that must be used as part of the server config for
+  `secondary` datacenters. It sets:
   * `primary_datacenter` to the name of the `primary` datacenter.
-  * `primary_gateways` to an array of IPs or hostnames for the mesh gateways in the `primary` datacenter.
-    These are the addresses that Consul servers in `secondary` clusters use to communicate with the primary datacenter.
-    Even if there are multiple `secondary` datacenters, only the primary gateways need to be configured.
-    Upon first connection with a `primary` datacenter, the addresses for other `secondary` datacenters are discovered.
-* `ACL replication token` (`replicationToken`) is an ACL token in order to authenticate with the `primary` datacenter required for
-  `secondary` datacenters if ACLs are enabled.
-  This ACL token is also used to replicate ACLs from the `primary` datacenter so that components in each datacenter
-  can authenticate with one another.
-* `Gossip encryption key` (`gossipEncryptionKey`) is the gossip encryption key in order to be part of the gossip pool required for
-  `secondary` datacenters if gossip encryption is enabled. Gossip is the method by which Consul discovers the addresses and
-  health of other nodes.
+  * `primary_gateways` to an array of IPs or hostnames for the mesh gateways in the `primary` datacenter. These are the
+    addresses that Consul servers in `secondary` clusters use to communicate with the primary datacenter. Even if there
+    are multiple `secondary` datacenters, only the primary gateways need to be configured. Upon first connection with a
+    `primary` datacenter, the addresses for other `secondary` datacenters are discovered.
+* `ACL replication token` (`replicationToken`) is an ACL token in order to authenticate with the `primary` datacenter
+  required for `secondary` datacenters if ACLs are enabled. This ACL token is also used to replicate ACLs from the
+  `primary` datacenter so that components in each datacenter can authenticate with one another.
+* `Gossip encryption key` (`gossipEncryptionKey`) is the gossip encryption key in order to be part of the gossip pool
+  required for `secondary` datacenters if gossip encryption is enabled. Gossip is the method by which Consul discovers
+  the addresses and health of other nodes.
 
 ### Disaster Recovery
 
-The Disaster Recovery mode implies two Consul services, one of which is in an `active` state and the other is in a `standby` state.
-They are installed on separate Kubernetes/OpenShift clusters.
+The Disaster Recovery mode implies two Consul services, one of which is in an `active` state and the other is in a
+`standby` state. They are installed on separate Kubernetes/OpenShift clusters.
 
 | Parameter                                                                  | Type    | Mandatory | Default value            | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 |----------------------------------------------------------------------------|---------|-----------|--------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -1045,16 +1059,16 @@ They are installed on separate Kubernetes/OpenShift clusters.
 | `global.disasterRecovery.extraLabels`                                      | object  | no        | {}                       | The custom labels for Consul Disaster Recovery pod.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | `global.disasterRecovery.securityContext`                                  | object  | no        | {}                       | The pod-level security attributes and common container settings for Disaster Recovery pod.                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 
-For more information, see [Consul Disaster Recovery](/docs/public/disaster-recovery.md) section in 
+For more information, see [Consul Disaster Recovery](/docs/public/disaster-recovery.md) section in
 the _Cloud Platform Disaster Recovery Guide_.
 
 ## Servers
 
-For production deployments, you need to deploy 3 or 5 Consul servers for quorum and failure tolerance. 
+For production deployments, you need to deploy 3 or 5 Consul servers for quorum and failure tolerance.
 For most deployments 3 servers are adequate.
 
-In the server section, set `replicas` to 3. This deploys three servers and can cause Consul to wait to perform leader election 
-until all 3 are healthy. The resources depend on your environment.
+In the server section, set `replicas` to 3. This deploys three servers and can cause Consul to wait to perform leader
+election until all 3 are healthy. The resources depend on your environment.
 
 | Parameter                                  | Type    | Mandatory | Default value                                                                 | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 |--------------------------------------------|---------|-----------|-------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -1145,15 +1159,15 @@ This section describes configuration for Consul servers when the servers are run
 
 ## Clients
 
-A Consul client is deployed on every Kubernetes node, so you do not need to specify the number of clients for your deployments. 
-You need to specify resources and enable `gRPC`. 
-For most production scenarios, the Consul clients are designed for horizontal scalability. 
-Enabling `gRPC` enables the gRPC listener on port `8502` and exposes it to the host. 
-It is required when you use Consul Connect. 
-This port is opened on Kubernetes node, so you need to have corresponding RBAC and security policies.
+A Consul client is deployed on every Kubernetes node, so you do not need to specify the number of clients for your
+deployments. You need to specify resources and enable `gRPC`. For most production scenarios, the Consul clients are
+designed for horizontal scalability. Enabling `gRPC` enables the gRPC listener on port `8502` and exposes it to the
+host. It is required when you use Consul Connect. This port is opened on Kubernetes node, so you need to have
+corresponding RBAC and security policies.
 
-If your security policy denies opening such ports, you need to set the `enablePodSecurityPolicies` parameter to `true` for creating 
-necessary pod security policies. For Kubernetes 1.25+ you need to follow the [Kubernetes 1.25](#kubernetes-125) guide.
+If your security policy denies opening such ports, you need to set the `enablePodSecurityPolicies` parameter to `true`
+for creating necessary pod security policies. For Kubernetes 1.25+ you need to follow the [Kubernetes
+1.25](#kubernetes-125) guide.
 
 | Parameter                           | Type    | Mandatory | Default value                                                                 | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 |-------------------------------------|---------|-----------|-------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -1193,11 +1207,11 @@ necessary pod security policies. For Kubernetes 1.25+ you need to follow the [Ku
 
 ## DNS
 
-You can create configuration for DNS within the Kubernetes cluster. This creates a service that routes to all agents, client or server,
-for serving DNS requests.
-It does not automatically configure kube-dns, you must manually configure a `stubDomain` with kube-dns for this to have an effect.
-For more information, refer to 
-[Configuration of Stub-domain and upstream nameserver using CoreDNS](https://kubernetes.io/docs/tasks/administer-cluster/dns-custom-nameservers/#configuration-of-stub-domain-and-upstream-nameserver-using-coredns)
+You can create configuration for DNS within the Kubernetes cluster. This creates a service that routes to all agents,
+client or server, for serving DNS requests. It does not automatically configure kube-dns, you must manually configure a
+`stubDomain` with kube-dns for this to have an effect. For more information, refer to [Configuration of Stub-domain and
+upstream nameserver using
+CoreDNS](https://kubernetes.io/docs/tasks/administer-cluster/dns-custom-nameservers/#configuration-of-stub-domain-and-upstream-nameserver-using-coredns)
 .
 
 | Parameter            | Type    | Mandatory | Default value | Description                                                                                                                                          |
@@ -1426,7 +1440,8 @@ Consul Backup Daemon is a service to manage Consul snapshots.
 
 When you enable Consul Backup Daemon in deployment parameters, the separated service is deployed with Consul server.
 Backup Daemon is available via Kubernetes service and port `8080` (`8443` for HTTPS) and allows you to collect and
-restore snapshots using a schedule or via REST API. Consul Backup Daemon can work with snapshot of all datacenters of Consul cluster.
+restore snapshots using a schedule or via REST API. Consul Backup Daemon can work with snapshot of all datacenters of
+Consul cluster.
 
 | Parameter                                                       | Type    | Mandatory | Default value                                                                 | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 |-----------------------------------------------------------------|---------|-----------|-------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -1453,7 +1468,7 @@ restore snapshots using a schedule or via REST API. Consul Backup Daemon can wor
 | `backupDaemon.extraLabels`                                      | object  | no        | {}                                                                            | The extra labels to attach to the Consul backup daemon pods. It should be a YAML map.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | `backupDaemon.username`                                         | string  | no        | ""                                                                            | The name of the Consul backup daemon API user. This parameter enables Consul backup daemon authentication. If the parameter is empty, Consul backup daemon is deployed with disabled authentication.                                                                                                                                                                                                                                                                                                                                                                              |
 | `backupDaemon.password`                                         | string  | no        | ""                                                                            | The password of the Consul backup daemon API user. This parameter enables Consul backup daemon authentication. If the parameter is empty, Consul backup daemon is deployed with disabled authentication.                                                                                                                                                                                                                                                                                                                                                                          |
-| `backupDaemon.backupSchedule`                                   | string  | no        | 0 0 * * *                                                                     | The schedule time in cron format (value must be within quotes). If this parameter is empty, the default schedule (`"0 0 * * *"`), defined in Consul backup daemon configuration, is used. The value `0 0 * * *` means that snapshots are created everyday at 0:00.                                                                                                                                                                                                                                                                                                                |
+| `backupDaemon.backupSchedule`                                   | string  | no        | `0 0 * * *`                                                                   | The schedule time in cron format (value must be within quotes). If this parameter is empty, the default schedule (`"0 0 * * *"`), defined in Consul backup daemon configuration, is used. The value `0 0 * * *` means that snapshots are created everyday at 0:00.                                                                                                                                                                                                                                                                                                                |
 | `backupDaemon.evictionPolicy`                                   | string  | no        | 1h/1d,7d/delete                                                               | The eviction policy for snapshots. It is a comma-separated string of policies written as `$start_time/$interval`. This policy splits all backups older then `$start_time` to numerous time intervals `$interval` time long. Then it deletes all backups in every interval except the newest one. For example, `1d/7d` policy means "take all backups older then one day, split them in groups by 7-days interval, and leave only the newest". If this parameter is empty, the default eviction policy (`"0/1d,7d/delete"`) defined in Consul backup daemon configuration is used. |
 | `backupDaemon.resources.requests.cpu`                           | string  | no        | 25m                                                                           | The minimum number of CPUs the Consul backup daemon container should use.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | `backupDaemon.resources.requests.memory`                        | string  | no        | 64Mi                                                                          | The minimum amount of memory the Consul backup daemon container should use.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
@@ -1471,8 +1486,8 @@ Consul ACL Configurator is a service to manage Consul ACLs.
 
 When you enable Consul ACL Configurator in deployment parameters, the separate service is deployed with Consul server.
 Consul ACL Configurator provides an operator with appropriate Kubernetes CRD to collect and process CRs which contain
-Consul ACLs configuration. Also, Consul ACL Configurator has a separate docker container which is an HTTP server on `8088` port to
-execute common reconcile process (reload each configuration from all CRs) via REST API.
+Consul ACLs configuration. Also, Consul ACL Configurator has a separate docker container which is an HTTP server on
+`8088` port to execute common reconcile process (reload each configuration from all CRs) via REST API.
 
 | Parameter                                         | Type    | Mandatory | Default value                     | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 |---------------------------------------------------|---------|-----------|-----------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -1497,11 +1512,11 @@ execute common reconcile process (reload each configuration from all CRs) via RE
 
 Deployment Status Provisioner is a component to provide overall Consul service status.
 
-If Deployment Status Provisioner is enabled, the separate job is created during the deployment. 
-This job waits until all monitored resources are ready or completed. 
-If integration tests are running, this job also waits for the integration tests to complete and writes the final result to the job status.
+If Deployment Status Provisioner is enabled, the separate job is created during the deployment. This job waits until
+all monitored resources are ready or completed. If integration tests are running, this job also waits for the
+integration tests to complete and writes the final result to the job status.
 
-For more information, refer to the 
+For more information, refer to the
 [Deployment Status Provisioner](https://github.com/Netcracker/qubership-deployment-status-provisioner/blob/main/Readme.md).
 
 | Parameter                                     | Type    | Mandatory | Default value            | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
@@ -1531,35 +1546,35 @@ Update resources job is intended to update resource parameters values on post-in
 
 ## Integration Tests
 
-| Parameter                                           | Type      | Mandatory   | Default value              | Description                                                                                                                                                                                                                                                                                                                                                  |
-|-----------------------------------------------------|-----------|-------------|----------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `integrationTests.enabled`                          | boolean   | no          | false                      | Whether the installation of Consul integration tests is to be enabled.                                                                                                                                                                                                                                                                                       |
-| `integrationTests.dockerImage`                      | string    | no          | Calculates automatically   | The docker image of Consul integration tests.                                                                                                                                                                                                                                                                                                                |
-| `integrationTests.secret.aclToken`                  | string    | no          | ""                         | The ACL token for authentication in Consul. If the parameter value is not specified, but Consul ACL is enabled, ACL token is taken from Consul secret with bootstrap ACL token (`<name>-bootstrap-acl-token`, where `<name>` is the value of `global.name` parameter).                                                                                       |
-| `integrationTests.secret.prometheus.user`           | string    | no          | ""                         | The username for authentication on Prometheus/VictoriaMetrics secured endpoints.                                                                                                                                                                                                                                                                             |
-| `integrationTests.secret.prometheus.password`       | string    | no          | ""                         | The password for authentication on Prometheus/VictoriaMetrics secured endpoints.                                                                                                                                                                                                                                                                             |
-| `integrationTests.affinity`                         | object    | no          | <affinity_rule>            | The affinity scheduling rules in JSON format.                                                                                                                                                                                                                                                                                                                |
-| `integrationTests.tags`                             | string    | no          | crud                       | The tags combined with `AND`, `OR` and `NOT` operators that select test cases to run. Information about available tags can be found in the [Integration test tags description](#tags-description) article.                                                                                                                                                   |
-| `integrationTests.statusWritingEnabled`             | boolean   | no          | true                       | Whether the status of Consul integration tests execution is to be written to deployment.                                                                                                                                                                                                                                                                     |
-| `integrationTests.isShortStatusMessage`             | boolean   | no          | true                       | Whether the status message is to contain only first line of `result.txt` file. The parameter makes sense only if `integrationTests.statusWritingEnabled` parameter is set to `true`.                                                                                                                                                                         |
-| `integrationTests.consulPort`                       | string    | no          | ""                         | The port of the Consul server. By default, it is equal to `8500` for non-TLS Consul and `8501` for TLS Consul.                                                                                                                                                                                                                                               |
-| `integrationTests.prometheusUrl`                    | string    | no          | ""                         | The URL (with schema and port) to Prometheus. For example, `http://prometheus.cloud.openshift.sdntest.example.com:80`. This parameter must be specified if you want to run integration tests with `prometheus` tag. **Note:** This parameter could be used as VictoriaMetrics URL instead of Prometheus. For example, `http://vmauth-k8s.monitoring:8427`.   |
-| `integrationTests.resources.requests.cpu`           | string    | no          | 50m                        | The minimum number of CPUs the container should use.                                                                                                                                                                                                                                                                                                         |
-| `integrationTests.resources.requests.memory`        | string    | no          | 256Mi                      | The minimum amount of memory the container should use.                                                                                                                                                                                                                                                                                                       |
-| `integrationTests.resources.limits.cpu`             | string    | no          | 400m                       | The maximum number of CPUs the container should use.                                                                                                                                                                                                                                                                                                         |
-| `integrationTests.resources.limits.memory`          | string    | no          | 256Mi                      | The maximum amount of memory the container should use.                                                                                                                                                                                                                                                                                                       |
-| `integrationTests.extraLabels`                      | object    | no          | {}                         | The custom labels for the Consul integration tests pod.                                                                                                                                                                                                                                                                                                      |
-| `integrationTests.securityContext`                  | object    | no          | {}                         | The pod-level security attributes and common container settings for the Consul integration tests pod.                                                                                                                                                                                                                                                        |
-| `integrationTests.atpReport.enabled`                | boolean   | no          | false                      | Opt-in for ATP report upload. When `false`, ATP S3-related environment variables are not passed to the pod.                                                                                                                                                                                                                                                  |
-| `integrationTests.atpReport.atpStorage.provider`    | string    | no          | aws                        | S3 provider type for ATP Storage (for example `aws`, `minio`, `s3`). Used for S3-compatible upload of integration test results.                                                                                                                                                                                                                              |
-| `integrationTests.atpReport.atpStorage.serverUrl`   | string    | no          | ""                         | S3 API endpoint URL.                                                                                                                                                                                                                                                                                                                                         |
-| `integrationTests.atpReport.atpStorage.serverUiUrl` | string    | no          | ""                         | Optional S3 storage UI URL.                                                                                                                                                                                                                                                                                                                                  |
-| `integrationTests.atpReport.atpStorage.bucket`      | string    | no          | ""                         | S3 bucket name. If empty, S3 integration is typically disabled in the shared test scripts flow.                                                                                                                                                                                                                                                              |
-| `integrationTests.atpReport.atpStorage.region`      | string    | no          | us-east-1                  | S3 region (for example for AWS).                                                                                                                                                                                                                                                                                                                             |
-| `integrationTests.atpReport.atpStorage.username`    | string    | no          | ""                         | S3 access key. Sensitive; may be stored in a Kubernetes Secret when report upload is enabled.                                                                                                                                                                                                                                                                |
-| `integrationTests.atpReport.atpStorage.password`    | string    | no          | ""                         | S3 secret key. Sensitive; may be stored in a Kubernetes Secret when report upload is enabled.                                                                                                                                                                                                                                                                |
-| `integrationTests.atpReportViewUiUrl`               | string    | no          | ""                         | Optional base URL for viewing Allure reports.                                                                                                                                                                                                                                                                                                                |
-| `integrationTests.environmentName`                  | string    | no          | consul                     | Logical environment name for paths or labels in ATP Storage workflows.                                                                                                                                                                                                                                                                                       |
+| Parameter                                           | Type    | Mandatory | Default value            | Description                                                                                                                                                                                                                                                                                                                                                |
+|-----------------------------------------------------|---------|-----------|--------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `integrationTests.enabled`                          | boolean | no        | false                    | Whether the installation of Consul integration tests is to be enabled.                                                                                                                                                                                                                                                                                     |
+| `integrationTests.dockerImage`                      | string  | no        | Calculates automatically | The docker image of Consul integration tests.                                                                                                                                                                                                                                                                                                              |
+| `integrationTests.secret.aclToken`                  | string  | no        | ""                       | The ACL token for authentication in Consul. If the parameter value is not specified, but Consul ACL is enabled, ACL token is taken from Consul secret with bootstrap ACL token (`<name>-bootstrap-acl-token`, where `<name>` is the value of `global.name` parameter).                                                                                     |
+| `integrationTests.secret.prometheus.user`           | string  | no        | ""                       | The username for authentication on Prometheus/VictoriaMetrics secured endpoints.                                                                                                                                                                                                                                                                           |
+| `integrationTests.secret.prometheus.password`       | string  | no        | ""                       | The password for authentication on Prometheus/VictoriaMetrics secured endpoints.                                                                                                                                                                                                                                                                           |
+| `integrationTests.affinity`                         | object  | no        | <affinity_rule>          | The affinity scheduling rules in JSON format.                                                                                                                                                                                                                                                                                                              |
+| `integrationTests.tags`                             | string  | no        | crud                     | The tags combined with `AND`, `OR` and `NOT` operators that select test cases to run. Information about available tags can be found in the [Integration test tags description](#tags-description) article.                                                                                                                                                 |
+| `integrationTests.statusWritingEnabled`             | boolean | no        | true                     | Whether the status of Consul integration tests execution is to be written to deployment.                                                                                                                                                                                                                                                                   |
+| `integrationTests.isShortStatusMessage`             | boolean | no        | true                     | Whether the status message is to contain only first line of `result.txt` file. The parameter makes sense only if `integrationTests.statusWritingEnabled` parameter is set to `true`.                                                                                                                                                                       |
+| `integrationTests.consulPort`                       | string  | no        | ""                       | The port of the Consul server. By default, it is equal to `8500` for non-TLS Consul and `8501` for TLS Consul.                                                                                                                                                                                                                                             |
+| `integrationTests.prometheusUrl`                    | string  | no        | ""                       | The URL (with schema and port) to Prometheus. For example, `http://prometheus.cloud.openshift.sdntest.example.com:80`. This parameter must be specified if you want to run integration tests with `prometheus` tag. **Note:** This parameter could be used as VictoriaMetrics URL instead of Prometheus. For example, `http://vmauth-k8s.monitoring:8427`. |
+| `integrationTests.resources.requests.cpu`           | string  | no        | 50m                      | The minimum number of CPUs the container should use.                                                                                                                                                                                                                                                                                                       |
+| `integrationTests.resources.requests.memory`        | string  | no        | 256Mi                    | The minimum amount of memory the container should use.                                                                                                                                                                                                                                                                                                     |
+| `integrationTests.resources.limits.cpu`             | string  | no        | 400m                     | The maximum number of CPUs the container should use.                                                                                                                                                                                                                                                                                                       |
+| `integrationTests.resources.limits.memory`          | string  | no        | 256Mi                    | The maximum amount of memory the container should use.                                                                                                                                                                                                                                                                                                     |
+| `integrationTests.extraLabels`                      | object  | no        | {}                       | The custom labels for the Consul integration tests pod.                                                                                                                                                                                                                                                                                                    |
+| `integrationTests.securityContext`                  | object  | no        | {}                       | The pod-level security attributes and common container settings for the Consul integration tests pod.                                                                                                                                                                                                                                                      |
+| `integrationTests.atpReport.enabled`                | boolean | no        | false                    | Opt-in for ATP report upload. When `false`, ATP S3-related environment variables are not passed to the pod.                                                                                                                                                                                                                                                |
+| `integrationTests.atpReport.atpStorage.provider`    | string  | no        | aws                      | S3 provider type for ATP Storage (for example `aws`, `minio`, `s3`). Used for S3-compatible upload of integration test results.                                                                                                                                                                                                                            |
+| `integrationTests.atpReport.atpStorage.serverUrl`   | string  | no        | ""                       | S3 API endpoint URL.                                                                                                                                                                                                                                                                                                                                       |
+| `integrationTests.atpReport.atpStorage.serverUiUrl` | string  | no        | ""                       | Optional S3 storage UI URL.                                                                                                                                                                                                                                                                                                                                |
+| `integrationTests.atpReport.atpStorage.bucket`      | string  | no        | ""                       | S3 bucket name. If empty, S3 integration is typically disabled in the shared test scripts flow.                                                                                                                                                                                                                                                            |
+| `integrationTests.atpReport.atpStorage.region`      | string  | no        | us-east-1                | S3 region (for example for AWS).                                                                                                                                                                                                                                                                                                                           |
+| `integrationTests.atpReport.atpStorage.username`    | string  | no        | ""                       | S3 access key. Sensitive; may be stored in a Kubernetes Secret when report upload is enabled.                                                                                                                                                                                                                                                              |
+| `integrationTests.atpReport.atpStorage.password`    | string  | no        | ""                       | S3 secret key. Sensitive; may be stored in a Kubernetes Secret when report upload is enabled.                                                                                                                                                                                                                                                              |
+| `integrationTests.atpReportViewUiUrl`               | string  | no        | ""                       | Optional base URL for viewing Allure reports.                                                                                                                                                                                                                                                                                                              |
+| `integrationTests.environmentName`                  | string  | no        | consul                   | Logical environment name for paths or labels in ATP Storage workflows.                                                                                                                                                                                                                                                                                     |
 
 * <affinity_rule> is as follows:
 
@@ -1714,8 +1729,10 @@ See [Consul Disaster Recovery](/docs/public/disaster-recovery.md) guide.
 
 ### HA Scheme
 
+<!-- markdownlint-disable MD033 -->
 <details>
 <summary>Click to expand YAML</summary>
+<!-- markdownlint-enable MD033 -->
 
 ```yaml
 global:
@@ -1811,7 +1828,7 @@ The same as [On-Prem Examples DR Scheme](#on-prem-examples).
 
 ## Common
 
-In the common way, the upgrade procedure is the same as the initial deployment. You need to follow `Release Notes` and 
+In the common way, the upgrade procedure is the same as the initial deployment. You need to follow `Release Notes` and
 `Breaking Changes` in the version you install to find details.
 If you upgrade to a version which has several major diff changes from the installed version (e.g. `0.3.1` over `0.1.4`),
 you need to check `Release Notes` and `Breaking Changes` sections for `0.2.0` and `0.3.0` versions.
@@ -1836,8 +1853,8 @@ It can be done automatically during the upgrade with [Automatic CRD Upgrade](#au
 
 ### Automatic CRD Upgrade
 
-It is possible to upgrade CRD automatically on the environment to the latest one which is presented with the installing version.
-This feature is enabled by default if the `DISABLE_CRD` parameter is not `true`.
+It is possible to upgrade CRD automatically on the environment to the latest one which is presented with the installing
+version. This feature is enabled by default if the `DISABLE_CRD` parameter is not `true`.
 
 Automatic CRD upgrade requires the following cluster rights for the deployment user:
 
@@ -1862,27 +1879,31 @@ Consul does not support rollback with downgrade of a version. In this case, you 
 
 ## Multiple Availability Zone Deployment
 
-When deploying to a cluster with several availability zones, it is important that Consul server pods start in different availability zones.
+When deploying to a cluster with several availability zones, it is important that Consul server pods start in different
+availability zones.
 
 ### Affinity
 
-You can manage pods' distribution using `affinity` rules to prevent Kubernetes from running Consul server pods on nodes of the same
-availability zone.
+You can manage pods' distribution using `affinity` rules to prevent Kubernetes from running Consul server pods on nodes
+of the same availability zone.
 
-**Note**: This section describes deployment only for `storage class` persistent volumes (PV) type because with predefined PV,
-the Consul server pods are started on the nodes that are specified explicitly with persistent volumes.
-In that way, it is necessary to take care of creating PVs on nodes belonging to different availability zones in advance.
+**Note**: This section describes deployment only for `storage class` persistent volumes (PV) type because with
+predefined PV, the Consul server pods are started on the nodes that are specified explicitly with persistent volumes.
+In that way, it is necessary to take care of creating PVs on nodes belonging to different availability zones in
+advance.
 
 #### Replicas Fewer Than Availability Zones
 
-For cases when the number of Consul server pods (value of the `server.replicas` parameter) is equal to or less than the number of
-availability zones, you need to restrict the start of pods to one pod per availability zone. You can also specify additional node
-affinity rule to start pods on allowed Kubernetes nodes.
+For cases when the number of Consul server pods (value of the `server.replicas` parameter) is equal to or less than the
+number of availability zones, you need to restrict the start of pods to one pod per availability zone. You can also
+specify additional node affinity rule to start pods on allowed Kubernetes nodes.
 
 For this, you can use the following affinity rules:
 
+<!-- markdownlint-disable MD033 -->
 <details>
 <summary>Click to expand YAML</summary>
+<!-- markdownlint-enable MD033 -->
 
 ```yaml
 server:
@@ -1925,20 +1946,23 @@ server:
 
 Where:
 
-* `topology.kubernetes.io/zone` is the name of the label that defines the availability zone. This is the default name for Kubernetes 1.17+.
-  Earlier, `failure-domain.beta.kubernetes.io/zone` was used.
+* `topology.kubernetes.io/zone` is the name of the label that defines the availability zone. This is the default name
+  for Kubernetes 1.17+. Earlier, `failure-domain.beta.kubernetes.io/zone` was used.
 * `role` and `compute` are the sample name and value of label that defines the region to run Consul server pods.
 
 #### Replicas More Than Availability Zones
 
-For cases when the number of Consul server pods (value of the `server.replicas` parameter) is greater than 
-the number of availability zones, you need to restrict the start of pods to one pod per node and specify the preferred rule to 
-start on different availability zones. You can also specify an additional node affinity rule to start the pods on allowed Kubernetes nodes.
+For cases when the number of Consul server pods (value of the `server.replicas` parameter) is greater than the number
+of availability zones, you need to restrict the start of pods to one pod per node and specify the preferred rule to
+start on different availability zones. You can also specify an additional node affinity rule to start the pods on
+allowed Kubernetes nodes.
 
 For this, you can use the following affinity rules:
 
+<!-- markdownlint-disable MD033 -->
 <details>
 <summary>Click to expand YAML</summary>
+<!-- markdownlint-enable MD033 -->
 
 ```yaml
 server:
@@ -1996,19 +2020,19 @@ server:
 
 Where:
 
-* `kubernetes.io/hostname` is the name of the label that defines the Kubernetes node. This is a standard name for Kubernetes.
-* `topology.kubernetes.io/zone` is the name of the label that defines the availability zone. This is a standard name for Kubernetes 1.17+.
-   Earlier, `failure-domain.beta.kubernetes.io/zone` was used.
+* `kubernetes.io/hostname` is the name of the label that defines the Kubernetes node. This is a standard name for
+  Kubernetes.
+* `topology.kubernetes.io/zone` is the name of the label that defines the availability zone. This is a standard name
+  for Kubernetes 1.17+. Earlier, `failure-domain.beta.kubernetes.io/zone` was used.
 * `role` and `compute` are the sample name and value of the label that defines the region to run Consul server pods.
 
 ## Consul Authentication Method
 
-To communicate with secured Consul (ACLs enabled) API each client service should log in to Consul via Consul Authentication method.
-In practice, it means that client service should know Consul auth method name.
-This name is `<prifix>-k8s-auth-method` where `prefix` is `global.name` installation parameter value if it is not `null`.
-Otherwise, it is helm chart release name plus "-consul" suffix.
-In production version we totally recommend not override default `global.name` value - `consul`.
-In this way Consul authentication method name is `consul-k8s-auth-method`.
+To communicate with secured Consul (ACLs enabled) API each client service should log in to Consul via Consul
+Authentication method. In practice, it means that client service should know Consul auth method name. This name is
+`<prifix>-k8s-auth-method` where `prefix` is `global.name` installation parameter value if it is not `null`. Otherwise,
+it is helm chart release name plus "-consul" suffix. In production version we totally recommend not override default
+`global.name` value - `consul`. In this way Consul authentication method name is `consul-k8s-auth-method`.
 
 ## Multiple Datacenters
 
@@ -2018,7 +2042,7 @@ For more information, refer to [Federation Between Kubernetes Clusters](/docs/pu
 
 ### Federate Multiple Datacenters Using WAN Gossip
 
-Consul Service supports multiple datacenters. To get started, you need to install two separate datacenters and 
+Consul Service supports multiple datacenters. To get started, you need to install two separate datacenters and
 join them via single WAN gossip pool. You can do this manually during installation process.
 
 #### Create Multi-DC Configuration Manually
