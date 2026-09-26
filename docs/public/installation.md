@@ -101,7 +101,8 @@ The following Custom Resource Definitions should be installed to the cloud befor
 
 * `ConsulACL` - When you deploy with restricted rights or the CRDs' creation is disabled by the Deployer job.
   For more information, see [Automatic CRD Upgrade](#automatic-crd-upgrade).
-* `GrafanaDashboard`, `PrometheusRule`, and `ServiceMonitor` - They should be installed when you deploy Consul monitoring with
+* `GrafanaDashboard`, `PrometheusRule`, and `ServiceMonitor` - They should be installed when you deploy Consul
+  monitoring with
   `monitoring.enabled=true` and `monitoring.monitoringType=prometheus`.
   You need to install the Monitoring Operator service before the Consul installation.
 * `SiteManager` - It is installed when you deploy Consul with Disaster Recovery support (`global.disasterRecovery.mode`).
