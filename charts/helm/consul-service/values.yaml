@@ -2431,7 +2431,7 @@ integrationTests:
   # Available tags: crud, smoke, ha, backup, s3_storage, alerts, consul_images, consul_container_hardening
   # Leave empty ("") to run ALL tests
   tags: "crud"
-  statusWritingEnabled: true
+  statusWritingEnabled: false
   isShortStatusMessage: true
   # The parameter specifies Consul server port. Default value is 8500 for http, and 8501 for https.
   consulPort: ""

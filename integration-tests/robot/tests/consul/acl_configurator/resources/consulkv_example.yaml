@@ -1,0 +1,16 @@
+apiVersion: netcracker.com/v1alpha1
+kind: ConsulKV
+metadata:
+  name: cloud-core
+  namespace: cloud-core
+spec:
+  kv:
+    operatorNamespace: alty1224-consul-service
+    purgeOnDelete: true
+    entries:
+      - key: "config/cloud-core/application/"
+      - key: "config/cloud-core/cloud-core-service/"
+      - key: "data/<namespace>/cloud-core-service/abc"
+        value: ""
+      - key: "logging/cloud-core/cloud-core-service/LOG_LEVEL"
+        value: "INFO"
