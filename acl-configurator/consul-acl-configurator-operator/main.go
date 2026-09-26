@@ -142,6 +142,10 @@ func getWatchNamespace() (string, error) {
 }
 
 func configureMgrNamespaces(mgrOptions *ctrl.Options, namespace string, ownNamespace string) {
+	if namespace == "*" {
+		mgrOptions.Cache.DefaultNamespaces = nil
+		return
+	}
 	namespaces := strings.Split(namespace, ",")
 	if !util.Contains(ownNamespace, namespaces) {
 		namespaces = append(namespaces, ownNamespace)
