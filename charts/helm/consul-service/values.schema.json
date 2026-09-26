@@ -289,19 +289,28 @@
           "type": "object",
           "properties": {
             "https": {
-              "type": "string",
+              "type": [
+                "string",
+                "integer"
+              ],
               "default": "",
               "title": "The global.ports.https schema",
               "description": "This parameter specifies custom global https port providing the ability to deploy two Consul instances with enabled Clients to one cluster"
             },
             "http": {
-              "type": "string",
+              "type": [
+                "string",
+                "integer"
+              ],
               "default": "",
               "title": "The global.ports.http schema",
               "description": "This parameter specifies custom global http port providing the ability to deploy two Consul instances with enabled Clients to one cluster"
             },
             "grpc": {
-              "type": "string",
+              "type": [
+                "string",
+                "integer"
+              ],
               "default": "",
               "title": "The global.ports.grpc schema",
               "description": "This parameter specifies custom global grpc port providing the ability to deploy two Consul instances with enabled Clients to one cluster"
@@ -892,19 +901,28 @@
               "description": "server.ports.serflan parameters"
             },
             "https": {
-              "type": "string",
+              "type": [
+                "string",
+                "integer"
+              ],
               "default": "",
               "title": "The server.ports.https schema",
               "description": "Customize the server's https consul port providing the ability to deploy two Consul instances with enabled Clients to one cluster"
             },
             "http": {
-              "type": "string",
+              "type": [
+                "string",
+                "integer"
+              ],
               "default": "",
               "title": "The server.ports.http schema",
               "description": "Customize the server's http consul port providing the ability to deploy two Consul instances with enabled Clients to one cluster"
             },
             "grpc": {
-              "type": "string",
+              "type": [
+                "string",
+                "integer"
+              ],
               "default": "",
               "title": "The server.ports.grpc schema",
               "description": "Customize the server's grpc consul port providing the ability to deploy two Consul instances with enabled Clients to one cluster"
@@ -1389,19 +1407,28 @@
           "type": "object",
           "properties": {
             "https": {
-              "type": "string",
+              "type": [
+                "string",
+                "integer"
+              ],
               "default": "",
               "title": "The client.ports.https schema",
               "description": "Customize the client's https consul port providing the ability to deploy two Consul instances to one cluster"
             },
             "http": {
-              "type": "string",
+              "type": [
+                "string",
+                "integer"
+              ],
               "default": "",
               "title": "The client.ports.http schema",
               "description": "Customize the client's http consul port providing the ability to deploy two Consul instances to one cluster"
             },
             "grpc": {
-              "type": "string",
+              "type": [
+                "string",
+                "integer"
+              ],
               "default": "",
               "title": "The client.ports.grpc schema",
               "description": "Customize the client's grpc consul port providing the ability to deploy two Consul instances to one cluster"
@@ -3364,7 +3391,10 @@
           "type": "object",
           "properties": {
             "port": {
-              "type": "string",
+              "type": [
+                "string",
+                "integer"
+              ],
               "default": "",
               "title": "The consulAclConfigurator.consul.port schema",
               "description": "The Consul server port"
@@ -3617,7 +3647,10 @@
           "description": "Whether the status message is to contain only first line of `result"
         },
         "consulPort": {
-          "type": "string",
+          "type": [
+            "string",
+            "integer"
+          ],
           "default": "",
           "title": "The integrationTests.consulPort schema",
           "description": "The port of the Consul server"
