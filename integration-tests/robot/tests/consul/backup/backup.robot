@@ -38,11 +38,9 @@ Create Test Data
     Get And Check Test Data From Consul  ${test_key}  ${test_value}
 
 Full Backup
-    ${response}=  Post Request  backupsession  /backup
-    Should Be Equal As Strings  ${response.status_code}  200
-    ${backup_id}=  Set Variable  ${response.content}
-    Wait Until Keyword Succeeds  ${BACKUP_TIMEOUT}  ${BACKUP_TIME_INTERVAL}
-    ...  Check Backup Status  ${backup_id}  ${False}
+    ${backup_id}=  Create Backup With Retry
+    ...  ${CONSUL_BACKUP_DAEMON_PROTOCOL}://${CONSUL_BACKUP_DAEMON_HOST}:${CONSUL_BACKUP_DAEMON_PORT}
+    ...  ${CONSUL_BACKUP_DAEMON_USERNAME}  ${CONSUL_BACKUP_DAEMON_PASSWORD}
     RETURN  ${backup_id}
 
 Check Backup Status
