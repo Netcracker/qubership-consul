@@ -93,7 +93,8 @@ Before you start the installation and configuration of a Consul cluster, ensure 
 
 Note the following terms:
 
-* `DEPLOY_W_HELM` means installation is performed with `helm install/upgrade` commands, not `helm template + kubectl apply`.
+* `DEPLOY_W_HELM` means installation is performed with `helm install/upgrade` commands, not
+  `helm template + kubectl apply`.
 
 ### Custom Resource Definitions
 
@@ -105,7 +106,8 @@ The following Custom Resource Definitions should be installed to the cloud befor
   monitoring with
   `monitoring.enabled=true` and `monitoring.monitoringType=prometheus`.
   You need to install the Monitoring Operator service before the Consul installation.
-* `SiteManager` - It is installed when you deploy Consul with Disaster Recovery support (`global.disasterRecovery.mode`).
+* `SiteManager` - It is installed when you deploy Consul with Disaster Recovery support
+  (`global.disasterRecovery.mode`).
   You have to install the SiteManager service before the Consul installation.
 
 **Important**: To create CRDs, you must have cloud rights for `CustomResourceDefinitions`.
@@ -326,8 +328,8 @@ Set appropriate UID and GID on hostPath directories and rule for SELinux:
 chown -R 100:1000 /mnt/data/<pv-name>
 ```
 
-You also need to specify node names via `server.nodes` parameter in the same order in which the Persistent Volumes are specified
-so that Consul pods are assigned to these nodes.
+You also need to specify node names via `server.nodes` parameter in the same order in which the Persistent
+Volumes are specified so that Consul pods are assigned to these nodes.
 
 According to the specified parameters, the `Pod Scheduler` distributes pods to the necessary Kubernetes nodes.
 For more information, refer to [Pod Scheduler](#pod-scheduler) section.
@@ -341,12 +343,11 @@ For more information, refer to [Pod Scheduler](#pod-scheduler) section.
 
 Kubernetes 1.25+ does not contain Pod Security Policies in its API. It is replaced with Pod Security Standards.
 In most cases it is enough to disable PSP in deployment parameters (`global.enablePodSecurityPolicies: false`)
-to allow installation to 1.25 version, but Consul Client (`client.enabled: true`) requires `hostPort` access which is
-not covered by
-OOB Pod Admission Control and `baseline` [Pod Security Standard](https://kubernetes.io/docs/concepts/security/pod-security-standards/).
-To be able to deploy Consul cluster with enabled `clients` you need to provide `privileged` policy to Consul namespace
-as prerequisite
-step.
+to allow installation to 1.25 version, but Consul Client (`client.enabled: true`) requires `hostPort` access
+which is not covered by OOB Pod Admission Control and `baseline`
+[Pod Security Standard](https://kubernetes.io/docs/concepts/security/pod-security-standards/).
+To be able to deploy Consul cluster with enabled `clients` you need to provide `privileged` policy to Consul
+namespace as prerequisite step.
 
 It can be performed with the following command:
 
@@ -367,15 +368,15 @@ It requires the following cluster rights for deployment user:
 
 #### Migration to Kubernetes 1.25
 
-When you have Consul with enabled `clients` and `global.enablePodSecurityPolicies: true` installed to Kubernetes 1.23+
-version with
-enabled PSP admission control you need to prepare Consul service **before** Kubernetes 1.25 upgrade with the following steps:
+When you have Consul with enabled `clients` and `global.enablePodSecurityPolicies: true` installed to Kubernetes
+1.23+ version with enabled PSP admission control you need to prepare Consul service **before** Kubernetes 1.25
+upgrade with the following steps:
 
 1. Upgrade Consul to `0.2.0+` version with enabled `privileged` PSS for namespace.
    Refer to [Deployment to Kubernetes 1.25](#kubernetes-125) guide.
-2. Enable PSS for Kubernetes `rbac.admission: pss`.
-   [KubeMarine:RBAC Admission](https://github.com/Netcracker/KubeMarine/blob/main/docs/public/Installation.md#configuring-default-profiles)
-  .
+2. Enable PSS for Kubernetes `rbac.admission: pss`. Refer to
+   <!-- markdownlint-disable-next-line MD013 -->
+   [KubeMarine:RBAC Admission](https://github.com/Netcracker/KubeMarine/blob/main/docs/public/Installation.md#configuring-default-profiles).
 3. Upgrade Consul with disabled PSP `global.enablePodSecurityPolicies: false`.
 4. Upgrade Kubernetes to 1.25.
 
@@ -404,13 +405,13 @@ The `AWS S3` bucket is created if a backup is necessary.
 
 ## HWE
 
-The provided values do not guarantee that these values are correct for all cases. It is a general recommendation
-. Resources should be calculated and estimated for each project case with test load on the SVT stand, especially the HDD
-size.
+The provided values do not guarantee that these values are correct for all cases. It is a general recommendation.
+Resources should be calculated and estimated for each project case with test load on the SVT stand, especially
+the HDD size.
 
-The Hashicorp recommends starting resources configuration from
-[System
-Requirements](https://developer.hashicorp.com/consul/tutorials/production-deploy/reference-architecture#system-requirements)
+The Hashicorp recommends starting resources configuration from the
+<!-- markdownlint-disable-next-line MD013 -->
+[System Requirements](https://developer.hashicorp.com/consul/tutorials/production-deploy/reference-architecture#system-requirements)
 guide.
 
 ### Tiny
@@ -518,7 +519,8 @@ statusProvisioner:
 
 ### Small
 
-It is recommended for development purposes, PoC, demos and not heavy loaded productions. Disk throughput is about 30 MB/s.
+It is recommended for development purposes, PoC, demos and not heavy loaded productions. Disk throughput is
+about 30 MB/s.
 
 | Module                  | CPU   | RAM, Gi | Storage, Gb |
 |-------------------------|-------|---------|-------------|
@@ -904,8 +906,9 @@ The section lists the configurable parameters of the Consul chart and their defa
 
 ## Global
 
-The global values affect all the other parameters in the chart. To enable all the Consul components in the Helm chart, set
-`global.enabled` to `true`. This installs the servers, clients, Consul DNS, and the Consul UI with their defaults.
+The global values affect all the other parameters in the chart. To enable all the Consul components in the
+Helm chart, set `global.enabled` to `true`. This installs the servers, clients, Consul DNS, and the Consul UI
+with their defaults.
 
 You should also set the global parameters based on your specific environment requirements.
 
@@ -1013,7 +1016,8 @@ It contains the following information:
 
 * `Server certificate authority certificate` (`caCert`) is the certificate authority used to sign Consul
   server-to-server communication.
-  This is required by `secondary` clusters because they must communicate with the Consul servers in the `primary` cluster.
+  This is required by `secondary` clusters because they must communicate with the Consul servers in the
+  `primary` cluster.
 * `Server certificate authority key` (`caKey`) is the signing key for the server certificate authority.
   This is required by `secondary` clusters because they need to create server certificates for each Consul server
   using the same certificate authority as the `primary`.
@@ -1233,14 +1237,13 @@ necessary pod security policies. For Kubernetes 1.25+ you need to follow the [Ku
 
 ## DNS
 
-You can create configuration for DNS within the Kubernetes cluster. This creates a service that routes to all agents,
-client or server,
-for serving DNS requests.
-It does not automatically configure kube-dns, you must manually configure a `stubDomain` with kube-dns for this to have
-an effect.
+You can create configuration for DNS within the Kubernetes cluster. This creates a service that routes to all
+agents, client or server, for serving DNS requests.
+It does not automatically configure kube-dns, you must manually configure a `stubDomain` with kube-dns for this
+to have an effect.
 For more information, refer to
-[Configuration of Stub-domain and upstream nameserver using CoreDNS](https://kubernetes.io/docs/tasks/administer-cluster/dns-custom-nameservers/#configuration-of-stub-domain-and-upstream-nameserver-using-coredns)
-.
+<!-- markdownlint-disable-next-line MD013 -->
+[Configuration of Stub-domain and upstream nameserver using CoreDNS](https://kubernetes.io/docs/tasks/administer-cluster/dns-custom-nameservers/#configuration-of-stub-domain-and-upstream-nameserver-using-coredns).
 
 | Parameter            | Type    | Mandatory | Default value | Description                                                                                                                                          |
 |----------------------|---------|-----------|---------------|------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -1318,7 +1321,8 @@ If clients are not enabled then set the node selection to choose a node with a C
 
 After you enable Consul server communication over Connect in the server section, you also need to enable `connectInject`
 by setting the `enabled` parameter value to `true`. You can also configure security features.
-When you enable the `default` parameter, it allows the injector to automatically inject the Connect sidecar into all pods.
+When you enable the `default` parameter, it allows the injector to automatically inject the Connect sidecar
+into all pods.
 If you prefer to manually annotate which pods to inject, you can set this value to `false`.
 
 Also, you need to have rights for creating `MutatingWebhookConfiguration` if you enable `connectInject` parameter.
@@ -1548,6 +1552,7 @@ If integration tests are running, this job also waits for the integration tests 
 to the job status.
 
 For more information, refer to the
+<!-- markdownlint-disable-next-line MD013 -->
 [Deployment Status Provisioner](https://github.com/Netcracker/qubership-deployment-status-provisioner/blob/main/Readme.md).
 
 | Parameter                                     | Type    | Mandatory | Default value            | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
@@ -1646,7 +1651,8 @@ You can use the following tags:
   * `consul_is_down_alert` tag runs `Consul Is Down Alert` test.
 * `backup` tag runs all tests for backup cases:
   * `full_backup` tag runs `Test Full Backup And Restore` and `Test Full Backup And Restore On S3 Storage` tests.
-  * `granular_backup` tag runs `Test Granular Backup And Restore` and `Test Granular Backup And Restore On S3 Storage` tests.
+  * `granular_backup` tag runs `Test Granular Backup And Restore` and `Test Granular Backup And Restore On S3
+    Storage` tests.
   * `full_backup_s3` tag runs `Test Full Backup And Restore On S3 Storage` test.
   * `granular_backup_s3` tag runs `Test Granular Backup And Restore On S3 Storage` test.
   * `backup_eviction` tag runs `Test Evict Backup By Id` test.
@@ -1682,7 +1688,8 @@ If you need to use resource profile then you can use the following command:
 helm install [release-name] ./ -f ./resource-profiles/[profile-name-yaml] -f [parameters-yaml] -n [namespace]
 ```
 
-**Warning**: pure Helm deployment does not support the automatic CRD upgrade procedure, so you need to perform it manually.
+**Warning**: pure Helm deployment does not support the automatic CRD upgrade procedure, so you need to perform
+it manually.
 
 ```bash
 kubectl replace -f ./crds/crd.yaml
@@ -1872,7 +1879,8 @@ Consul supports rolling upgrade feature with near-zero downtime.
 
 Custom resource definition `ConsulACL` should be upgraded before the installation if there are any changes.
 <!-- #GFCFilterMarkerStart# -->
-The CRD for this version is stored in [consul_acl_configurator_crd.yaml](/charts/helm/consul-service/crds/consul_acl_configurator_crd.yaml)
+The CRD for this version is stored in
+[consul_acl_configurator_crd.yaml](/charts/helm/consul-service/crds/consul_acl_configurator_crd.yaml)
 and can be applied with the following command:
 
 ```sh
@@ -2057,7 +2065,8 @@ server:
 
 Where:
 
-* `kubernetes.io/hostname` is the name of the label that defines the Kubernetes node. This is a standard name for Kubernetes.
+* `kubernetes.io/hostname` is the name of the label that defines the Kubernetes node. This is a standard name
+  for Kubernetes.
 * `topology.kubernetes.io/zone` is the name of the label that defines the availability zone. This is a standard name for
   Kubernetes 1.17+.
    Earlier, `failure-domain.beta.kubernetes.io/zone` was used.
@@ -2068,7 +2077,8 @@ Where:
 To communicate with secured Consul (ACLs enabled) API each client service should log in to Consul via Consul
 Authentication method.
 In practice, it means that client service should know Consul auth method name.
-This name is `<prifix>-k8s-auth-method` where `prefix` is `global.name` installation parameter value if it is not `null`.
+This name is `<prifix>-k8s-auth-method` where `prefix` is `global.name` installation parameter value if it is
+not `null`.
 Otherwise, it is helm chart release name plus "-consul" suffix.
 In production version we totally recommend not override default `global.name` value - `consul`.
 In this way Consul authentication method name is `consul-k8s-auth-method`.
@@ -2077,7 +2087,9 @@ In this way Consul authentication method name is `consul-k8s-auth-method`.
 
 ### Federate Multiple Datacenters Via Mesh Gateways
 
-For more information, refer to [Federation Between Kubernetes Clusters](/docs/public/federation-between-datacenters.md#federation-between-kubernetes-clusters).
+For more information, refer to
+<!-- markdownlint-disable-next-line MD013 -->
+[Federation Between Kubernetes Clusters](/docs/public/federation-between-datacenters.md#federation-between-kubernetes-clusters).
 
 ### Federate Multiple Datacenters Using WAN Gossip
 
@@ -2086,4 +2098,5 @@ join them via single WAN gossip pool. You can do this manually during installati
 
 #### Create Multi-DC Configuration Manually
 
-For more information, refer to [Datacenter Federation with WAN Gossip](https://developer.hashicorp.com/consul/docs/deploy/server/vm/bootstrap).
+For more information, refer to
+[Datacenter Federation with WAN Gossip](https://developer.hashicorp.com/consul/docs/deploy/server/vm/bootstrap).

@@ -1,0 +1,36 @@
+# This file is a Helm template example showing how a client service should define a ConsulACL CR.
+# .Values.CONSUL_URL must be a full URL: http://<service>.<namespace>.svc.cluster.local:<port>
+# operatorNamespace is extracted automatically from the second segment of the hostname.
+apiVersion: netcracker.com/v1alpha1
+kind: ConsulACL
+metadata:
+  name: example-consulacl
+  namespace: opensearch-service
+spec:
+  acl:
+    name: example-consulacl
+    explicitName: true
+    operatorNamespace: {{ (index (splitList "." (first (splitList ":" (last (splitList "://" .Values.CONSUL_URL))))) 1) | quote }}  # yamllint disable-line rule:braces
+    json: >
+      {
+        "policies": [
+          {
+            "Name": "example_policy",
+            "Description": "Example policy for opensearch-service",
+            "Rules": "key_prefix \"config/opensearch/\" { policy = \"read\" }"
+          }
+        ],
+        "roles": [
+          {
+            "Name": "example_role",
+            "Description": "Example role for opensearch-service",
+            "policy_names": ["example_policy"]
+          }
+        ],
+        "bind_rules": [
+          {
+            "BindName": "example_bind",
+            "ServiceAccountName": "opensearch-service-operator"
+          }
+        ]
+      }
