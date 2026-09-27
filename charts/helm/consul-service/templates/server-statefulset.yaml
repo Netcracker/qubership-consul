@@ -421,6 +421,11 @@ spec:
                   curl http://127.0.0.1:8500/v1/status/leader \
                   {{- end }}
                   2>/dev/null | grep -E '".+"'
+            initialDelaySeconds: {{ .Values.server.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.server.livenessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.server.livenessProbe.timeoutSeconds }}
+            successThreshold: {{ .Values.server.livenessProbe.successThreshold }}
+            failureThreshold: {{ .Values.server.livenessProbe.failureThreshold }}
           readinessProbe:
             # NOTE(mitchellh): when our HTTP status endpoints support the
             # proper status codes, we should switch to that. This is temporary.
@@ -436,11 +441,11 @@ spec:
                   curl http://127.0.0.1:8500/v1/status/leader \
                   {{- end }}
                   2>/dev/null | grep -E '".+"'
-            failureThreshold: 2
-            initialDelaySeconds: 5
-            periodSeconds: 3
-            successThreshold: 1
-            timeoutSeconds: 5
+            initialDelaySeconds: {{ .Values.server.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.server.readinessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.server.readinessProbe.timeoutSeconds }}
+            successThreshold: {{ .Values.server.readinessProbe.successThreshold }}
+            failureThreshold: {{ .Values.server.readinessProbe.failureThreshold }}
           resources:
             requests:
               cpu: {{ default "50m" .Values.server.resources.requests.cpu }}

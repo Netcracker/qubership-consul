@@ -147,7 +147,7 @@ func main() {
 func getWatchNamespace() (string, error) {
 	// WatchNamespaceEnvVar is the constant for env variable WATCH_NAMESPACE
 	// which specifies the Namespace to watch.
-	// An empty value means the operator is running with cluster scope.
+	// If the value is "*", the operator runs with cluster-wide scope.
 	var watchNamespaceEnvVar = "WATCH_NAMESPACE"
 
 	ns, found := os.LookupEnv(watchNamespaceEnvVar)
