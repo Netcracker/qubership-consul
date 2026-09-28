@@ -131,7 +131,7 @@ func main() {
 func getWatchNamespace() (string, error) {
 	// WatchNamespaceEnvVar is the constant for env variable WATCH_NAMESPACE
 	// which specifies the Namespace to watch.
-	// An empty value means the operator is running with cluster scope.
+	// If the value is "*", the operator runs with cluster-wide scope.
 	var watchNamespaceEnvVar = "WATCH_NAMESPACE"
 
 	ns, found := os.LookupEnv(watchNamespaceEnvVar)
@@ -142,6 +142,10 @@ func getWatchNamespace() (string, error) {
 }
 
 func configureMgrNamespaces(mgrOptions *ctrl.Options, namespace string, ownNamespace string) {
+	if namespace == "*" {
+		mgrOptions.Cache.DefaultNamespaces = nil
+		return
+	}
 	namespaces := strings.Split(namespace, ",")
 	if !util.Contains(ownNamespace, namespaces) {
 		namespaces = append(namespaces, ownNamespace)
