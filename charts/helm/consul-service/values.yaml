@@ -2491,7 +2491,7 @@ pvc:
 # are kept), because volumeClaimTemplates are immutable and the upgrade would fail otherwise.
 # Helm recreates the StatefulSet with the new volumeClaimTemplates during the upgrade.
 resourceMigration:
-  enabled: false
+  enabled: true
   resources:
     requests:
       memory: "75Mi"

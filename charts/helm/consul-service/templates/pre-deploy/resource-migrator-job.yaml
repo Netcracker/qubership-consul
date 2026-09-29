@@ -21,7 +21,7 @@ spec:
         component: resource-migrator
         {{- include "consul-service.defaultLabels" . | nindent 8 }}
     spec:
-      {{- if not (eq (include "openshift.enabled" .) "true") }}
+      {{- if ne (include "openshift.enabled" .) "true" }}
       securityContext:
         {{- include "consul.globalPodSecurityContext" . | nindent 8 }}
         {{- with .Values.resourceMigration.securityContext }}
@@ -32,7 +32,7 @@ spec:
       serviceAccountName: {{ template "consul.fullname" . }}-resource-migrator
       containers:
         - name: resource-migrator
-          image: {{ .Values.podScheduler.dockerImage }}
+          image: {{ template "kubectl.image" . }}
           command:
             - "/bin/bash"
             - "-c"
