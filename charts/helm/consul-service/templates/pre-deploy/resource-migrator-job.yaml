@@ -1,5 +1,5 @@
 {{- if .Values.resourceMigration.enabled }}
-{{- $desiredAnnotations := .Values.pvc.metadata.annotations | default (dict) }}
+{{- $desiredAnnotations := include "consul.pvc.metadata.annotations" . | fromYaml | default (dict) }}
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -33,6 +33,9 @@ spec:
       containers:
         - name: resource-migrator
           image: {{ template "kubectl.image" . }}
+          env:
+            - name: DESIRED_ANNOTATIONS
+              value: {{ $desiredAnnotations | toJson | replace "$(" "$$(" | quote }}
           command:
             - "/bin/bash"
             - "-c"
@@ -43,7 +46,6 @@ spec:
               NAMESPACE="{{ .Release.Namespace }}"
               FULLNAME="{{ template "consul.fullname" . }}"
               SERVER_STS_NAME="${FULLNAME}-server"
-              DESIRED_ANNOTATIONS='{{ $desiredAnnotations | toJson }}'
 
               # The CURRENT annotations are read from the StatefulSet's volumeClaimTemplates, which
               # contain only the annotations set by this chart. A live PVC also carries annotations
@@ -63,7 +65,7 @@ spec:
               fi
 
               ACTUAL_ANNOTATIONS="$(printf '%s' "$STS_JSON" | jq -cS '.spec.volumeClaimTemplates[0].metadata.annotations // {}')"
-              DESIRED_ANNOTATIONS="$(printf '%s' "$DESIRED_ANNOTATIONS" | jq -cS 'with_entries(.value |= tostring)')"
+              DESIRED_ANNOTATIONS="$(printf '%s' "$DESIRED_ANNOTATIONS" | jq -cS '.')"
 
               if [ "$ACTUAL_ANNOTATIONS" = "$DESIRED_ANNOTATIONS" ]; then
                 echo "[resource-migrator] Server PVC annotations already up to date"

@@ -1111,10 +1111,11 @@ Read-only mount for a pod-secrets projected volume.
 
 {{/*
 Coerce all annotation values to quoted strings (handles booleans/numbers).
+Non-string values are rendered via toJson, so large integers stay as "1000000" instead of "1e+06".
 */}}
 {{- define "consul.stringifyAnnotations" -}}
 {{- range $key, $value := . }}
-{{ $key }}: {{ $value | toString | quote }}
+{{ $key }}: {{ ternary $value (toJson $value) (kindIs "string" $value) | quote }}
 {{- end }}
 {{- end -}}
 
