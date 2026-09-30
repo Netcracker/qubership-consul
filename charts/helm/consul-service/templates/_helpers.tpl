@@ -1110,19 +1110,11 @@ Read-only mount for a pod-secrets projected volume.
 {{- end -}}
 
 {{/*
-Coerce all annotation values to quoted strings (handles booleans/numbers).
-Non-string values are rendered via toJson, so large integers stay as "1000000" instead of "1e+06".
-*/}}
-{{- define "consul.stringifyAnnotations" -}}
-{{- range $key, $value := . }}
-{{ $key }}: {{ ternary $value (toJson $value) (kindIs "string" $value) | quote }}
-{{- end }}
-{{- end -}}
-
-{{/*
 Global annotations applied to all Consul PVCs (server volumeClaimTemplates, server PVCs and backup-daemon PVC).
 */}}
 {{- define "consul.pvc.metadata.annotations" -}}
-{{- include "consul.stringifyAnnotations" (.Values.pvc.metadata.annotations | default (dict)) | trim -}}
+{{- with .Values.pvc.metadata.annotations }}
+{{- toYaml . }}
+{{- end }}
 {{- end -}}
 
