@@ -1,5 +1,4 @@
 {{- if .Values.resourceMigration.enabled }}
-{{- $desiredAnnotations := include "consul.pvc.metadata.annotations" . | fromYaml | default (dict) }}
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -35,7 +34,7 @@ spec:
           image: {{ template "kubectl.image" . }}
           env:
             - name: DESIRED_ANNOTATIONS
-              value: {{ $desiredAnnotations | toJson | quote }}
+              value: {{ include "consul.pvc.metadata.annotations" . | fromYaml | toJson | quote }}
           command:
             - "/bin/bash"
             - "-c"
