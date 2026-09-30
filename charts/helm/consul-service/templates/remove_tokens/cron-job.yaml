@@ -42,6 +42,14 @@ spec:
                 items:
                   - key: {{ $aclBootstrapSecretKey }}
                     path: CONSUL_HTTP_TOKEN
+            {{- if .Values.global.tls.enabled }}
+            - name: consul-ca-cert
+              secret:
+                secretName: {{ template "consul.caCertSecretName" . }}
+                items:
+                  - key: {{ default "tls.crt" .Values.global.tls.caCert.secretKey }}
+                    path: tls.crt
+            {{- end }}
           containers:
             - name: remove-tokens
               image: {{ template "remove-tokens.image" . }}
@@ -54,16 +62,25 @@ spec:
                   value: "{{ template "consul.fullname" . }}-server"
                 - name: CONSUL_PORT
                   value: "{{ coalesce .Values.consulAclConfigurator.consul.port (include "consul.port" .) }}"
-                - name: AUTH_METHOD
-                  value: "{{ template "consul.fullname" . }}-consul-k8s-component-auth-method"
                 - name: CONSUL_NAMESPACE
                   valueFrom:
                     fieldRef:
                       fieldPath: metadata.namespace
+                {{- if .Values.global.tls.enabled }}
+                - name: CONSUL_USE_TLS
+                  value: "true"
+                - name: CONSUL_CACERT_FILE
+                  value: "/consul/tls/ca/tls.crt"
+                {{- end }}
               volumeMounts:
                 - name: remove-tokens-pod-secrets
                   mountPath: {{ $removeTokensPodSecretsMount }}
                   readOnly: true
+                {{- if .Values.global.tls.enabled }}
+                - name: consul-ca-cert
+                  mountPath: /consul/tls/ca/
+                  readOnly: true
+                {{- end }}
               securityContext:
                 {{- include "consul.globalContainerSecurityContext" . | nindent 16 }}
 {{- end }}

@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -28,7 +30,10 @@ const (
 	leaderWaitMaxDelay = 30 * time.Second
 )
 
-var httpClient = &http.Client{Timeout: httpTimeout}
+var (
+	httpClient = &http.Client{Timeout: httpTimeout}
+	baseURL    = "http://localhost:8500"
+)
 
 type Token struct {
 	AccessorID  string    `json:"AccessorID"`
@@ -65,17 +70,18 @@ func parseDescription(desc string) *TokenDescription {
 
 func main() {
 	consulHost, consulPort, consulToken, namespace := loadEnv()
+	configureHTTP(consulHost, consulPort)
 
 	clientset := mustGetKubeClient()
 
-	if !waitForLeader(consulHost, consulPort, consulToken) {
+	if !waitForLeader(consulToken) {
 		log.Println("[WARN] Consul leader is not elected, skipping this run")
 		return
 	}
 
 	livePods := getLiveConsulPods(clientset, namespace)
 
-	tokens, err := fetchConsulTokens(consulHost, consulPort, consulToken)
+	tokens, err := fetchConsulTokens(consulToken)
 	if err != nil {
 		log.Fatalln(err, "Failed fetchConsulTokens")
 	}
@@ -84,14 +90,17 @@ func main() {
 
 	tokensToDelete := pickTokensToDelete(tokensByPod, livePods)
 
-	deleteTokens(consulHost, consulPort, consulToken, tokensToDelete)
+	deleteTokens(consulToken, tokensToDelete)
 }
 
 // ----------------- ENV -----------------
 
 func loadEnv() (host, port, token, ns string) {
 	host = strings.TrimSpace(os.Getenv("CONSUL_HOST"))
-	port = "8500"
+	port = strings.TrimSpace(os.Getenv("CONSUL_PORT"))
+	if port == "" {
+		port = "8500"
+	}
 	token = readConsulToken()
 	ns = strings.TrimSpace(os.Getenv("CONSUL_NAMESPACE"))
 
@@ -99,6 +108,29 @@ func loadEnv() (host, port, token, ns string) {
 		log.Fatal("[ERROR] Missing CONSUL_HOST / Consul ACL token (mounted secret file)")
 	}
 	return
+}
+
+// configureHTTP sets baseURL and, when CONSUL_USE_TLS=true, switches to https
+// trusting the CA from CONSUL_CACERT_FILE (system roots if it is not set).
+func configureHTTP(host, port string) {
+	scheme := "http"
+	if strings.EqualFold(strings.TrimSpace(os.Getenv("CONSUL_USE_TLS")), "true") {
+		scheme = "https"
+		tlsCfg := &tls.Config{MinVersion: tls.VersionTLS12}
+		if caFile := strings.TrimSpace(os.Getenv("CONSUL_CACERT_FILE")); caFile != "" {
+			pem, err := os.ReadFile(caFile)
+			if err != nil {
+				log.Fatalf("Cannot read CA file %s: %v", caFile, err)
+			}
+			pool := x509.NewCertPool()
+			if !pool.AppendCertsFromPEM(pem) {
+				log.Fatalf("No valid certificates in CA file %s", caFile)
+			}
+			tlsCfg.RootCAs = pool
+		}
+		httpClient.Transport = &http.Transport{TLSClientConfig: tlsCfg}
+	}
+	baseURL = fmt.Sprintf("%s://%s:%s", scheme, host, port)
 }
 
 const removeTokensPodSecretsDir = "/etc/secrets/remove-tokens-pod-secrets"
@@ -145,8 +177,8 @@ func getLiveConsulPods(clientset *kubernetes.Clientset, namespace string) map[st
 
 // waitForLeader polls /v1/status/leader with exponential backoff until Consul
 // reports a leader or leaderWaitMax elapses.
-func waitForLeader(host, port, token string) bool {
-	urlStr := fmt.Sprintf("http://%s:%s/v1/status/leader", host, port)
+func waitForLeader(token string) bool {
+	urlStr := baseURL + "/v1/status/leader"
 	deadline := time.Now().Add(leaderWaitMax)
 	delay := leaderWaitInitial
 
@@ -189,8 +221,8 @@ func hasLeader(urlStr, token string) bool {
 	return strings.Trim(strings.TrimSpace(string(body)), `"`) != ""
 }
 
-func fetchConsulTokens(host, port, token string) ([]Token, error) {
-	urlStr := fmt.Sprintf("http://%s:%s/v1/acl/tokens", host, port)
+func fetchConsulTokens(token string) ([]Token, error) {
+	urlStr := baseURL + "/v1/acl/tokens"
 	fmt.Println("[INFO] Fetching tokens from Consul...")
 
 	req, err := http.NewRequest("GET", urlStr, nil)
@@ -258,7 +290,7 @@ func pickTokensToDelete(tokensByPod map[string][]Token, livePods map[string]stru
 	return tokensToDelete
 }
 
-func deleteTokens(host, port, token string, tokensToDelete []string) {
+func deleteTokens(token string, tokensToDelete []string) {
 	if len(tokensToDelete) == 0 {
 		fmt.Println("[INFO] No stale client tokens to delete.")
 		return
@@ -268,7 +300,7 @@ func deleteTokens(host, port, token string, tokensToDelete []string) {
 	for _, id := range tokensToDelete {
 		fmt.Println(id)
 		idEnc := url.PathEscape(id)
-		delURL := fmt.Sprintf("http://%s:%s/v1/acl/token/%s", host, port, idEnc)
+		delURL := baseURL + "/v1/acl/token/" + idEnc
 
 		req, err := http.NewRequest("DELETE", delURL, nil)
 		if err != nil {
