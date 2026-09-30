@@ -338,7 +338,7 @@ For more information, refer to [Pod Scheduler](#pod-scheduler) section.
 
 You can add custom annotations to all Consul PersistentVolumeClaims via `pvc.metadata.annotations`. These annotations
 are applied to both the Consul server PVCs (via the server StatefulSet `volumeClaimTemplates`) and the backup daemon
-PVC. Annotation values must be strings, so quote numbers and booleans (for example, `"1"` or `"true"`).
+PVC.
 
 A common use case is to protect PVCs from being pruned by ArgoCD:
 

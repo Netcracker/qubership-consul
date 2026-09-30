@@ -34,7 +34,7 @@ spec:
           image: {{ template "kubectl.image" . }}
           env:
             - name: DESIRED_ANNOTATIONS
-              value: {{ .Values.pvc.metadata.annotations | default (dict) | toJson | quote }}
+              value: {{ include "consul.pvc.metadata.annotations" . | fromYaml | toJson | quote }}
           command:
             - "/bin/bash"
             - "-c"
