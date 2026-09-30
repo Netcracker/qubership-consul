@@ -21,6 +21,15 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
+const (
+	httpTimeout        = 30 * time.Second
+	leaderWaitMax      = 3 * time.Minute
+	leaderWaitInitial  = 5 * time.Second
+	leaderWaitMaxDelay = 30 * time.Second
+)
+
+var httpClient = &http.Client{Timeout: httpTimeout}
+
 type Token struct {
 	AccessorID  string    `json:"AccessorID"`
 	Description string    `json:"Description"`
@@ -58,6 +67,11 @@ func main() {
 	consulHost, consulPort, consulToken, namespace := loadEnv()
 
 	clientset := mustGetKubeClient()
+
+	if !waitForLeader(consulHost, consulPort, consulToken) {
+		log.Println("[WARN] Consul leader is not elected, skipping this run")
+		return
+	}
 
 	livePods := getLiveConsulPods(clientset, namespace)
 
@@ -129,6 +143,52 @@ func getLiveConsulPods(clientset *kubernetes.Clientset, namespace string) map[st
 
 // ----------------- Consul Tokens -----------------
 
+// waitForLeader polls /v1/status/leader with exponential backoff until Consul
+// reports a leader or leaderWaitMax elapses.
+func waitForLeader(host, port, token string) bool {
+	urlStr := fmt.Sprintf("http://%s:%s/v1/status/leader", host, port)
+	deadline := time.Now().Add(leaderWaitMax)
+	delay := leaderWaitInitial
+
+	for {
+		if hasLeader(urlStr, token) {
+			return true
+		}
+		if time.Now().Add(delay).After(deadline) {
+			return false
+		}
+		log.Printf("[WARN] No Consul leader yet, retrying in %s", delay)
+		time.Sleep(delay)
+		delay *= 2
+		if delay > leaderWaitMaxDelay {
+			delay = leaderWaitMaxDelay
+		}
+	}
+}
+
+func hasLeader(urlStr, token string) bool {
+	req, err := http.NewRequest("GET", urlStr, nil)
+	if err != nil {
+		return false
+	}
+	req.Header.Set("X-Consul-Token", token)
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return false
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != 200 {
+		return false
+	}
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return false
+	}
+	return strings.Trim(strings.TrimSpace(string(body)), `"`) != ""
+}
+
 func fetchConsulTokens(host, port, token string) ([]Token, error) {
 	urlStr := fmt.Sprintf("http://%s:%s/v1/acl/tokens", host, port)
 	fmt.Println("[INFO] Fetching tokens from Consul...")
@@ -139,7 +199,7 @@ func fetchConsulTokens(host, port, token string) ([]Token, error) {
 	}
 	req.Header.Set("X-Consul-Token", token)
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -217,7 +277,7 @@ func deleteTokens(host, port, token string, tokensToDelete []string) {
 		}
 		req.Header.Set("X-Consul-Token", token)
 
-		resp, err := http.DefaultClient.Do(req)
+		resp, err := httpClient.Do(req)
 		if err != nil {
 			log.Printf("[WARN] Failed to revoke %s: %v", id, err)
 			continue
