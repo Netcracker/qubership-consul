@@ -776,8 +776,9 @@ func (m *mockKVClient) DeleteTree(prefix string, _ *consulApi.WriteOptions) (*co
 		return nil, m.deleteTreeFunc(prefix)
 	}
 	m.deletedTrees = append(m.deletedTrees, prefix)
+	// Consul deletes a tree by raw string prefix, not by path segments.
 	for key := range m.store {
-		if key == prefix || strings.HasPrefix(key, prefix+"/") {
+		if strings.HasPrefix(key, prefix) {
 			delete(m.store, key)
 		}
 	}
@@ -857,7 +858,7 @@ func TestDeleteKVEntries_CallsDeleteForEachOwnedEntry(t *testing.T) {
 		{Key: "config/ns/svc/", Status: "synced", Owned: true},
 		{Key: "logging/ns/svc/LOG_LEVEL", Status: "synced", Owned: true},
 	}
-	if err := deleteKVEntries(statuses); err != nil {
+	if _, err := deleteKVEntries(statuses); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if len(mock.deletedKeys) != 2 {
@@ -877,7 +878,7 @@ func TestDeleteKVEntries_NotOwnedEntries_Skipped(t *testing.T) {
 	statuses := []consulacl.ConsulKVEntryStatus{
 		{Key: "config/ns/svc/", Status: "synced", Owned: false},
 	}
-	if err := deleteKVEntries(statuses); err != nil {
+	if _, err := deleteKVEntries(statuses); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if len(mock.deletedKeys) != 0 {
@@ -908,7 +909,7 @@ func TestDeleteKVEntries_NetworkError_Returned(t *testing.T) {
 		{Key: "key/one", Status: "synced", Owned: true},
 		{Key: "key/two", Status: "synced", Owned: true},
 	}
-	err := deleteKVEntries(statuses)
+	_, err := deleteKVEntries(statuses)
 	if err == nil {
 		t.Fatal("expected error to be returned, got nil")
 	}

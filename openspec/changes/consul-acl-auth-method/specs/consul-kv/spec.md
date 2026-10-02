@@ -288,20 +288,23 @@ The controller SHALL write and delete keys in Consul transactions of at most 64 
 
 When a later batch fails after earlier batches committed, the controller SHALL record the keys of the committed batches in `status.entries` (with `Owned=true` where applicable) and give only the keys of the failed batch an error status, so that a retry neither increments `Flags` a second time for keys already written, nor decrements it a second time for keys already released. The overall status SHALL become successful only after all batches are written.
 
-> **Bug** (task 22.6, bugfix): on a failure all entries are given an `error` status without `Owned=true`, although earlier batches are committed, so the next reconcile increments `Flags` again and the key is never deleted. When removing keys, a failed later batch returns no result, so the next reconcile decrements the already released keys again and may delete a key still used by another CR.
+A key that was owned before and belongs to the failed batch SHALL stay owned in `status`. On deletion of the CR, the keys released by the committed batches SHALL be recorded in `status` before the request is requeued.
 
 #### Scenario: Second batch fails on apply
 
 - **WHEN** a CR with 100 keys is applied and the batch with keys 65–100 fails after the batch with keys 1–64 committed
 - **THEN** keys 1–64 SHALL be recorded as owned in `status` and the next reconcile SHALL NOT increment their `Flags`
 
+#### Scenario: Second batch fails on deletion
+
+- **WHEN** a CR with 100 owned keys is deleted and the batch with keys 65–100 fails after the batch with keys 1–64 committed
+- **THEN** keys 1–64 SHALL be recorded as released in `status` and the retry SHALL decrement only keys 65–100
+
 ---
 
 ### Requirement: Duplicate Keys
 
 When a `ConsulKV` resource declares the same `key` more than once, the controller SHALL write the key once with the value of the last entry, SHALL mark the earlier entries in `status.entries` as `skipped (duplicate key)`, and SHALL write all other keys normally. A duplicate SHALL NOT make the transaction fail.
-
-> **Bug** (task 22.5, bugfix): a duplicate produces two `KVCAS` operations with the same `ModifyIndex` in one transaction, the second one fails, and every retry fails the same way until `max retries exceeded`, so none of the up to 64 keys in that batch is written.
 
 #### Scenario: Same key declared twice
 
@@ -313,8 +316,6 @@ When a `ConsulKV` resource declares the same `key` more than once, the controlle
 ### Requirement: Purge on Delete
 
 When `spec.kv.purgeOnDelete` is `true`, the controller SHALL, on deletion of the CR, remove each declared key and everything below it, regardless of which other resources use those keys. The declared key SHALL be treated as a directory: the controller SHALL delete the exact key and then the tree `<key>/` (the trailing `/` is appended when missing and a declared key without `/` is accepted as is), so that keys that merely share the string prefix, such as `config/application/...` for `config/app`, are not deleted.
-
-> **Bug** (task 22.4, bugfix): `deleteKVTree` deletes by raw string prefix, so with `key: "config/app"` the keys `config/application/...` and `config/app-gateway/...` are deleted too. There are no tests for `purgeOnDelete`.
 
 #### Scenario: Prefix collision
 

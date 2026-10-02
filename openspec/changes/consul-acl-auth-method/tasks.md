@@ -239,10 +239,10 @@
 - [x] 22.1 Track ownership of keys with the `Flags` reference counter (create → `Flags=1`, additional owner → `Flags+1`, externally created key (`Flags=0`) is not owned)
 - [x] 22.2 Write and delete in transactional batches of at most 64 operations (Consul limit) using CAS with retries
 - [x] 22.3 Support `purgeOnDelete` (recursive delete of the declared keys on CR deletion) and `operatorNamespace`
-- [ ] 22.4 **[bugfix]** `purgeOnDelete`: delete the exact declared key and the tree `<key>/` (append `/` when missing; a key without `/` is accepted), regardless of other users of those keys, so that `config/app` never removes `config/application/...` or `config/app-gateway/...`; add tests for the prefix collision and for keys shared with another CR
-- [ ] 22.5 **[bugfix]** Duplicate keys within one CR: do not fail the transaction; the last entry for a key wins, earlier duplicates get status `skipped (duplicate key)` in `status.entries`, all other keys are written normally
-- [ ] 22.6 **[bugfix]** Partial batch failure (more than 64 keys, a later batch fails): keys of the batches that were committed are recorded in `status.entries` with `Owned=true`, so on the next reconcile their `Flags` are not incremented again; only the keys of the failed batch get an error status and are retried; `generalStatus`/`Successful` becomes success only after all batches are written. The same for removal of keys: keys already released are not decremented again. Add a test "second batch fails" and correct the "batch is atomic" comment
-- [ ] 22.7 Tests for `purgeOnDelete`
+- [x] 22.4 **[bugfix]** `purgeOnDelete`: delete the exact declared key and the tree `<key>/` (append `/` when missing; a key without `/` is accepted), regardless of other users of those keys, so that `config/app` never removes `config/application/...` or `config/app-gateway/...`; add tests for the prefix collision and for keys shared with another CR
+- [x] 22.5 **[bugfix]** Duplicate keys within one CR: do not fail the transaction; the last entry for a key wins, earlier duplicates get status `skipped (duplicate key)` in `status.entries`, all other keys are written normally
+- [x] 22.6 **[bugfix]** Partial batch failure (more than 64 keys, a later batch fails): keys of the batches that were committed are recorded in `status.entries` with `Owned=true`, so on the next reconcile their `Flags` are not incremented again; only the keys of the failed batch get an error status and are retried; `generalStatus`/`Successful` becomes success only after all batches are written. The same for removal of keys: keys already released are not decremented again. Add a test "second batch fails" and correct the "batch is atomic" comment
+- [x] 22.7 Tests for `purgeOnDelete`
 
 > Covers: Key Ownership, Purge on Delete, Duplicate Keys, Batched Writes
 

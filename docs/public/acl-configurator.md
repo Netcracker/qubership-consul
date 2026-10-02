@@ -301,11 +301,24 @@ This allows multiple CRs to safely reference the same key — the key is only de
 - Key exists with `Flags>0` (owned by another CR) → operator increments `Flags`. Key is **co-owned**; it will
   only be deleted when all owning CRs are removed.
 
+If the same key is declared more than once in one CR, the key is written once with the value of the last entry.
+The earlier entries are reported in the CR status as `skipped (duplicate key)`; all other keys are written normally.
+
+Keys are written and released in Consul transactions of at most 64 operations. Each transaction is atomic, the
+operation as a whole is not: if a later transaction fails, the keys of the committed transactions are recorded in
+the CR status as written (or released), only the keys of the failed transaction get an error status, and the
+operator retries them after `consulAclConfigurator.reconcilePeriod`. The CR becomes `synced` only when all keys
+are written.
+
 ### spec.kv.purgeOnDelete
 
-If `spec.kv.purgeOnDelete: true` is set, deleting the CR will recursively delete all Consul keys under each
-entry's key as a prefix, bypassing the ownership counter. Use this only when the CR owns an entire key namespace
-exclusively.
+If `spec.kv.purgeOnDelete: true` is set, deleting the CR removes each declared key and everything below it,
+bypassing the ownership counter: also keys used by other CRs are removed. Use this only when the CR owns an
+entire key namespace exclusively.
+
+Each declared key is treated as a directory: the operator deletes the exact key and the tree `<key>/`. For example,
+for `config/my-service` it deletes `config/my-service` and `config/my-service/...`, but not
+`config/my-service-gateway/...`.
 
 ```yaml
 spec:

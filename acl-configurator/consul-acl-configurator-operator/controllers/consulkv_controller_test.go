@@ -213,7 +213,7 @@ func TestOwnership_KeyNotDeletedUntilLastOwner(t *testing.T) {
 	mock.store["shared/key"] = &consulApi.KVPair{Key: "shared/key", Value: []byte("v"), Flags: 2, ModifyIndex: 5}
 
 	// First owner releases
-	if err := deleteKVBatch([]string{"shared/key"}); err != nil {
+	if _, err := deleteKVBatch([]string{"shared/key"}); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
@@ -237,7 +237,7 @@ func TestOwnership_KeyDeletedByLastOwner(t *testing.T) {
 	mock.initStore()
 	mock.store["shared/key"] = &consulApi.KVPair{Key: "shared/key", Value: []byte("v"), Flags: 1, ModifyIndex: 3}
 
-	if err := deleteKVBatch([]string{"shared/key"}); err != nil {
+	if _, err := deleteKVBatch([]string{"shared/key"}); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
@@ -258,7 +258,7 @@ func TestOwnership_AlreadyAbsentKey(t *testing.T) {
 	txnClient = mock
 	defer func() { kvClient = origKV; txnClient = origTxn }()
 
-	if err := deleteKVBatch([]string{"missing/key"}); err != nil {
+	if _, err := deleteKVBatch([]string{"missing/key"}); err != nil {
 		t.Errorf("expected no error for absent key, got %v", err)
 	}
 	if len(mock.deletedKeys) != 0 {
@@ -336,7 +336,7 @@ func TestDeleteKVBatch_DecrementAndDeleteMixed(t *testing.T) {
 	mock.store["shared"] = &consulApi.KVPair{Key: "shared", Value: []byte("v"), Flags: 2, ModifyIndex: 7}
 	mock.store["solo"] = &consulApi.KVPair{Key: "solo", Value: []byte("v"), Flags: 1, ModifyIndex: 9}
 
-	if err := deleteKVBatch([]string{"shared", "solo"}); err != nil {
+	if _, err := deleteKVBatch([]string{"shared", "solo"}); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if mock.store["shared"] == nil || mock.store["shared"].Flags != 1 {

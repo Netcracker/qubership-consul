@@ -17,6 +17,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -92,9 +93,19 @@ func (r *ConsulKVReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			if instance.Spec.KV.PurgeOnDelete {
 				deleteErr = deleteKVTree(instance.Status.Entries)
 			} else {
-				deleteErr = deleteKVEntries(instance.Status.Entries)
+				var released map[string]bool
+				released, deleteErr = deleteKVEntries(instance.Status.Entries)
+				if deleteErr != nil && len(released) > 0 {
+					// Record the keys of the committed batches so that the retry does not decrement them again.
+					if statusErr := crUpdater.updateStatusWithRetry(func(cr *consulacl.ConsulKV) {
+						cr.Status.Entries = markReleased(cr.Status.Entries, released)
+					}); statusErr != nil {
+						kvLog.Error(statusErr, "Error updating ConsulKV status after partial release")
+					}
+				}
 			}
 			if deleteErr != nil {
+				reqLogger.Error(deleteErr, "Error releasing ConsulKV entries")
 				return reconcile.Result{RequeueAfter: time.Second * time.Duration(periodTime)}, nil
 			}
 			err = crUpdater.updateWithRetry(func(cr *consulacl.ConsulKV) {
@@ -174,41 +185,56 @@ func (r *ConsulKVReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
+const statusSkippedDuplicate = "skipped (duplicate key)"
+
 func applyKVEntries(entries []consulacl.ConsulKVEntry, ownedKeys map[string]bool) ([]consulacl.ConsulKVEntryStatus, error) {
 	statuses := make([]consulacl.ConsulKVEntryStatus, len(entries))
 
-	// Empty keys are reported per-entry and excluded from the transaction batch.
+	// The last entry of a key wins; two operations on one key would make the transaction fail.
+	lastIndex := make(map[string]int, len(entries))
+	for i, e := range entries {
+		lastIndex[e.Key] = i
+	}
+
+	// Empty keys and earlier duplicates are reported per-entry and excluded from the transactions.
 	valid := make([]consulacl.ConsulKVEntry, 0, len(entries))
 	for i, e := range entries {
-		if e.Key == "" {
+		switch {
+		case e.Key == "":
 			statuses[i] = consulacl.ConsulKVEntryStatus{Key: "", Status: "error: key must not be empty"}
-		} else {
+		case lastIndex[e.Key] != i:
+			statuses[i] = consulacl.ConsulKVEntryStatus{Key: e.Key, Status: statusSkippedDuplicate}
+		default:
 			valid = append(valid, e)
 		}
 	}
 
 	owned, err := writeKVBatchWithOwnership(valid, ownedKeys)
 
-	// The batch is all-or-nothing, so every valid entry shares the outcome.
+	// Each batch is atomic, the whole write is not: keys of committed batches are synced even if
+	// a later batch failed, so that the retry does not increment their Flags again.
 	for i, e := range entries {
-		if e.Key == "" {
+		if e.Key == "" || lastIndex[e.Key] != i {
 			continue
 		}
-		if err != nil {
-			statuses[i] = consulacl.ConsulKVEntryStatus{Key: e.Key, Status: "error: " + err.Error()}
+		isOwned, committed := owned[e.Key]
+		if !committed {
+			// Not written in this cycle; a key owned before stays owned.
+			statuses[i] = consulacl.ConsulKVEntryStatus{Key: e.Key, Status: "error: " + err.Error(), Owned: ownedKeys[e.Key]}
 			continue
 		}
 		status := "synced"
-		if !owned[e.Key] {
+		if !isOwned {
 			status = "synced (not owned: pre-existing key)"
 		}
-		statuses[i] = consulacl.ConsulKVEntryStatus{Key: e.Key, Status: status, Owned: owned[e.Key]}
+		statuses[i] = consulacl.ConsulKVEntryStatus{Key: e.Key, Status: status, Owned: isOwned}
 	}
 	return statuses, err
 }
 
 // writeKVBatchWithOwnership applies entries in CAS transactions of up to txnBatchSize
-// operations. It returns a key->owned map describing whether this CR now owns each key.
+// operations. It returns a key->owned map with an entry for each key of the committed batches,
+// describing whether this CR now owns the key; on error the keys of the failed and later batches are absent.
 func writeKVBatchWithOwnership(entries []consulacl.ConsulKVEntry, ownedKeys map[string]bool) (map[string]bool, error) {
 	owned := make(map[string]bool, len(entries))
 	for start := 0; start < len(entries); start += txnBatchSize {
@@ -283,20 +309,24 @@ func writeKVChunk(entries []consulacl.ConsulKVEntry, ownedKeys, owned map[string
 }
 
 // mergeKVStatuses preserves the order of existing status entries and appends new ones at the bottom.
+// A key may have several updated entries (earlier duplicates are reported as skipped), they are kept together.
 // cleanedKeys contains keys that were successfully decremented this reconcile cycle.
 func mergeKVStatuses(existing, updated []consulacl.ConsulKVEntryStatus, cleanedKeys map[string]bool) []consulacl.ConsulKVEntryStatus {
-	updatedMap := make(map[string]consulacl.ConsulKVEntryStatus, len(updated))
+	updatedByKey := make(map[string][]consulacl.ConsulKVEntryStatus, len(updated))
 	for _, e := range updated {
-		updatedMap[e.Key] = e
+		updatedByKey[e.Key] = append(updatedByKey[e.Key], e)
 	}
 
 	result := make([]consulacl.ConsulKVEntryStatus, 0, len(existing)+len(updated))
 	seen := make(map[string]bool, len(existing))
 
 	for _, e := range existing {
+		if seen[e.Key] {
+			continue
+		}
 		seen[e.Key] = true
-		if entry, ok := updatedMap[e.Key]; ok {
-			result = append(result, entry)
+		if entries, ok := updatedByKey[e.Key]; ok {
+			result = append(result, entries...)
 		} else {
 			// key removed from spec: owned=false only if decrement succeeded
 			owned := e.Owned && !cleanedKeys[e.Key]
@@ -306,35 +336,49 @@ func mergeKVStatuses(existing, updated []consulacl.ConsulKVEntryStatus, cleanedK
 
 	for _, e := range updated {
 		if !seen[e.Key] {
-			result = append(result, e)
+			seen[e.Key] = true
+			result = append(result, updatedByKey[e.Key]...)
 		}
 	}
 
 	return result
 }
 
-// deleteKVEntries is called on CR deletion. Decrements Flags for every owned entry,
-// deleting a key once its counter reaches zero.
-func deleteKVEntries(statuses []consulacl.ConsulKVEntryStatus) error {
+// ownedStatusKeys returns the distinct non-empty keys owned according to the status entries.
+func ownedStatusKeys(statuses []consulacl.ConsulKVEntryStatus) []string {
+	seen := make(map[string]bool, len(statuses))
 	var keys []string
 	for _, e := range statuses {
-		if e.Key != "" && e.Owned {
+		if e.Key != "" && e.Owned && !seen[e.Key] {
+			seen[e.Key] = true
 			keys = append(keys, e.Key)
 		}
 	}
-	return deleteKVBatch(keys)
+	return keys
+}
+
+// deleteKVEntries is called on CR deletion. Decrements Flags for every owned entry,
+// deleting a key once its counter reaches zero. It returns the keys released by the
+// committed batches, also when a later batch fails.
+func deleteKVEntries(statuses []consulacl.ConsulKVEntryStatus) (map[string]bool, error) {
+	return deleteKVBatch(ownedStatusKeys(statuses))
 }
 
 // deleteKVBatch releases the given keys in CAS transactions of up to txnBatchSize
-// operations (each batch is applied atomically on its own).
-func deleteKVBatch(keys []string) error {
+// operations. Each batch is atomic, the whole operation is not: the returned set contains
+// the keys of the batches that committed before an error.
+func deleteKVBatch(keys []string) (map[string]bool, error) {
+	released := make(map[string]bool, len(keys))
 	for start := 0; start < len(keys); start += txnBatchSize {
 		end := min(start+txnBatchSize, len(keys))
 		if err := deleteKVChunk(keys[start:end]); err != nil {
-			return err
+			return released, err
+		}
+		for _, k := range keys[start:end] {
+			released[k] = true
 		}
 	}
-	return nil
+	return released, nil
 }
 
 // deleteKVChunk applies one batch atomically: for each key it either decrements Flags
@@ -391,48 +435,69 @@ func deleteKVChunk(keys []string) error {
 	return fmt.Errorf("KV delete txn: max retries exceeded (%d)", casMaxRetries)
 }
 
-// deleteKVTree is called on CR deletion when PurgeOnDelete is set.
-// It recursively deletes all Consul keys under each entry's key prefix, bypassing ownership checks.
+// deleteKVTree is called on CR deletion when PurgeOnDelete is set. Each declared key is
+// treated as a directory: the exact key and the tree "<key>/" are deleted, bypassing ownership
+// checks. Consul deletes a tree by raw string prefix, so the trailing "/" is required to keep
+// keys that only share the prefix (config/application/... for config/app).
 func deleteKVTree(statuses []consulacl.ConsulKVEntryStatus) error {
 	var firstErr error
+	keepFirst := func(err error) {
+		if firstErr == nil {
+			firstErr = err
+		}
+	}
+	seen := make(map[string]bool, len(statuses))
 	for _, e := range statuses {
-		if e.Key == "" {
+		if e.Key == "" || seen[e.Key] {
 			continue
 		}
-		if _, err := kvClient.DeleteTree(e.Key, nil); err != nil {
-			kvLog.Error(err, "Error deleting KV tree", "prefix", e.Key)
-			if firstErr == nil {
-				firstErr = err
+		seen[e.Key] = true
+		treePrefix := e.Key
+		if !strings.HasSuffix(treePrefix, "/") {
+			if _, err := kvClient.Delete(e.Key, nil); err != nil {
+				kvLog.Error(err, "Error deleting KV key", "key", e.Key)
+				keepFirst(err)
+				continue
 			}
+			treePrefix += "/"
+		}
+		if _, err := kvClient.DeleteTree(treePrefix, nil); err != nil {
+			kvLog.Error(err, "Error deleting KV tree", "prefix", treePrefix)
+			keepFirst(err)
 		}
 	}
 	return firstErr
 }
 
 // deleteRemovedEntries decrements Flags for keys that were owned but removed from spec.
-// Returns the set of keys that were successfully released (for status update).
+// Returns the set of keys that were released (for status update), including the keys of
+// committed batches when a later batch fails.
 func deleteRemovedEntries(existing []consulacl.ConsulKVEntryStatus, specEntries []consulacl.ConsulKVEntry) (map[string]bool, error) {
 	specKeys := make(map[string]bool, len(specEntries))
 	for _, e := range specEntries {
 		specKeys[e.Key] = true
 	}
 
-	var keys []string
+	var removed []consulacl.ConsulKVEntryStatus
 	for _, e := range existing {
-		if !specKeys[e.Key] && e.Owned {
-			keys = append(keys, e.Key)
+		if !specKeys[e.Key] {
+			removed = append(removed, e)
 		}
 	}
+	return deleteKVBatch(ownedStatusKeys(removed))
+}
 
-	if err := deleteKVBatch(keys); err != nil {
-		return nil, err // batch is atomic: on failure nothing was released
+// markReleased returns statuses in which the released keys are no longer owned.
+func markReleased(statuses []consulacl.ConsulKVEntryStatus, released map[string]bool) []consulacl.ConsulKVEntryStatus {
+	result := make([]consulacl.ConsulKVEntryStatus, len(statuses))
+	for i, e := range statuses {
+		if released[e.Key] {
+			e.Owned = false
+			e.Status = "released"
+		}
+		result[i] = e
 	}
-
-	cleanedKeys := make(map[string]bool, len(keys))
-	for _, k := range keys {
-		cleanedKeys[k] = true
-	}
-	return cleanedKeys, nil
+	return result
 }
 
 func containsFinalizer(finalizers []string, finalizer string) bool {

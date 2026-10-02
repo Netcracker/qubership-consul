@@ -122,15 +122,16 @@ ConsulKVStatus {
 - **ConsulKV keys:** the `Flags` field is a reference counter. A new key is created with `Flags=1`; another CR using the same key increments the counter; removal decrements it and deletes the key at `Flags<=1`. A key created outside the operator (`Flags=0`) is written but never owned and never deleted.
 - **Stale entities on update (explicit mode)** are found in Consul, not in the CR status: an entity is stale when the namespace of the CR is in its owner list and neither the CR nor another resource of the namespace declares it. This survives restore from backup and does not depend on the status format. Entities without the marker are never treated as stale.
 
-**Limitations (tasks 22.x):**
+**Limitations:**
 - Stale binding rules are searched under the auth methods referenced in the current spec; a rule whose per-rule `AuthMethod` was removed from the spec together with the rule stays in Consul (the same holds for prefixed mode).
-- Both batch operations are atomic per batch of 64 operations, not as a whole. A failure after the first batch leaves `Flags` out of sync with `status` (counter incremented twice on retry, or decremented twice on removal, which can delete a key still used by another CR).
+- Both batch operations are atomic per batch of 64 operations, not as a whole. The keys of committed batches are recorded in `status` (owned on apply, released on deletion), so a retry neither increments nor decrements their `Flags` twice. A failure between a committed batch and the status update can still repeat the operation for that batch.
+- Duplicate keys in one ConsulKV are reduced to the last entry before the transactions are built; the earlier entries get status `skipped (duplicate key)`.
 
 ### 10. `purgeOnDelete` for ConsulKV
 
 **Decision:** with `purgeOnDelete: true` the controller removes the declared keys on CR deletion with a recursive delete (`DeleteTree`) instead of the ref-count decrement.
 
-**Known risk:** Consul `recurse` matches a string prefix, not a path hierarchy. A key `config/app` also removes `config/application/...` and `config/app-gateway/...`. Planned fix (task 22.4): purge the exact key and the tree `<key>/` (the slash is appended, a key without it is not rejected). Purge is intentionally unconditional: it removes the whole path even if other resources use it.
+Consul `recurse` matches a string prefix, not a path hierarchy, so the declared key is treated as a directory: the controller deletes the exact key and then the tree `<key>/` (the slash is appended when missing, a key without it is accepted). `config/app` therefore keeps `config/application/...` and `config/app-gateway/...` (task 22.4). Purge is intentionally unconditional: it removes the whole path even if other resources use it.
 
 ### 11. Operator concurrency
 
@@ -152,11 +153,11 @@ ConsulKVStatus {
 | `--accept-paths` of the JWKS proxy anchored only one alternative (`^a\|b$`), so `/openid/v1/jwks/...` and `.../.well-known/openid-configuration` passed | Medium | Fixed: `^(?:/openid/v1/jwks\|/\.well-known/openid-configuration)$` (task 20.7) |
 | Network error in `processBindRules` swallowed by a shadowed `err`: condition `Successful=True`, no requeue | High | Fixed, test added (task 21.3); `govet shadow` to be enabled in the shared linter config (task 21.3a) |
 | Network error of an earlier entity hidden by a later successful call in `processPolicies`/`processRoles`/`processBindRules` | High | Fixed: the first network error is kept (task 21.8) |
-| `purgeOnDelete` deletes by raw string prefix and removes sibling keys such as `config/application/...` | High | Purge `<key>` and `<key>/` only (task 22.4) |
+| `purgeOnDelete` deletes by raw string prefix and removes sibling keys such as `config/application/...` | High | Fixed: purge `<key>` and `<key>/` only (task 22.4) |
 | Shared role/rule deleted and role tokens revoked when one of several CRs is deleted (`explicitName: true`) | Medium | Fixed: owner tracking for roles and rules (tasks 7.2, 21.5) |
 | Two CRs of one namespace share an owner entry; one could release an entity the other still declares | Medium | Entities declared by other resources of the namespace are skipped (Decision 9) |
-| Partial failure across KV batches desynchronises `Flags` and status | Medium | Per-batch results (task 22.6) |
-| Duplicate key in one ConsulKV makes every transaction of the batch fail with a CAS conflict | Medium | Last entry wins, earlier duplicates marked skipped (task 22.5) |
+| Partial failure across KV batches desynchronises `Flags` and status | Medium | Fixed: per-batch results recorded in status (task 22.6) |
+| Duplicate key in one ConsulKV makes every transaction of the batch fail with a CAS conflict | Medium | Fixed: last entry wins, earlier duplicates marked skipped (task 22.5) |
 | JWKS proxy is a single replica and a single point of failure for new logins | Medium | Fixed: 2 replicas, anti-affinity and PDB by default (task 20.7) |
 | Two operator pods run in parallel during a rolling update | Medium | Leader election or `Recreate` (task 23.1) |
 
