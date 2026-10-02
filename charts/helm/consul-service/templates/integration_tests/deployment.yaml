@@ -106,6 +106,10 @@ spec:
             - name: CONSUL_BACKUP_DAEMON_PROTOCOL
               value:  {{ template "backupDaemon.protocol" . }}
             {{- end }}
+            {{- if .Values.consulAclConfigurator.enabled }}
+            - name: CONSUL_ACL_CONFIGURATOR_HOST
+              value: {{ template "consul-acl-configurator.name" . }}-operator
+            {{- end }}
             {{- if .Values.backupDaemon.s3.enabled }}
             - name: S3_ENABLED
               value: "true"

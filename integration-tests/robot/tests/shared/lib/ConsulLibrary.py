@@ -58,8 +58,8 @@ class ConsulLibrary(object):
         url = f'{self.consul_scheme}://{self.consul_host}:{self.consul_port}/v1/kv/{key}'
         headers = {'Authorization': 'Bearer ' + self.consul_token}
         response = requests.Response()
-        # Handle OSError as large PUT request with enabled TLS produces SSLEOFError 
-        try: 
+        # Handle OSError as large PUT request with enabled TLS produces SSLEOFError
+        try:
             response = requests.put(url, data=value, headers=headers, verify=self.consul_cafile)
         except OSError:
             response.status_code = 413
@@ -80,9 +80,11 @@ class ConsulLibrary(object):
         successful state within ``backup_timeout`` seconds. On such a failure the
         backup is re-issued (a new POST /backup), up to ``attempts`` times.
 
-        Backup completion is polled via ``/listbackups/<id>`` (the ``failed`` /
-        ``valid`` fields) -- the backup counterpart of ``/jobstatus/<task_id>``
-        used for restore. Returns the backup id on success; fails otherwise.
+        Backup completion is polled via ``/jobstatus/<backup_id>`` (a backup's task
+        id equals its backup id), whose terminal ``status`` reflects the backup
+        script's exit code -- so a backup that failed to take the snapshot is seen
+        as ``Failed`` and re-issued, instead of being wrongly accepted as valid.
+        Returns the backup id on success; fails otherwise.
         """
         attempts = int(attempts)
         auth = (username, password)
@@ -116,22 +118,20 @@ class ConsulLibrary(object):
         last = 'no status received'
         while time.time() < deadline:
             try:
-                response = requests.get(f'{base_url}/listbackups/{backup_id}',
+                response = requests.get(f'{base_url}/jobstatus/{backup_id}',
                                         auth=auth, verify=verify, timeout=30)
             except requests.exceptions.RequestException as e:
                 last = f'status request failed: {e}'
                 time.sleep(float(interval))
                 continue
-            if response.status_code == 200:
-                content = response.json()
-                if content.get('failed') is True:
-                    return False, f'backup {backup_id} reported failed=True: {content}'
-                if content.get('failed') is False and content.get('valid') is True:
-                    return True, ''
-                last = f'not ready yet: {content}'
-            else:
-                # 404 while the backup is still running, or after a failed backup
-                # that was never stored -- keep polling until timeout.
-                last = f'HTTP {response.status_code}: {response.text}'
+            try:
+                status = response.json().get('status')
+            except ValueError:
+                status = None
+            if status == 'Successful':
+                return True, ''
+            if status == 'Failed':
+                return False, f'backup {backup_id} reported Failed: {response.text}'
+            last = f'not ready yet: HTTP {response.status_code}: {response.text}'
             time.sleep(float(interval))
         return False, f'backup {backup_id} not successful within {timeout}s ({last})'
