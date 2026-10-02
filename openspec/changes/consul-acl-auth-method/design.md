@@ -35,6 +35,8 @@ Additionally, there is no declarative path for Consul KV entries — teams curre
 
 ### 1. Explicit naming via opt-in flag fields — no new CRD version
 
+> _Superseded by Decision 7: the flag is the CR-level field `spec.acl.explicitName`. The per-rule `AuthMethod` part of this decision still applies._
+
 **Decision:** Extend `ACLRoleAdapter` and `ACLBindingRuleAdapter` (defined in `acl_api_provider.go`) with optional `ExplicitName bool` and `ExplicitBindName bool` flag fields. When `true`, `convertEntityName` is skipped and the literal name from the struct is used. For `ACLBindingRuleAdapter`, add an optional `AuthMethod string` field; when non-empty it overrides the global `authMethod` variable.
 
 **Rationale:** These structs are the internal representation deserialized from `spec.acl.json`. Extending them with optional fields is fully backward compatible (omitempty JSON tags) and requires no CRD schema change, no new API version, and no conversion webhook. The `ConsulACL` CRD spec field `json` is an opaque string in the CRD schema — its internal structure is not validated by Kubernetes.
@@ -56,17 +58,16 @@ Additionally, there is no declarative path for Consul KV entries — teams curre
 **Spec shape:**
 ```
 ConsulKVSpec {
-  Path  string  // KV path in Consul
-  Value string  // value to write
+  KV { Entries []{Key, Value}, PurgeOnDelete bool, OperatorNamespace string }
 }
 ConsulKVStatus {
-  GeneralStatus string
+  Entries []{Key, Status, Owned}, GeneralStatus, ManagedBy string, Conditions []metav1.Condition
 }
 ```
 
 **Reconciliation:**
-- Apply: `PUT /v1/kv/{path}` via `consul.KV().Put(...)`.
-- Delete: `DELETE /v1/kv/{path}` via `consul.KV().Delete(...)`.
+- Apply: transactional batches of at most 64 operations (`KV().Txn` with `KVCAS`), with ownership tracked in `Flags` (see Decision 9).
+- Delete: per key, decrement `Flags` or delete the key at `Flags<=1`; with `purgeOnDelete` a recursive delete (see Decision 10).
 - Finalizer string: `{group}/consulkvconfigurator-controller` (consistent with the existing ACL finalizer pattern).
 
 **Rationale:** Using the same `api/v1alpha1` package, the same `CustomResourceUpdater` pattern, and the same `makeAclClient` parent Consul client follows established conventions. The KV API (`consul.KV()`) is already available on the same Consul client used for ACL operations. No new dependencies.
@@ -91,6 +92,47 @@ ConsulKVStatus {
 
 **Rationale:** Kubernetes does not validate the JSON blob's structure. Adding the new fields only requires updating the Go structs and controller logic, not the CRD YAML. This avoids a CRD version bump and a conversion webhook entirely.
 
+### 7. Naming flag lives at `spec.acl.explicitName`, not per entity
+
+**Decision (supersedes Decision 1):** the flag is a single CR-level field `spec.acl.explicitName` (typed in `ACL`), not `ExplicitName`/`ExplicitBindName` inside the JSON blob. It applies to policies, roles and binding rules of that CR.
+
+**Rationale:** the cross-CR sharing pattern requires verbatim names for policies as well, and one switch per CR is simpler to reason about than three per-entity flags. The field is optional (`omitempty`), so existing CRs keep the prefixed naming.
+
+### 8. Global JWT auth method with a JWKS proxy
+
+**Decision:** the operator creates (and on every start updates) a global auth method `applications-k8s-m2m` of type `jwt`. Consul servers validate Kubernetes service-account tokens against the API server's public keys, fetched from `JWKS_URL`. Because the API server endpoints require authentication, the chart deploys `kubectl proxy` (`acl-configurator-jwks-proxy`) that exposes only `/openid/v1/jwks` and `/.well-known/openid-configuration`, read-only, under its own ServiceAccount without extra RBAC. `ClaimMappings` map `/kubernetes.io/namespace` → `namespace` and `/kubernetes.io/serviceaccount/name` → `serviceaccount`; therefore binding-rule selectors use `value.namespace` and `value.serviceaccount`.
+
+**Rationale:** a `jwt` method does not need a reviewer token with `TokenReview` permissions in Consul and works for services outside the Consul datacenter's Kubernetes cluster as long as they present a service-account JWT.
+
+**Trade-offs and known limitations (tracked in tasks 20.x):**
+- `BoundIssuer`/`BoundAudiences` are hard-coded to `https://kubernetes.default.svc.cluster.local`. Clusters with a different `--service-account-issuer` (OpenShift, EKS, GKE, AKS, custom cluster domain) reject every login until these values are configurable.
+- The selector format depends on the method type. It is currently always `value.*`, so a per-rule `AuthMethod` of type `kubernetes` yields a rule that never matches.
+- The proxy is a single replica without PodDisruptionBudget and without the scheduling knobs available for the other components; while it is down, key lookups for unknown `kid` (key rotation, Consul restart) fail and new logins are rejected.
+- The proxy path filter `^(?:/openid/v1/jwks)|(?:/.well-known/openid-configuration)$` is split by `|` into a prefix match and a suffix match and has an unescaped dot. It still allows the two required paths, but is wider than intended; the fix is `^(?:/openid/v1/jwks|/\.well-known/openid-configuration)$`.
+- `EnsureApplicationsAuthMethod` overwrites the method on every start, so manual corrections are reverted.
+
+### 9. Ownership of shared entities
+
+**Decision:** for `explicitName: true` the operator cannot identify its own entities by name prefix, so shared ownership is tracked in the entity itself:
+- **Policies:** the namespaces of the owning CRs are stored in the description as `[consul-acl-owners: ns1, ns2]`. A policy is deleted when its last owner is removed.
+- **ConsulKV keys:** the `Flags` field is a reference counter. A new key is created with `Flags=1`; another CR using the same key increments the counter; removal decrements it and deletes the key at `Flags<=1`. A key created outside the operator (`Flags=0`) is written but never owned and never deleted.
+- **Stale policies on update** are found by parsing the previous `policiesStatus` string.
+
+**Limitations (tasks 21.x, 22.x):**
+- Roles and binding rules have no owner tracking. Deleting one CR deletes a shared role/rule and revokes all tokens of the role, including tokens used by other CRs; stale clean-up of roles and rules is disabled in explicit mode, so entries removed from the spec stay in Consul.
+- The status string is a human-readable value, not a reliable store: it is lost on restore from backup and its format is not a contract. A structured source is needed.
+- Both batch operations are atomic per batch of 64 operations, not as a whole. A failure after the first batch leaves `Flags` out of sync with `status` (counter incremented twice on retry, or decremented twice on removal, which can delete a key still used by another CR).
+
+### 10. `purgeOnDelete` for ConsulKV
+
+**Decision:** with `purgeOnDelete: true` the controller removes the declared keys on CR deletion with a recursive delete (`DeleteTree`) instead of the ref-count decrement.
+
+**Known risk:** Consul `recurse` matches a string prefix, not a path hierarchy. A key `config/app` also removes `config/application/...` and `config/app-gateway/...`, and the ownership counters are bypassed. Until validation is added, keys used with `purgeOnDelete` must end with `/` (task 22.4).
+
+### 11. Operator concurrency
+
+**Decision:** the ClusterRole grants `coordination.k8s.io/leases`, but leader election is not enabled (`--leader-elect` defaults to `false`). With the default `RollingUpdate` strategy two operators run in parallel during an upgrade; ACL reconciliation (lookup-before-create, owner list in description) is not safe in that case. Task 23.1 enables leader election or switches to `Recreate`.
+
 ---
 
 ## Risks / Trade-offs
@@ -102,6 +144,15 @@ ConsulKVStatus {
 | `ConsulKV` controller shares the Consul token with the ACL controller; the bootstrap token must have KV write permissions | Medium | Document requirement; the bootstrap token in standard Consul deployments already has full permissions. Teams using scoped bootstrap tokens must extend it |
 | ExplicitName flag in JSON is invisible to Kubernetes admission (no schema validation) | Low | Invalid configurations surface as Consul API errors reflected in `.status`; acceptable given the existing pattern |
 | CRDs in `crds/` are not updated on `helm upgrade` (Helm limitation) | Low | Documented in Helm's own docs; operators must run `kubectl apply -f crds/` on upgrade when the CRD schema changes |
+| Switching the global auth method to `applications-k8s-m2m` (JWT) leaves binding rules under the old `-k8s-auth-method` that the operator no longer updates or deletes | High | Mark as breaking; document migration and manual clean-up; clients must log in through the new method (task 20.10) |
+| Hard-coded JWT `BoundIssuer`/`BoundAudiences` reject all logins on clusters with another service-account issuer | High | Make configurable (task 20.7) |
+| Network error in `processBindRules` swallowed by a shadowed `err`: condition `Successful=True`, no requeue | High | Fix the shadowing, add test, enable `govet shadow` (task 21.3) |
+| `purgeOnDelete` deletes by string prefix and ignores ownership | High | Require trailing `/`, delete only owned keys (task 22.4) |
+| Shared role/rule deleted and role tokens revoked when one of several CRs is deleted (`explicitName: true`) | Medium | Owner tracking for roles and rules (tasks 7.2, 21.5) |
+| Partial failure across KV batches desynchronises `Flags` and status | Medium | Per-batch results (task 22.6) |
+| Duplicate key in one ConsulKV makes every transaction of the batch fail with a CAS conflict | Medium | Validate uniqueness (task 22.5) |
+| JWKS proxy is a single replica and a single point of failure for new logins | Medium | Replicas and PDB (task 20.9) |
+| Two operator pods run in parallel during a rolling update | Medium | Leader election or `Recreate` (task 23.1) |
 
 ---
 
@@ -113,18 +164,20 @@ ConsulKVStatus {
 
 3. **ConsulKV CRD** is a new resource type — no existing objects to migrate.
 
+3a. **Global auth method change (breaking).** After the upgrade the operator creates `applications-k8s-m2m` and creates binding rules under it. Rules created earlier under `{fullname}-k8s-auth-method` stay in Consul untouched and keep serving clients that still log in through the old method, but later CR changes are applied only to the new rules. Steps: (a) upgrade the operator, (b) switch client services to log in through `applications-k8s-m2m` with a service-account JWT, (c) remove the old binding rules manually, (d) review `connect-inject` and `backup-daemon` settings that still reference the old methods.
+
 4. **Helm upgrade**: the new CRD YAML in `crds/` is not applied automatically on `helm upgrade`. Operators must apply `consulkv_crd.yaml` before upgrading to the new chart version when `ConsulKV` resources are intended to be used.
 
 ---
 
 ## Open Questions
 
-1. **Explicit role name and cross-namespace sharing**: when `ExplicitName: true` is set on a role, and the same role name appears in two different `ConsulACL` resources, both reconcilers will call `RoleUpdate` on the same Consul entity. Is this intentional (shared role ownership) or a misconfiguration that should be detected and rejected?
+1. **Explicit role name and cross-namespace sharing** — _Partially resolved_: sharing is intentional (see Decision 9). Owner tracking exists for policies and ConsulKV keys; it is still missing for roles and binding rules (tasks 7.2, 21.5).
 
 2. **ConsulKV value encoding**: should the `spec.value` field support arbitrary binary data (base64-encoded) or only UTF-8 strings? The Consul KV API accepts `[]byte`, so base64 is possible without extra dependencies.
 
-3. **ConsulKV path ownership**: if two `ConsulKV` resources target the same Consul path, the last writer wins. Should the controller detect this (e.g., by writing the resource UID as metadata) and refuse to overwrite?
+3. **ConsulKV path ownership** — _Resolved_: ownership is tracked with the `Flags` reference counter (Decision 9); keys created outside the operator are written but not owned.
 
-4. **Binding-rule deletion with per-rule auth method**: when a `ConsulACL` is deleted, `deleteBindingRules` calls `BindingRuleList(authMethod, ...)` using the global auth method. If some rules were created with a per-rule override, those rules will not be found in the global-scoped list and will be leaked. Should deletion iterate over all auth methods referenced in the config, or should the per-rule auth method value be recorded in status?
+4. **Binding-rule deletion with per-rule auth method** — _Resolved_: `deleteBindingRules` iterates over every distinct auth method referenced in the config (task 8). Rules left under an auth method that was removed from the config, including the pre-upgrade `-k8s-auth-method`, are not found and need manual clean-up.
 
-5. **ConsulACL status for binding rules**: the current `BindRulesStatus` is a free-form string serialized from `StatusHolder`. Should the `ConsulKV` status follow the same pattern (single `GeneralStatus` string) or adopt a structured `Conditions` array aligned with Kubernetes conventions?
+5. **ConsulACL status for binding rules** — _Resolved for ConsulKV_: `ConsulKVStatus` has per-key `entries`, `generalStatus`, `managedBy` and `conditions`. ConsulACL keeps free-form status strings; making them structured is required for reliable stale clean-up (task 21.4).

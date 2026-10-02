@@ -4,7 +4,7 @@
 
 Extends the Consul ACL configurator operator with a CR-level `spec.acl.explicitName` flag that controls whether entity names are used verbatim or auto-prefixed, per-rule AuthMethod overrides on binding rules, idempotent binding-rule reconciliation, and complete create/update/delete lifecycle handling including removed-element cleanup.
 
-All changes are additive. Existing `ConsulACL` resources that do not use the new fields continue to behave as before.
+Naming, per-rule AuthMethod and lifecycle changes are additive: existing `ConsulACL` resources that do not use the new fields keep the prefixed names. The change of the global auth method to the JWT method `applications-k8s-m2m` and of the generated binding-rule selector is **breaking** (see "Global JWT Auth Method" and "Binding-Rule Selector from Claim Mappings").
 
 ---
 
@@ -17,7 +17,10 @@ All changes are additive. Existing `ConsulACL` resources that do not use the new
 - **explicit name** — the literal name supplied in the ACL configuration, used as-is without prefixing. Applies when `spec.acl.explicitName: true`.
 - **BindName** — the name of the Consul ACL role that a binding rule binds a Kubernetes service account identity to.
 - **AuthMethod** — the Consul ACL authentication method under which a binding rule is registered.
-- **global AuthMethod** — the auth method name read from the `CONSUL_AUTH_METHOD_NAME` environment variable at operator startup, applied to all binding rules that do not specify a per-rule override.
+- **global AuthMethod** — the auth method name read from the `CONSUL_AUTH_METHOD_NAME` environment variable at operator startup, applied to all binding rules that do not specify a per-rule override. The Helm chart sets it to `applications-k8s-m2m`.
+- **`applications-k8s-m2m`** — the global Consul auth method of type `jwt` that the operator creates and updates at startup.
+- **JWKS proxy** — a read-only `kubectl proxy` deployment that exposes the Kubernetes API server's JWKS and OpenID configuration to Consul servers.
+- **owner list** — the list of namespaces stored in the description of an explicitly named policy as `[consul-acl-owners: ns1, ns2]`.
 
 ---
 
@@ -38,9 +41,9 @@ When `spec.acl.explicitName` is absent or `false`, the operator SHALL use the pr
 
 When `spec.acl.explicitName: true`, the operator SHALL use the literal `Name` value from each role entry as the Consul role name, bypassing the prefixed-name convention.
 
-> **TODO — Explicit naming scope for policies**: The Jira problem statement names only roles and binding rules as targets for explicit naming. However, the Jira examples show policies with verbatim names when `spec.acl.explicitName: true` is set, which the cross-CR sharing pattern requires. Confirm whether `spec.acl.explicitName: true` also bypasses prefixing for policies before finalizing implementation.
+> **Resolved — scope**: `spec.acl.explicitName: true` bypasses prefixing for policies, roles and binding rules of the CR (needed for cross-CR sharing). Shared ownership of policies is handled by the owner list (see "Shared Ownership of Explicit Policies").
 
-> **TODO — Cross-CR policy references in `policy_names`**: The second Jira example has a role whose `policy_names` list references policies defined in a separate `ConsulACL` CR. The operator currently resolves `policy_names` only against policies processed in the same reconcile cycle. Confirm whether the operator must also look up policies by verbatim name directly from Consul to support cross-CR references.
+> **Open — cross-CR policy references in `policy_names`**: a role may reference a policy defined in a separate `ConsulACL` CR. Confirm that the operator resolves such policies by verbatim name directly from Consul (`getPolicyLinks`) and not only among the policies processed in the same reconcile.
 
 #### Scenario: Role created with explicit name
 
@@ -179,7 +182,7 @@ During reconciliation, the operator SHALL process entities in the following orde
 
 When a `ConsulACL` resource has a non-zero `DeletionTimestamp` and the operator's finalizer is present, the operator SHALL delete all managed Consul entities, revoke or reject any associated Consul tokens, and then remove the finalizer.
 
-> **TODO — Token revocation mechanism**: The Jira requires deletion to "revoke/reject any corresponding tokens." It is not specified whether the operator must call the Consul token-revocation API directly, or whether this is the responsibility of the existing `remove-tokens` CronJob. Confirm before implementing.
+> **Resolved — token revocation mechanism**: the operator calls the Consul token API directly (lists tokens by role and deletes them) before deleting the roles. The `remove-tokens` CronJob is not involved.
 
 #### Scenario: Delete removes Consul entities in reverse order
 
@@ -272,3 +275,137 @@ A binding-rule entry that has no `BindName` value SHALL be skipped during reconc
 
 - **WHEN** a `ConsulACL` resource is reconciled and a binding-rule entry has an empty `BindName` field
 - **THEN** the operator SHALL skip that binding rule, record `"Some binding rules have not got a name"` in `status.bindRulesStatus`, and continue processing remaining binding rules
+
+---
+
+### Requirement: Global JWT Auth Method
+
+At startup the operator SHALL create the Consul auth method `applications-k8s-m2m` of type `jwt` if it does not exist, and update it if it does, retrying with exponential backoff until it succeeds. The method SHALL validate tokens against the keys served at `JWKS_URL` and map the claims `/kubernetes.io/namespace` to `namespace` and `/kubernetes.io/serviceaccount/name` to `serviceaccount`.
+
+The `BoundIssuer` and `BoundAudiences` of the method SHALL match the `--service-account-issuer` of the cluster. The values SHALL be configurable and SHALL NOT be overwritten on start when the effective configuration is unchanged.
+
+> **Not yet implemented**: `BoundIssuer` and `BoundAudiences` are hard-coded to `https://kubernetes.default.svc.cluster.local` and the method is updated on every start (tasks 20.6, 20.7). On clusters with a different issuer all logins through this method are rejected.
+
+#### Scenario: Auth method created on first start
+
+- **WHEN** the operator starts and Consul has no auth method `applications-k8s-m2m`
+- **THEN** the operator SHALL create it with type `jwt`, the configured `JWKS_URL` and the claim mappings above
+
+#### Scenario: Consul unavailable at start
+
+- **WHEN** the operator starts and Consul cannot be reached
+- **THEN** the operator SHALL keep retrying with increasing backoff and SHALL NOT crash
+
+---
+
+### Requirement: Binding-Rule Selector from Claim Mappings
+
+The selector of a binding rule generated from `ServiceAccountName` SHALL match the claims exposed by the auth method that the rule belongs to.
+
+- For a `jwt` method: `value.namespace == "<crNamespace>" and value.serviceaccount == "<ServiceAccountName>"`.
+- For a `kubernetes` method: `serviceaccount.namespace == "<crNamespace>" and serviceaccount.name == "<ServiceAccountName>"`.
+
+> **Not yet implemented** (task 20.5): the operator always generates the `value.*` form. A rule with a per-rule `AuthMethod` of type `kubernetes` therefore never matches a login and the service receives a token without roles.
+
+#### Scenario: Selector for the global JWT method
+
+- **WHEN** a binding-rule entry with `ServiceAccountName: "my-sa"` is reconciled for a CR in namespace `staging` under `applications-k8s-m2m`
+- **THEN** the rule selector SHALL be `value.namespace == "staging" and value.serviceaccount == "my-sa"`
+
+#### Scenario: Selector for a per-rule kubernetes method
+
+- **WHEN** a binding-rule entry specifies `AuthMethod` of type `kubernetes` and `ServiceAccountName: "my-sa"`
+- **THEN** the rule selector SHALL use `serviceaccount.namespace` and `serviceaccount.name`
+
+---
+
+### Requirement: Upgrade From the Kubernetes Auth Method
+
+Binding rules created by earlier versions under `{fullname}-k8s-auth-method` SHALL be treated as outside the scope of the operator after the upgrade: the operator SHALL NOT update or delete them. The upgrade procedure SHALL be documented, including that client services must log in through `applications-k8s-m2m` and that the old rules must be removed manually.
+
+#### Scenario: CR changed after upgrade
+
+- **WHEN** a CR with an existing rule under the old auth method gets a new role after the operator is upgraded
+- **THEN** the operator SHALL create or update the rule only under `applications-k8s-m2m`, and the rule under the old method SHALL remain unchanged
+
+---
+
+### Requirement: JWKS Proxy
+
+The Helm chart SHALL deploy a read-only proxy that exposes only `/openid/v1/jwks` and `/.well-known/openid-configuration` of the Kubernetes API server, under a dedicated ServiceAccount without additional RBAC. The path filter SHALL match exactly these two paths: `^(?:/openid/v1/jwks|/\.well-known/openid-configuration)$`. All methods other than `GET` SHALL be rejected.
+
+The proxy SHOULD run with more than one replica and a PodDisruptionBudget and SHOULD support the same scheduling and labelling settings as the other components.
+
+> **Bug** (task 20.8, bugfix; replicas and scheduling options are task 20.9, not a bug): the deployed filter is `^(?:/openid/v1/jwks)|(?:/.well-known/openid-configuration)$`, which is a prefix match OR a suffix match. It serves the two required paths but also any path starting with `/openid/v1/jwks` or ending with `openid-configuration`. The deployment has `replicas: 1`, no PodDisruptionBudget, and no affinity, tolerations, nodeSelector, priorityClassName or extra labels.
+
+#### Scenario: JWKS is served
+
+- **WHEN** a Consul server requests `/openid/v1/jwks` from the proxy
+- **THEN** the proxy SHALL return the API server response
+
+#### Scenario: Other path is rejected
+
+- **WHEN** a client requests `/api/v1/secrets` from the proxy
+- **THEN** the proxy SHALL reject the request
+
+---
+
+### Requirement: Shared Ownership of Explicit Policies
+
+With `spec.acl.explicitName: true` the operator SHALL record the namespace of each owning CR in the owner list of the policy description. The operator SHALL delete a policy only when the CR being deleted or updated is its last owner; otherwise it SHALL remove only the namespace from the owner list. On update, policies that were applied earlier and are absent from the new spec SHALL be released the same way.
+
+#### Scenario: Second CR adds itself as owner
+
+- **WHEN** a CR in `ns2` declares an explicit policy that already exists with `[consul-acl-owners: ns1]`
+- **THEN** the operator SHALL update the policy and set the owner list to `ns1, ns2`
+
+#### Scenario: Deleting one of two owners keeps the policy
+
+- **WHEN** the CR in `ns1` is deleted and the policy has owners `ns1, ns2`
+- **THEN** the operator SHALL keep the policy and set the owner list to `ns2`
+
+#### Scenario: Deleting the last owner deletes the policy
+
+- **WHEN** the CR in `ns2` is deleted and it is the only remaining owner
+- **THEN** the operator SHALL delete the policy
+
+> **Known limitation** (task 21.4): stale policies are identified by parsing the previous `status.policiesStatus` string, which is lost on restore from backup.
+
+---
+
+### Requirement: Shared Ownership of Explicit Roles and Binding Rules
+
+With `spec.acl.explicitName: true` a role or binding rule used by several CRs SHALL NOT be deleted, and the tokens of the role SHALL NOT be revoked, while another CR still declares it. Roles and binding rules removed from a CR spec SHALL be cleaned up in explicit mode under the same rule.
+
+> **Not yet implemented** (tasks 7.2, 21.5): there is no owner tracking for roles and binding rules. Deleting one CR deletes a shared role and rule and revokes all tokens of the role, including those used through other CRs, and stale cleanup of roles and rules is disabled in explicit mode, so entries removed from a spec stay in Consul.
+
+#### Scenario: Shared role survives deletion of one CR
+
+- **WHEN** two CRs declare the role `shared-reader` with `explicitName: true` and one CR is deleted
+- **THEN** the role, its binding rule and the tokens of the role SHALL remain until the other CR is also deleted
+
+---
+
+### Requirement: Network Error Is Propagated From Binding-Rule Processing
+
+A network error returned by `BindingRuleList`, `BindingRuleCreate` or `BindingRuleUpdate` SHALL be returned from `processBindRules`, so that the reconcile ends with `Successful=False` and is requeued after `RECONCILE_PERIOD_SECONDS`. Other errors SHALL be recorded in `status.bindRulesStatus` and SHALL NOT stop processing of the remaining rules.
+
+> **Bug** (task 21.3, bugfix): a variable declared with `:=` inside the loop shadows the outer `err`, so an error from `BindingRuleCreate` or `BindingRuleUpdate` is only written to the status string and the function returns `nil`. The condition becomes `Successful=True` and no requeue happens.
+
+#### Scenario: Consul unavailable while creating a rule
+
+- **WHEN** `BindingRuleCreate` fails with a network error
+- **THEN** `processBindRules` SHALL return that error and the reconcile SHALL be requeued
+
+---
+
+### Requirement: Single Active Operator
+
+At most one operator instance SHALL reconcile ConsulACL and ConsulKV resources at a time, including during a rolling update.
+
+> **Not yet implemented** (task 23.1): the ClusterRole already allows `coordination.k8s.io/leases`, but `--leader-elect` is not passed to the operator and defaults to `false`, and the deployment uses `RollingUpdate`.
+
+#### Scenario: Upgrade of the operator
+
+- **WHEN** the operator deployment is updated and the new pod starts before the old pod stops
+- **THEN** only one of them SHALL run reconciliation

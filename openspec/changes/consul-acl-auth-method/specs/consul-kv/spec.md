@@ -33,7 +33,9 @@ type ConsulKVEntry struct {
 }
 
 type ConsulKVConfig struct {
-    Entries []ConsulKVEntry `json:"entries"`
+    Entries           []ConsulKVEntry `json:"entries"`
+    PurgeOnDelete     bool            `json:"purgeOnDelete,omitempty"`
+    OperatorNamespace string          `json:"operatorNamespace,omitempty"`
 }
 
 type ConsulKVSpec struct {
@@ -253,3 +255,84 @@ An entry in `spec.kv.entries` with an empty `key` SHALL be skipped during reconc
 
 - **WHEN** a `ConsulKV` resource is reconciled and one entry in `spec.kv.entries` has an empty `key` field
 - **THEN** the controller SHALL skip that entry, record an error in `.status` for it, and continue calling KVPut for all other valid entries
+
+---
+
+### Requirement: Key Ownership
+
+The controller SHALL track ownership of each key in the Consul `Flags` field as a reference counter.
+
+- A key that does not exist SHALL be created with `Flags=1`; the CR owns it.
+- A key that exists with `Flags=0` (created outside the operator) SHALL have its value written, `Flags` SHALL stay `0`, and the CR SHALL NOT own it (status `synced (not owned: pre-existing key)`).
+- A key that exists with `Flags>0` and is not yet owned by this CR SHALL have `Flags` incremented.
+- A key already owned by this CR SHALL have only its value updated.
+- On deletion of the CR, or when a key is removed from the spec, the controller SHALL decrement `Flags` for each owned key and SHALL delete the key when `Flags<=1`. Keys that are not owned SHALL be left in Consul.
+
+> This refines "KVDelete per Entry on Delete" and "Finalizer Removed After Cleanup": on deletion the controller releases owned keys instead of deleting every declared key unconditionally.
+
+#### Scenario: Key shared by two CRs survives deletion of one
+
+- **WHEN** two `ConsulKV` resources declare `config/shared/url` and one is deleted
+- **THEN** the key SHALL remain in Consul with `Flags=1` until the other resource is deleted
+
+#### Scenario: Externally created key is not deleted
+
+- **WHEN** a key created outside the operator is declared in a `ConsulKV` and the resource is deleted
+- **THEN** the key SHALL remain in Consul
+
+---
+
+### Requirement: Batched Transactions
+
+The controller SHALL write and delete keys in Consul transactions of at most 64 operations using check-and-set, retrying a batch on a CAS conflict. A batch is atomic; the operation as a whole is not.
+
+When a later batch fails after earlier batches committed, the controller SHALL record the outcome of the committed batches in `status` so that a retry neither increments `Flags` a second time for keys already written, nor decrements it a second time for keys already released.
+
+> **Bug** (task 22.6, bugfix): on a failure all entries are given an `error` status without `Owned=true`, although earlier batches are committed, so the next reconcile increments `Flags` again and the key is never deleted. When removing keys, a failed later batch returns no result, so the next reconcile decrements the already released keys again and may delete a key still used by another CR.
+
+#### Scenario: Second batch fails on apply
+
+- **WHEN** a CR with 100 keys is applied and the batch with keys 65–100 fails after the batch with keys 1–64 committed
+- **THEN** keys 1–64 SHALL be recorded as owned in `status` and the next reconcile SHALL NOT increment their `Flags`
+
+---
+
+### Requirement: Duplicate Keys Are Rejected
+
+A `ConsulKV` resource SHALL NOT contain the same `key` twice. The controller SHALL report `duplicate key "<key>"` in `status` and SHALL NOT include the duplicate in the transaction. The CRD SHOULD reject such a manifest with a validation rule.
+
+> **Bug** (task 22.5, bugfix): a duplicate produces two `KVCAS` operations with the same `ModifyIndex` in one transaction, the second one fails, and every retry fails the same way until `max retries exceeded`, so none of the up to 64 keys in that batch is written.
+
+#### Scenario: Same key declared twice
+
+- **WHEN** `spec.kv.entries` contains `config/app/url` twice
+- **THEN** the controller SHALL report a clear duplicate-key error and SHALL still write the other valid entries
+
+---
+
+### Requirement: Purge on Delete
+
+When `spec.kv.purgeOnDelete` is `true`, the controller SHALL remove the declared keys on deletion of the CR with a recursive delete. Because Consul `recurse` matches a string prefix, a key used with `purgeOnDelete` SHALL end with `/`, and the controller SHALL delete a tree only for keys with `Owned=true` and `Flags<=1`. The controller SHALL NOT purge a prefix under which keys of other CRs exist.
+
+> **Bug** (task 22.4, bugfix): there is no validation, and `deleteKVTree` deletes by prefix for every entry in `status`, including keys that are not owned and keys with `Flags>1`. With `key: "config/app"`, `config/application/...` and `config/app-gateway/...` are deleted too, and the reference counting is bypassed. There are no tests for `purgeOnDelete`.
+
+#### Scenario: Prefix collision
+
+- **WHEN** a CR with `purgeOnDelete: true` and `key: "config/app/"` is deleted and `config/application/x` exists
+- **THEN** `config/application/x` SHALL remain in Consul
+
+#### Scenario: Key without trailing slash
+
+- **WHEN** a CR with `purgeOnDelete: true` declares `key: "config/app"`
+- **THEN** the controller or the CRD validation SHALL reject it
+
+---
+
+### Requirement: Operator Namespace Binding
+
+When `spec.kv.operatorNamespace` is set, the CR SHALL be reconciled only by the operator whose own namespace equals this value, which allows the CR to live in a different namespace. When it is empty, the CR SHALL be reconciled by the operator running in the CR's own namespace.
+
+#### Scenario: CR bound to another operator
+
+- **WHEN** a CR has `operatorNamespace: consul-b` and the operator runs in `consul-a`
+- **THEN** the operator in `consul-a` SHALL ignore the CR
