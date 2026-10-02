@@ -1,26 +1,58 @@
 {{- if .Values.consulAclConfigurator.enabled }}
+{{- $proxy := .Values.consulAclConfigurator.jwksProxy | default dict }}
+{{- $proxyName := printf "%s-jwks-proxy" (include "consul-acl-configurator.name" .) }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ template "consul-acl-configurator.name" . }}-jwks-proxy
+  name: {{ $proxyName }}
   namespace: {{ .Release.Namespace }}
   labels:
-    name: {{ template "consul-acl-configurator.name" . }}-jwks-proxy
+    name: {{ $proxyName }}
     {{- include "consul-service.defaultLabels" . | nindent 4 }}
 spec:
-  replicas: 1
+  replicas: {{ $proxy.replicas | default 2 }}
   selector:
     matchLabels:
-      name: {{ template "consul-acl-configurator.name" . }}-jwks-proxy
+      name: {{ $proxyName }}
   template:
     metadata:
       labels:
-        name: {{ template "consul-acl-configurator.name" . }}-jwks-proxy
+        {{- with .Values.global.extraLabels }}
+          {{- toYaml . | nindent 8 -}}
+        {{- end }}
+        {{- with $proxy.extraLabels }}
+          {{- toYaml . | nindent 8 -}}
+        {{- end }}
+        name: {{ $proxyName }}
         {{- include "consul-service.defaultLabels" . | nindent 8 }}
       annotations:
         'consul.hashicorp.com/connect-inject': 'false'
     spec:
-      serviceAccountName: {{ template "consul-acl-configurator.name" . }}-jwks-proxy
+      serviceAccountName: {{ $proxyName }}
+      affinity:
+      {{- if $proxy.affinity }}
+        {{- tpl ($proxy.affinity | toYaml) . | nindent 8 }}
+      {{- else }}
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                topologyKey: kubernetes.io/hostname
+                labelSelector:
+                  matchLabels:
+                    name: {{ $proxyName }}
+      {{- end }}
+      {{- with $proxy.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $proxy.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if $proxy.priorityClassName }}
+      priorityClassName: {{ $proxy.priorityClassName | quote }}
+      {{- end }}
       {{- if not (eq (include "openshift.enabled" .) "true") }}
       securityContext:
         {{- include "consul.globalPodSecurityContext" . | nindent 8 }}
@@ -35,7 +67,7 @@ spec:
             - --address=0.0.0.0
             - --port=8080
             - --accept-hosts=.*
-            - --accept-paths=^(?:/openid/v1/jwks)|(?:/.well-known/openid-configuration)$
+            - --accept-paths=^(?:/openid/v1/jwks|/\.well-known/openid-configuration)$
             - --reject-methods=^(POST|PUT|PATCH|DELETE|HEAD|OPTIONS|CONNECT|TRACE)$
           ports:
             - name: http
@@ -43,17 +75,14 @@ spec:
               protocol: TCP
           securityContext:
             {{- include "consul.globalContainerSecurityContext" . | nindent 12 }}
-            allowPrivilegeEscalation: false
             runAsNonRoot: true
-            capabilities:
-              drop: ["ALL"]
           resources:
             requests:
-              cpu: "20m"
-              memory: "32Mi"
+              cpu: {{ dig "resources" "requests" "cpu" "20m" $proxy | quote }}
+              memory: {{ dig "resources" "requests" "memory" "32Mi" $proxy | quote }}
             limits:
-              cpu: "50m"
-              memory: "64Mi"
+              cpu: {{ dig "resources" "limits" "cpu" "50m" $proxy | quote }}
+              memory: {{ dig "resources" "limits" "memory" "64Mi" $proxy | quote }}
           startupProbe:
             httpGet:
               path: /openid/v1/jwks

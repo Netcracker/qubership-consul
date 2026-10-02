@@ -284,7 +284,25 @@ At startup the operator SHALL create the Consul auth method `applications-k8s-m2
 
 The `BoundIssuer` and `BoundAudiences` of the method SHALL be taken from the deployment parameters `boundIssuer` and `boundAudiences` when they are set. When they are not set, the operator SHALL detect them from the `issuer` field of the OpenID configuration served by the JWKS proxy (`/.well-known/openid-configuration`) and use it for both values, so that they match the `--service-account-issuer` of the cluster. If detection is needed and the issuer cannot be read, the operator SHALL retry with backoff and SHALL NOT fall back to a fixed value. The method SHALL NOT be updated on start when the resulting configuration is unchanged.
 
-> **Not yet implemented** (task 20.6): `BoundIssuer` and `BoundAudiences` are hard-coded to `https://kubernetes.default.svc.cluster.local` and the method is updated on every start. On clusters with a different issuer all logins through this method are rejected.
+#### Scenario: Issuer detected from the cluster
+
+- **WHEN** `boundIssuer` is not set and the OpenID configuration of the cluster has `issuer: https://oidc.example`
+- **THEN** the operator SHALL set `BoundIssuer` to `https://oidc.example` and, if `boundAudiences` is not set, `BoundAudiences` to `["https://oidc.example"]`
+
+#### Scenario: Explicit issuer and audiences
+
+- **WHEN** `boundIssuer` and `boundAudiences` are set in the deployment parameters
+- **THEN** the operator SHALL use them and SHALL NOT request the OpenID configuration
+
+#### Scenario: Issuer cannot be read
+
+- **WHEN** `boundIssuer` is not set and the JWKS proxy does not return the OpenID configuration
+- **THEN** the operator SHALL NOT create or update the method and SHALL retry with backoff
+
+#### Scenario: Configuration unchanged
+
+- **WHEN** the operator starts and the method in Consul already has the desired configuration
+- **THEN** the operator SHALL NOT update the method
 
 #### Scenario: Auth method created on first start
 
@@ -305,7 +323,9 @@ The selector of a binding rule generated from `ServiceAccountName` SHALL match t
 - For a `jwt` method: `value.namespace == "<crNamespace>" and value.serviceaccount == "<ServiceAccountName>"`.
 - For a `kubernetes` method: `serviceaccount.namespace == "<crNamespace>" and serviceaccount.name == "<ServiceAccountName>"`.
 
-> **Not yet implemented** (task 20.5): the operator always generates the `value.*` form. A rule with a per-rule `AuthMethod` of type `kubernetes` therefore never matches a login and the service receives a token without roles.
+- For any other type, or when the auth method does not exist yet, the `jwt` form is used.
+
+An explicit `Selector` in the binding-rule entry SHALL be passed to Consul unchanged.
 
 #### Scenario: Selector for the global JWT method
 
@@ -332,11 +352,19 @@ Binding rules created by earlier versions under `{fullname}-k8s-auth-method` SHA
 
 ### Requirement: JWKS Proxy
 
-The Helm chart SHALL deploy a read-only proxy that exposes only `/openid/v1/jwks` and `/.well-known/openid-configuration` of the Kubernetes API server, under a dedicated ServiceAccount without additional RBAC. The proxy SHALL serve these two paths (`--accept-paths`). All methods other than `GET` SHALL be rejected.
+The Helm chart SHALL deploy a read-only proxy that exposes only `/openid/v1/jwks` and `/.well-known/openid-configuration` of the Kubernetes API server, under a dedicated ServiceAccount without additional RBAC. The proxy SHALL serve exactly these two paths (`--accept-paths` anchored at both ends). All methods other than `GET` SHALL be rejected.
 
-The proxy SHOULD run with more than one replica and a PodDisruptionBudget and SHOULD support the same scheduling and labelling settings as the other components.
+The proxy SHALL run with 2 replicas by default, spread across nodes with a preferred anti-affinity, and with a PodDisruptionBudget when there is more than one replica. Replicas, resources, affinity, tolerations, nodeSelector, priorityClassName and extra labels SHALL be configurable in `consulAclConfigurator.jwksProxy`. An optional NetworkPolicy, disabled by default, SHALL allow ingress only from the Consul server pods of the release and from the operator.
 
-> **Not yet implemented** (task 20.7): the deployment has `replicas: 1`, no PodDisruptionBudget, and no affinity, tolerations, nodeSelector, priorityClassName or extra labels.
+#### Scenario: Proxy survives a node drain
+
+- **WHEN** a node with one of the two proxy pods is drained
+- **THEN** the PodDisruptionBudget SHALL keep the other pod running
+
+#### Scenario: Path with a valid prefix is rejected
+
+- **WHEN** a client requests `/openid/v1/jwks/extra` from the proxy
+- **THEN** the proxy SHALL reject the request
 
 #### Scenario: JWKS is served
 

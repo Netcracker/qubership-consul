@@ -1,0 +1,33 @@
+{{- if .Values.consulAclConfigurator.enabled }}
+{{- $proxy := .Values.consulAclConfigurator.jwksProxy | default dict }}
+{{- if dig "networkPolicy" "enabled" false $proxy }}
+# Only Consul servers (JWKS for login validation) and the operator (OpenID configuration for
+# BoundIssuer detection) may reach the JWKS proxy.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ template "consul-acl-configurator.name" . }}-jwks-proxy
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "consul-service.defaultLabels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      name: {{ template "consul-acl-configurator.name" . }}-jwks-proxy
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: {{ template "consul.name" . }}
+              release: "{{ .Release.Name }}"
+              component: server
+        - podSelector:
+            matchLabels:
+              name: {{ template "consul-acl-configurator.name" . }}-operator
+      ports:
+        - protocol: TCP
+          port: 8080
+{{- end }}
+{{- end }}

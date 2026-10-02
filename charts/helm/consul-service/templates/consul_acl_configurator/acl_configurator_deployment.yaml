@@ -124,6 +124,10 @@ spec:
           env:
             - name: JWKS_URL
               value: "http://{{ template "consul-acl-configurator.name" . }}-jwks-proxy:8080/openid/v1/jwks"
+            - name: BOUND_ISSUER
+              value: {{ default "" .Values.consulAclConfigurator.boundIssuer | quote }}
+            - name: BOUND_AUDIENCES
+              value: {{ join "," (default (list) .Values.consulAclConfigurator.boundAudiences) | quote }}
             - name: WATCH_NAMESPACE
               value: {{ default "" .Values.consulAclConfigurator.namespaces | quote }}
             - name: NAMESPACE
@@ -177,8 +181,4 @@ spec:
             periodSeconds: 15
             successThreshold: 1
             failureThreshold: 5
-      {{- if .Values.consulAclConfigurator.tolerations }}
-      tolerations:
-        {{ .Values.consulAclConfigurator.tolerations | toJson }}
-      {{- end }}
 {{- end }}

@@ -85,18 +85,24 @@ A configuration json (`spec.acl.json` yaml field) contains a json with 3 first l
 
 - `BindName` - string, name of role. A required field.
 - `ServiceAccountName` - string, name of Kubernetes service account of service which want to get token with
-  binding rules. A required field.
+  binding rules. Used to build `Selector` when `Selector` is not set.
+- `Description` - string, binding rule description. Can be absent.
+- `AuthMethod` - string, Consul authentication method of the rule. Can be absent. By default the global
+  JWT auth method `applications-k8s-m2m` is used (see [Authentication method](#authentication-method)).
+- `Selector` - string, Consul selector of the rule. Can be absent. When it is set, it is passed to Consul as is and
+  `ServiceAccountName` is not used for the selector.
 
 `Rule Binding inner json explicit fields`
 This fields will be set for any rule binding inner json.
 
-- `AuthMethod` - string, Consul authentication method name. By default `<Consul service account>-k8s-auth-method`.
 - `BindType` - string, type of bind entity. Value is "role".
-- `Namespace` - string, name of Kubernetes namespace (OpenShift project) of service which want to get token with
-  binding rule.
-- `Selector` - string, selector for service account namespace and service account name. This field will be built
-  from `Namespace` and `ServiceAccountName` with equal condition like this
-  `serviceaccount.namespace==\"<ServiceAccountName>\" and serviceaccount.name==\"<Namespace>\"`.
+- `Selector` - when it is not set in the configuration, it is built from the namespace of the custom resource and
+  `ServiceAccountName`. The form depends on the type of the auth method of the rule:
+  - `jwt` (the default `applications-k8s-m2m`): `value.namespace == "<CR namespace>" and value.serviceaccount == "<ServiceAccountName>"`;
+  - `kubernetes`: `serviceaccount.namespace == "<CR namespace>" and serviceaccount.name == "<ServiceAccountName>"`.
+
+  If `ServiceAccountName` is a template such as `${value.serviceaccount}`, no selector is generated and the rule
+  matches every login through its auth method.
 
 ### spec.acl.explicitName
 
@@ -152,16 +158,86 @@ spec:
       { ... }
 ```
 
-For example, if `CONSUL_ADDRESS=http://consul-service-server.alty1224-consul-service.svc.cluster.local:8500`,
-`operatorNamespace` resolves to `alty1224-consul-service`.
+For example, if `CONSUL_ADDRESS=http://consul-server.consul-service.svc.cluster.local:8500`,
+`operatorNamespace` resolves to `consul-service`.
 
 Only the operator deployed in that namespace will reconcile the CR. All other operators skip it at the informer
 level — it never enters their reconcile queue.
 
 **Rules:**
 
-- `operatorNamespace` absent — all operators that watch the CR's namespace process it (existing behaviour, no change).
-- `operatorNamespace` present — only the operator whose own namespace matches the value processes the CR.
+- `operatorNamespace` absent — the CR is processed only by the operator deployed in the same namespace as the CR.
+  Operators in other namespaces ignore it, even if they watch the CR namespace. A CR created in a namespace without
+  an operator is therefore not processed until `operatorNamespace` is set.
+- `operatorNamespace` present — only the operator whose own namespace matches the value processes the CR, wherever
+  the CR is created. The operator must watch the CR namespace (`consulAclConfigurator.namespaces`, `*` for all).
+
+The same rules apply to `spec.kv.operatorNamespace` of [ConsulKV](#consulkv) resources.
+
+## Authentication method
+
+Binding rules are created under the global JWT auth method `applications-k8s-m2m`, unless a rule sets its own
+`AuthMethod`. The operator creates the method at start, or updates it when its configuration differs, and retries
+with exponential backoff while Consul or the JWKS proxy is not available. The method is not written when the
+configuration is unchanged.
+
+The method has the following configuration:
+
+- `JWKSURL` - the JWKS proxy deployed by the chart, `http://<fullname>-acl-configurator-jwks-proxy:8080/openid/v1/jwks`.
+  The proxy exposes only `/openid/v1/jwks` and `/.well-known/openid-configuration` of the Kubernetes API server
+  and rejects all methods except `GET`.
+- `ClaimMappings` - `/kubernetes.io/namespace` to `namespace` and `/kubernetes.io/serviceaccount/name` to
+  `serviceaccount`, available in selectors as `value.namespace` and `value.serviceaccount`.
+- `BoundIssuer` and `BoundAudiences` - see below.
+
+Services log in with their service account token (a projected token with the cluster default audience works), for
+example `consul login -method=applications-k8s-m2m -bearer-token-file=/var/run/secrets/kubernetes.io/serviceaccount/token`.
+
+### BoundIssuer and BoundAudiences
+
+By default the operator reads the `issuer` field of `/.well-known/openid-configuration` served by the JWKS proxy,
+that is the `--service-account-issuer` of the cluster, and uses it as `BoundIssuer`. `BoundAudiences` defaults to the
+same value, because the default `--api-audiences` of the API server is equal to the issuer.
+
+When the audience of service account tokens differs from the issuer, or the issuer must be fixed, set
+`consulAclConfigurator.boundIssuer` and `consulAclConfigurator.boundAudiences` in the deployment parameters.
+Explicit values take precedence over detection; when only `boundAudiences` is set, the issuer is still detected.
+
+To check the issuer of the cluster manually, run:
+
+```bash
+kubectl get --raw /.well-known/openid-configuration
+```
+
+If the issuer can not be read and `boundIssuer` is not set, the operator does not fall back to a fixed value: it keeps
+retrying and logs `failed to ensure applications-k8s-m2m auth method, retrying`. Check that the JWKS proxy pods
+are ready and, when `consulAclConfigurator.jwksProxy.networkPolicy.enabled` is `true`, that the network policy
+allows the operator pod.
+
+### Upgrade from the Kubernetes auth method
+
+Earlier versions created binding rules under `<fullname>-k8s-auth-method`. After the upgrade the operator creates
+and updates rules only under `applications-k8s-m2m`; rules under the old method are left untouched and are not
+deleted together with the custom resources. Upgrade steps:
+
+1. Upgrade the chart. The operator creates `applications-k8s-m2m` and, on the next reconcile of each custom
+   resource, the binding rules under it.
+2. Switch the client services to log in through `applications-k8s-m2m` with their service account token.
+   Until then they keep using the old rules.
+3. Remove the old rules that were created by the operator. They have `BindType` `role` and the selector built from
+   `ServiceAccountName`, for example:
+
+   ```bash
+   consul acl binding-rule list -method=<fullname>-k8s-auth-method
+   consul acl binding-rule delete -id=<rule ID>
+   ```
+
+   Do not remove the rules created by `server-acl-init` (`BindType` `service`), they are used by the service mesh.
+
+The service mesh is not affected: `connect-inject` and the other Consul components keep logging in through
+`<fullname>-k8s-auth-method` and `<fullname>-k8s-component-auth-method`, which are managed by `server-acl-init`.
+After a restore from backup these Kubernetes auth methods are reconfigured by the backup daemon; `applications-k8s-m2m`
+is brought in line with the cluster by the operator, which is restarted after the restore.
 
 ## Custom resource lifecycle
 

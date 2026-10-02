@@ -48,6 +48,11 @@ type mockACLClient struct {
 	policyReadByNameFunc func(string, *consulApi.QueryOptions) (*consulApi.ACLPolicy, *consulApi.QueryMeta, error)
 	policyUpdated        []*consulApi.ACLPolicy
 	policyDeletedIDs     []string
+	// AuthMethod
+	authMethodReadFunc  func(string, *consulApi.QueryOptions) (*consulApi.ACLAuthMethod, *consulApi.QueryMeta, error)
+	authMethodReadNames []string
+	authMethodCreated   []*consulApi.ACLAuthMethod
+	authMethodUpdated   []*consulApi.ACLAuthMethod
 	// Token
 	tokenListFilteredFunc func(consulApi.ACLTokenFilterOptions, *consulApi.QueryOptions) ([]*consulApi.ACLTokenListEntry, *consulApi.QueryMeta, error)
 	tokenDeletedIDs       []string
@@ -131,12 +136,18 @@ func (m *mockACLClient) BindingRuleDelete(id string, q *consulApi.WriteOptions) 
 	return nil, nil
 }
 func (m *mockACLClient) AuthMethodCreate(am *consulApi.ACLAuthMethod, q *consulApi.WriteOptions) (*consulApi.ACLAuthMethod, *consulApi.WriteMeta, error) {
+	m.authMethodCreated = append(m.authMethodCreated, am)
 	return am, nil, nil
 }
 func (m *mockACLClient) AuthMethodRead(name string, q *consulApi.QueryOptions) (*consulApi.ACLAuthMethod, *consulApi.QueryMeta, error) {
+	m.authMethodReadNames = append(m.authMethodReadNames, name)
+	if m.authMethodReadFunc != nil {
+		return m.authMethodReadFunc(name, q)
+	}
 	return nil, nil, nil
 }
 func (m *mockACLClient) AuthMethodUpdate(am *consulApi.ACLAuthMethod, q *consulApi.WriteOptions) (*consulApi.ACLAuthMethod, *consulApi.WriteMeta, error) {
+	m.authMethodUpdated = append(m.authMethodUpdated, am)
 	return am, nil, nil
 }
 func (m *mockACLClient) TokenListFiltered(f consulApi.ACLTokenFilterOptions, q *consulApi.QueryOptions) ([]*consulApi.ACLTokenListEntry, *consulApi.QueryMeta, error) {
@@ -231,7 +242,7 @@ func TestConvertRoleAdapterToRole_Explicit(t *testing.T) {
 // 3.3a: ExplicitName false → prefixed BindName
 func TestConvertBindRuleAdapterToBindRule_Prefixed(t *testing.T) {
 	adapter := ACLBindingRuleAdapter{BindName: "reader"}
-	rule := convertBindRuleAdapterToBindRule(adapter, "myapp", "staging", false)
+	rule := convertBindRuleAdapterToBindRule(adapter, "myapp", "staging", false, "jwt")
 	want := "myapp_staging_reader"
 	if rule.BindName != want {
 		t.Errorf("got %q, want %q", rule.BindName, want)
@@ -241,7 +252,7 @@ func TestConvertBindRuleAdapterToBindRule_Prefixed(t *testing.T) {
 // 3.3b: ExplicitName true → verbatim BindName
 func TestConvertBindRuleAdapterToBindRule_Explicit(t *testing.T) {
 	adapter := ACLBindingRuleAdapter{BindName: "${serviceaccount.namespace}_${serviceaccount.name}"}
-	rule := convertBindRuleAdapterToBindRule(adapter, "myapp", "staging", true)
+	rule := convertBindRuleAdapterToBindRule(adapter, "myapp", "staging", true, "jwt")
 	want := "${serviceaccount.namespace}_${serviceaccount.name}"
 	if rule.BindName != want {
 		t.Errorf("got %q, want %q", rule.BindName, want)
@@ -254,7 +265,7 @@ func TestConvertBindRuleAdapterToBindRule_ConcreteServiceAccountSelector(t *test
 		BindName:           "${value.namespace}_${value.serviceaccount}",
 		ServiceAccountName: "kafka-service-operator",
 	}
-	rule := convertBindRuleAdapterToBindRule(adapter, "kafka-service", "kafka-service", true)
+	rule := convertBindRuleAdapterToBindRule(adapter, "kafka-service", "kafka-service", true, "jwt")
 	want := `value.namespace == "kafka-service" and value.serviceaccount == "kafka-service-operator"`
 	if rule.Selector != want {
 		t.Errorf("got %q, want %q", rule.Selector, want)
@@ -267,7 +278,7 @@ func TestConvertBindRuleAdapterToBindRule_TemplatedServiceAccountNoSelector(t *t
 		BindName:           "${serviceaccount.namespace}_${serviceaccount.name}",
 		ServiceAccountName: "${serviceaccount.name}",
 	}
-	rule := convertBindRuleAdapterToBindRule(adapter, "cloud-core", "cloud-core", true)
+	rule := convertBindRuleAdapterToBindRule(adapter, "cloud-core", "cloud-core", true, "jwt")
 	if rule.Selector != "" {
 		t.Errorf("got %q, want empty selector", rule.Selector)
 	}
@@ -280,7 +291,7 @@ func TestConvertBindRuleAdapterToBindRule_ExplicitSelectorWins(t *testing.T) {
 		ServiceAccountName: "kafka-service-operator",
 		Selector:           `value.namespace == "kafka-service"`,
 	}
-	rule := convertBindRuleAdapterToBindRule(adapter, "kafka-service", "kafka-service", true)
+	rule := convertBindRuleAdapterToBindRule(adapter, "kafka-service", "kafka-service", true, "jwt")
 	want := `value.namespace == "kafka-service"`
 	if rule.Selector != want {
 		t.Errorf("got %q, want %q", rule.Selector, want)
@@ -296,7 +307,7 @@ func TestConvertBindRuleAdapterToBindRule_GlobalAuthMethod(t *testing.T) {
 	defer func() { authMethod = orig }()
 
 	adapter := ACLBindingRuleAdapter{BindName: "reader"}
-	rule := convertBindRuleAdapterToBindRule(adapter, "myapp", "staging", false)
+	rule := convertBindRuleAdapterToBindRule(adapter, "myapp", "staging", false, "jwt")
 	if rule.AuthMethod != "cluster-k8s-auth-method" {
 		t.Errorf("got %q, want %q", rule.AuthMethod, "cluster-k8s-auth-method")
 	}
@@ -309,7 +320,7 @@ func TestConvertBindRuleAdapterToBindRule_PerRuleAuthMethod(t *testing.T) {
 	defer func() { authMethod = orig }()
 
 	adapter := ACLBindingRuleAdapter{BindName: "reader", AuthMethod: "new_auth_method"}
-	rule := convertBindRuleAdapterToBindRule(adapter, "myapp", "staging", false)
+	rule := convertBindRuleAdapterToBindRule(adapter, "myapp", "staging", false, "jwt")
 	if rule.AuthMethod != "new_auth_method" {
 		t.Errorf("got %q, want %q", rule.AuthMethod, "new_auth_method")
 	}
@@ -325,8 +336,8 @@ func TestConvertBindRuleAdapterToBindRule_TwoRulesDifferentAuthMethods(t *testin
 		{BindName: "rule-a"},
 		{BindName: "rule-b", AuthMethod: "custom-auth"},
 	}
-	ruleA := convertBindRuleAdapterToBindRule(adapters[0], "myapp", "staging", false)
-	ruleB := convertBindRuleAdapterToBindRule(adapters[1], "myapp", "staging", false)
+	ruleA := convertBindRuleAdapterToBindRule(adapters[0], "myapp", "staging", false, "jwt")
+	ruleB := convertBindRuleAdapterToBindRule(adapters[1], "myapp", "staging", false, "jwt")
 
 	if ruleA.AuthMethod != "global-auth" {
 		t.Errorf("rule-a: got %q, want %q", ruleA.AuthMethod, "global-auth")

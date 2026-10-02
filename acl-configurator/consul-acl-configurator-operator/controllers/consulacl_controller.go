@@ -15,10 +15,13 @@
 package controllers
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"net"
+	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"sort"
@@ -912,13 +915,18 @@ func getPolicyLinks(roleAdapter ACLRoleAdapter, policies map[string]string, cust
 func processBindRules(bindRules []ACLBindingRuleAdapter, customResourceName string, customResourceNamespace string, explicitName bool) (*StatusHolder, error) {
 	statusMap := StatusHolder{}
 	var err, netErr error
+	authMethodType := authMethodTypeResolver()
 	for _, bindRuleAdapter := range bindRules {
 		if bindRuleAdapter.BindName == "" {
 			statusMap["innerErrorHandlingItem"] = "Some binding rules have not got a name"
 			continue
 		}
-		bindRuleDemand := convertBindRuleAdapterToBindRule(bindRuleAdapter, customResourceName, customResourceNamespace, explicitName)
-		applicableAuthMethod := bindRuleDemand.AuthMethod
+		applicableAuthMethod := bindRuleAuthMethod(bindRuleAdapter)
+		var methodType string
+		if methodType, err = authMethodType(applicableAuthMethod); err != nil {
+			return &statusMap, err
+		}
+		bindRuleDemand := convertBindRuleAdapterToBindRule(bindRuleAdapter, customResourceName, customResourceNamespace, explicitName, methodType)
 		var existingRules []*consulApi.ACLBindingRule
 		existingRules, _, err = aclClient.BindingRuleList(applicableAuthMethod, &consulApi.QueryOptions{})
 		if err != nil {
@@ -954,7 +962,38 @@ func processBindRules(bindRules []ACLBindingRuleAdapter, customResourceName stri
 	return &statusMap, netErr
 }
 
-func convertBindRuleAdapterToBindRule(bindRuleAdapter ACLBindingRuleAdapter, customResourceName string, customResourceNamespace string, explicitName bool) consulApi.ACLBindingRule {
+// bindRuleAuthMethod returns the auth method of the binding rule: the per-rule override or the global one.
+func bindRuleAuthMethod(bindRuleAdapter ACLBindingRuleAdapter) string {
+	if bindRuleAdapter.AuthMethod != "" {
+		return bindRuleAdapter.AuthMethod
+	}
+	return authMethod
+}
+
+// authMethodTypeResolver returns the type of a Consul auth method, reading each method once.
+// An auth method that does not exist yet resolves to an empty type.
+func authMethodTypeResolver() func(name string) (string, error) {
+	types := map[string]string{}
+	return func(name string) (string, error) {
+		if t, ok := types[name]; ok {
+			return t, nil
+		}
+		am, _, err := aclClient.AuthMethodRead(name, &consulApi.QueryOptions{})
+		if err != nil && !isErrNotFound(err) {
+			return "", err
+		}
+		var t string
+		if am != nil {
+			t = am.Type
+		}
+		types[name] = t
+		return t, nil
+	}
+}
+
+// convertBindRuleAdapterToBindRule builds the Consul binding rule. authMethodType is the type of the
+// auth method of the rule and defines the selector generated from ServiceAccountName.
+func convertBindRuleAdapterToBindRule(bindRuleAdapter ACLBindingRuleAdapter, customResourceName string, customResourceNamespace string, explicitName bool, authMethodType string) consulApi.ACLBindingRule {
 	bindingRule := consulApi.ACLBindingRule{}
 	bindingRule.ID = bindRuleAdapter.ID
 	if explicitName {
@@ -963,11 +1002,7 @@ func convertBindRuleAdapterToBindRule(bindRuleAdapter ACLBindingRuleAdapter, cus
 		bindingRule.BindName = convertEntityName(bindRuleAdapter.BindName, customResourceName, customResourceNamespace)
 	}
 	bindingRule.BindType = "role"
-	if bindRuleAdapter.AuthMethod != "" {
-		bindingRule.AuthMethod = bindRuleAdapter.AuthMethod
-	} else {
-		bindingRule.AuthMethod = authMethod
-	}
+	bindingRule.AuthMethod = bindRuleAuthMethod(bindRuleAdapter)
 	bindingRule.Description = bindRuleAdapter.Description
 	if bindRuleAdapter.Selector != "" {
 		// Explicit selector wins and is passed to Consul verbatim.
@@ -980,7 +1015,13 @@ func convertBindRuleAdapterToBindRule(bindRuleAdapter ACLBindingRuleAdapter, cus
 			// matches nothing, so leave the selector empty (match all).
 			log.Info(fmt.Sprintf("ServiceAccountName [%s] for BindName [%s] is a template, skipping selector generation (rule will match all logins)",
 				bindRuleAdapter.ServiceAccountName, bindingRule.BindName))
+		} else if authMethodType == "kubernetes" {
+			// The kubernetes auth method exposes the service account as serviceaccount.* fields.
+			bindingRule.Selector = fmt.Sprintf("serviceaccount.namespace == \"%s\" and serviceaccount.name == \"%s\"",
+				customResourceNamespace,
+				bindRuleAdapter.ServiceAccountName)
 		} else {
+			// The jwt auth method exposes the claims mapped by ClaimMappings as value.* fields.
 			bindingRule.Selector = fmt.Sprintf("value.namespace == \"%s\" and value.serviceaccount == \"%s\"",
 				customResourceNamespace,
 				bindRuleAdapter.ServiceAccountName)
@@ -990,6 +1031,96 @@ func convertBindRuleAdapterToBindRule(bindRuleAdapter ACLBindingRuleAdapter, cus
 }
 
 const defaultJWKSURL = "http://localhost:8080/openid/v1/jwks"
+
+const openIDConfigPath = "/.well-known/openid-configuration"
+
+var openIDConfigHTTPClient = &http.Client{Timeout: 10 * time.Second}
+
+// openIDConfigURL returns the URL of the OpenID configuration served by the same host as jwksURL.
+func openIDConfigURL(jwksURL string) (string, error) {
+	u, err := url.Parse(jwksURL)
+	if err != nil {
+		return "", fmt.Errorf("invalid JWKS_URL %q: %w", jwksURL, err)
+	}
+	if u.Scheme == "" || u.Host == "" {
+		return "", fmt.Errorf("invalid JWKS_URL %q: scheme and host are required", jwksURL)
+	}
+	u.Path = openIDConfigPath
+	u.RawPath = ""
+	u.RawQuery = ""
+	u.Fragment = ""
+	return u.String(), nil
+}
+
+// detectIssuer reads the issuer of the service account tokens from the OpenID configuration
+// served next to jwksURL (the JWKS proxy exposes the configuration of the API server).
+func detectIssuer(jwksURL string) (string, error) {
+	configURL, err := openIDConfigURL(jwksURL)
+	if err != nil {
+		return "", err
+	}
+	resp, err := openIDConfigHTTPClient.Get(configURL)
+	if err != nil {
+		return "", fmt.Errorf("error requesting OpenID configuration %q: %w", configURL, err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("error requesting OpenID configuration %q: unexpected status %d", configURL, resp.StatusCode)
+	}
+	var openIDConfig struct {
+		Issuer string `json:"issuer"`
+	}
+	if err = json.NewDecoder(resp.Body).Decode(&openIDConfig); err != nil {
+		return "", fmt.Errorf("error parsing OpenID configuration %q: %w", configURL, err)
+	}
+	if openIDConfig.Issuer == "" {
+		return "", fmt.Errorf("OpenID configuration %q has no issuer", configURL)
+	}
+	return openIDConfig.Issuer, nil
+}
+
+// boundIssuerAndAudiences returns BoundIssuer and BoundAudiences of the auth method. Values set in
+// BOUND_ISSUER and BOUND_AUDIENCES (comma-separated) take precedence. Otherwise the issuer is detected
+// from the OpenID configuration and the audiences default to the issuer (the default --api-audiences).
+func boundIssuerAndAudiences(jwksURL string) (string, []string, error) {
+	issuer := strings.TrimSpace(os.Getenv("BOUND_ISSUER"))
+	var audiences []string
+	for _, a := range strings.Split(os.Getenv("BOUND_AUDIENCES"), ",") {
+		if a = strings.TrimSpace(a); a != "" {
+			audiences = append(audiences, a)
+		}
+	}
+	if issuer == "" {
+		detected, err := detectIssuer(jwksURL)
+		if err != nil {
+			return "", nil, err
+		}
+		issuer = detected
+	}
+	if len(audiences) == 0 {
+		audiences = []string{issuer}
+	}
+	return issuer, audiences, nil
+}
+
+// authMethodUpToDate reports whether the existing auth method already has the desired type,
+// description and config values. Config keys that are not set by the operator are ignored.
+func authMethodUpToDate(existing, desired *consulApi.ACLAuthMethod) bool {
+	if existing.Type != desired.Type || existing.Description != desired.Description {
+		return false
+	}
+	for key, value := range desired.Config {
+		want, err := json.Marshal(value)
+		if err != nil {
+			return false
+		}
+		got, err := json.Marshal(existing.Config[key])
+		if err != nil || !bytes.Equal(want, got) {
+			return false
+		}
+	}
+	return true
+}
 
 // EnsureApplicationsAuthMethod creates or updates the applications-k8s-m2m auth method in Consul.
 func EnsureApplicationsAuthMethod() error {
@@ -1003,6 +1134,10 @@ func EnsureApplicationsAuthMethod() error {
 	if jwksURL == "" {
 		jwksURL = defaultJWKSURL
 	}
+	issuer, audiences, err := boundIssuerAndAudiences(jwksURL)
+	if err != nil {
+		return fmt.Errorf("error resolving BoundIssuer of auth method %q: %w", amName, err)
+	}
 
 	am := &consulApi.ACLAuthMethod{
 		Name:        amName,
@@ -1010,8 +1145,8 @@ func EnsureApplicationsAuthMethod() error {
 		Description: "Auth method for application M2M authentication",
 		Config: map[string]interface{}{
 			"JWKSURL":        jwksURL,
-			"BoundIssuer":    "https://kubernetes.default.svc.cluster.local",
-			"BoundAudiences": []string{"https://kubernetes.default.svc.cluster.local"},
+			"BoundIssuer":    issuer,
+			"BoundAudiences": audiences,
 			"ClaimMappings": map[string]string{
 				"/kubernetes.io/namespace":           "namespace",
 				"/kubernetes.io/serviceaccount/name": "serviceaccount",
@@ -1023,13 +1158,15 @@ func EnsureApplicationsAuthMethod() error {
 		if err != nil {
 			return fmt.Errorf("error creating auth method %q: %w", amName, err)
 		}
-		log.Info(fmt.Sprintf("Auth method %q created", amName))
+		log.Info(fmt.Sprintf("Auth method %q created", amName), "boundIssuer", issuer, "boundAudiences", audiences)
+	} else if authMethodUpToDate(existing, am) {
+		log.Info(fmt.Sprintf("Auth method %q is up to date", amName))
 	} else {
 		_, _, err = aclClient.AuthMethodUpdate(am, &consulApi.WriteOptions{})
 		if err != nil {
 			return fmt.Errorf("error updating auth method %q: %w", amName, err)
 		}
-		log.Info(fmt.Sprintf("Auth method %q updated", amName))
+		log.Info(fmt.Sprintf("Auth method %q updated", amName), "boundIssuer", issuer, "boundAudiences", audiences)
 	}
 	return nil
 }

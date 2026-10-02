@@ -62,7 +62,7 @@ This change affects the following components:
 - **Helm Chart and CRDs** — adds installation and lifecycle management for the ConsulKV CRD and its controller.
 - **RBAC** — grants the operator permissions required to reconcile ConsulKV resources and to use leases for leader election.
 - **JWKS proxy** — new `kubectl proxy` deployment/service/ServiceAccount in the Helm chart that serves `/openid/v1/jwks` and `/.well-known/openid-configuration` to Consul servers.
-- **Client services and tooling** — services that authenticate through the old `-k8s-auth-method` must move to `applications-k8s-m2m`; `docs/public/acl-configurator.md`, `connect-inject` login settings and `backup-daemon` restore logic still reference the old methods and must be reviewed.
+- **Client services and tooling** — services that authenticate through the old `-k8s-auth-method` must move to `applications-k8s-m2m`; the migration is documented in `docs/public/acl-configurator.md`. `connect-inject` login settings and `backup-daemon` restore logic were reviewed and keep the Kubernetes auth methods managed by `server-acl-init` (service mesh and component logins).
 - **Deployment Workflows** — enables applications to provision Consul ACL resources and Consul KV entries declaratively through Kubernetes manifests while remaining compatible with existing deployments.
 
 The implementation relies only on existing Kubernetes and Consul APIs and does not introduce additional external dependencies.

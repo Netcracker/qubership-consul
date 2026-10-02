@@ -100,15 +100,19 @@ ConsulKVStatus {
 
 ### 8. Global JWT auth method with a JWKS proxy
 
-**Decision:** the operator creates (and on every start updates) a global auth method `applications-k8s-m2m` of type `jwt`. Consul servers validate Kubernetes service-account tokens against the API server's public keys, fetched from `JWKS_URL`. Because the API server endpoints require authentication, the chart deploys `kubectl proxy` (`acl-configurator-jwks-proxy`) that exposes only `/openid/v1/jwks` and `/.well-known/openid-configuration`, read-only, under its own ServiceAccount without extra RBAC. `ClaimMappings` map `/kubernetes.io/namespace` → `namespace` and `/kubernetes.io/serviceaccount/name` → `serviceaccount`; therefore binding-rule selectors use `value.namespace` and `value.serviceaccount`.
+**Decision:** the operator creates a global auth method `applications-k8s-m2m` of type `jwt` at start and updates it when its configuration differs. Consul servers validate Kubernetes service-account tokens against the API server's public keys, fetched from `JWKS_URL`. Because the API server endpoints require authentication, the chart deploys `kubectl proxy` (`acl-configurator-jwks-proxy`) that exposes only `/openid/v1/jwks` and `/.well-known/openid-configuration`, read-only, under its own ServiceAccount without extra RBAC. `ClaimMappings` map `/kubernetes.io/namespace` → `namespace` and `/kubernetes.io/serviceaccount/name` → `serviceaccount`; therefore binding-rule selectors for this method use `value.namespace` and `value.serviceaccount`.
+
+- **BoundIssuer / BoundAudiences:** `consulAclConfigurator.boundIssuer` and `boundAudiences` (env `BOUND_ISSUER`, `BOUND_AUDIENCES`) take precedence. Otherwise the issuer is read from `/.well-known/openid-configuration` on the host of `JWKS_URL`, and the audiences default to the issuer (the default `--api-audiences`). When detection fails the start-up retry loop keeps retrying; there is no hard-coded fallback.
+- **Idempotent update:** the method is written only when the type, description or one of the config keys set by the operator differs from Consul; other keys are ignored.
+- **Selector by method type:** the type of the auth method of each binding rule is read once per reconcile (`AuthMethodRead`); `kubernetes` gives `serviceaccount.namespace`/`serviceaccount.name`, any other type, or a method that does not exist yet, gives the `value.*` form.
+- **Proxy availability:** 2 replicas by default with a preferred anti-affinity across nodes, a PodDisruptionBudget (`maxUnavailable: 1`) when there is more than one replica, and overridable resources, affinity, tolerations, nodeSelector, priorityClassName and extra labels. An optional NetworkPolicy (off by default) allows ingress only from the Consul server pods of the release and from the operator, which reads the OpenID configuration.
 
 **Rationale:** a `jwt` method does not need a reviewer token with `TokenReview` permissions in Consul and works for services outside the Consul datacenter's Kubernetes cluster as long as they present a service-account JWT.
 
-**Trade-offs and known limitations (tracked in tasks 20.x):**
-- `BoundIssuer`/`BoundAudiences` are hard-coded to `https://kubernetes.default.svc.cluster.local`. Clusters with a different `--service-account-issuer` (OpenShift, EKS, GKE, AKS, custom cluster domain) reject every login until these values are detected from the cluster (task 20.6: by default the `issuer` of `/.well-known/openid-configuration`, overridable in `values.yaml`; audience is assumed to equal the issuer, which is the default `--api-audiences`).
-- The selector format depends on the method type. It is currently always `value.*`, so a per-rule `AuthMethod` of type `kubernetes` yields a rule that never matches.
-- The proxy is a single replica without PodDisruptionBudget and without the scheduling knobs available for the other components; while it is down, key lookups for unknown `kid` (key rotation, Consul restart) fail and new logins are rejected.
-- `EnsureApplicationsAuthMethod` overwrites the method on every start, so manual corrections are reverted.
+**Trade-offs:**
+- The `value.*` selector assumes the claim mappings of `applications-k8s-m2m`. A per-rule `jwt` method with other claim mappings needs an explicit `Selector`.
+- The NetworkPolicy matches Consul server pods of the same release; it must stay disabled with external Consul servers.
+- The audience equals the issuer by default; clusters with a custom `--api-audiences` must set `boundAudiences`.
 
 ### 9. Ownership of shared entities
 
@@ -143,8 +147,9 @@ ConsulKVStatus {
 | `ConsulKV` controller shares the Consul token with the ACL controller; the bootstrap token must have KV write permissions | Medium | Document requirement; the bootstrap token in standard Consul deployments already has full permissions. Teams using scoped bootstrap tokens must extend it |
 | ExplicitName flag in JSON is invisible to Kubernetes admission (no schema validation) | Low | Invalid configurations surface as Consul API errors reflected in `.status`; acceptable given the existing pattern |
 | CRDs in `crds/` are not updated on `helm upgrade` (Helm limitation) | Low | Documented in Helm's own docs; operators must run `kubectl apply -f crds/` on upgrade when the CRD schema changes |
-| Switching the global auth method to `applications-k8s-m2m` (JWT) leaves binding rules under the old `-k8s-auth-method` that the operator no longer updates or deletes | High | Mark as breaking; document migration and manual clean-up; clients must log in through the new method (task 20.8) |
-| Hard-coded JWT `BoundIssuer`/`BoundAudiences` reject all logins on clusters with another service-account issuer | High | Detect from the cluster OpenID configuration, overridable in values (task 20.6) |
+| Switching the global auth method to `applications-k8s-m2m` (JWT) leaves binding rules under the old `-k8s-auth-method` that the operator no longer updates or deletes | High | Breaking; migration and manual clean-up documented in `acl-configurator.md`; clients must log in through the new method (task 20.8) |
+| Hard-coded JWT `BoundIssuer`/`BoundAudiences` reject all logins on clusters with another service-account issuer | High | Fixed: detected from the cluster OpenID configuration, overridable in values (task 20.6) |
+| `--accept-paths` of the JWKS proxy anchored only one alternative (`^a\|b$`), so `/openid/v1/jwks/...` and `.../.well-known/openid-configuration` passed | Medium | Fixed: `^(?:/openid/v1/jwks\|/\.well-known/openid-configuration)$` (task 20.7) |
 | Network error in `processBindRules` swallowed by a shadowed `err`: condition `Successful=True`, no requeue | High | Fixed, test added (task 21.3); `govet shadow` to be enabled in the shared linter config (task 21.3a) |
 | Network error of an earlier entity hidden by a later successful call in `processPolicies`/`processRoles`/`processBindRules` | High | Fixed: the first network error is kept (task 21.8) |
 | `purgeOnDelete` deletes by raw string prefix and removes sibling keys such as `config/application/...` | High | Purge `<key>` and `<key>/` only (task 22.4) |
@@ -152,7 +157,7 @@ ConsulKVStatus {
 | Two CRs of one namespace share an owner entry; one could release an entity the other still declares | Medium | Entities declared by other resources of the namespace are skipped (Decision 9) |
 | Partial failure across KV batches desynchronises `Flags` and status | Medium | Per-batch results (task 22.6) |
 | Duplicate key in one ConsulKV makes every transaction of the batch fail with a CAS conflict | Medium | Last entry wins, earlier duplicates marked skipped (task 22.5) |
-| JWKS proxy is a single replica and a single point of failure for new logins | Medium | Replicas and PDB (task 20.7) |
+| JWKS proxy is a single replica and a single point of failure for new logins | Medium | Fixed: 2 replicas, anti-affinity and PDB by default (task 20.7) |
 | Two operator pods run in parallel during a rolling update | Medium | Leader election or `Recreate` (task 23.1) |
 
 ---
@@ -165,7 +170,7 @@ ConsulKVStatus {
 
 3. **ConsulKV CRD** is a new resource type — no existing objects to migrate.
 
-3a. **Global auth method change (breaking).** After the upgrade the operator creates `applications-k8s-m2m` and creates binding rules under it. Rules created earlier under `{fullname}-k8s-auth-method` stay in Consul untouched and keep serving clients that still log in through the old method, but later CR changes are applied only to the new rules. Steps: (a) upgrade the operator, (b) switch client services to log in through `applications-k8s-m2m` with a service-account JWT, (c) remove the old binding rules manually, (d) review `connect-inject` and `backup-daemon` settings that still reference the old methods.
+3a. **Global auth method change (breaking).** After the upgrade the operator creates `applications-k8s-m2m` and creates binding rules under it. Rules created earlier under `{fullname}-k8s-auth-method` stay in Consul untouched and keep serving clients that still log in through the old method, but later CR changes are applied only to the new rules. Steps: (a) upgrade the operator, (b) switch client services to log in through `applications-k8s-m2m` with a service-account JWT, (c) remove the old binding rules of `BindType` `role` manually (the `service` rules of `server-acl-init` stay). The procedure is documented in `docs/public/acl-configurator.md` ("Upgrade from the Kubernetes auth method"). `connect-inject`, the other Consul components and `backup-daemon/scripts/restore.py` intentionally keep `{fullname}-k8s-auth-method` and `{fullname}-k8s-component-auth-method`: these methods are managed by `server-acl-init` and used for the service mesh and component logins, not for the roles of the operator; after a restore the operator pod (`restore-policy: restart`) is restarted and brings `applications-k8s-m2m` in line with the cluster.
 
 4. **Helm upgrade**: the new CRD YAML in `crds/` is not applied automatically on `helm upgrade`. Operators must apply `consulkv_crd.yaml` before upgrading to the new chart version when `ConsulKV` resources are intended to be used.
 
