@@ -205,7 +205,6 @@
 - [ ] 20.5 Generate the selector depending on the auth-method type (`AuthMethodRead`: `kubernetes` → `serviceaccount.*`, `jwt` → `value.*`) so that a per-rule `AuthMethod` of type `kubernetes` keeps working
 - [ ] 20.6 Make the global auth method name configurable in `values.yaml` instead of the hard-coded `applications-k8s-m2m`
 - [ ] 20.7 Make `BoundIssuer` and `BoundAudiences` configurable (default: derived from the `issuer` field of `/.well-known/openid-configuration` or a `values.yaml` setting) — the current value is only valid for clusters whose `--service-account-issuer` is `https://kubernetes.default.svc.cluster.local`; do not call `AuthMethodUpdate` when the config is unchanged
-- [ ] 20.8 **[bugfix]** Fix the JWKS proxy path filter to `^(?:/openid/v1/jwks|/\.well-known/openid-configuration)$` (the current expression is split by `|` into a prefix match and a suffix match)
 - [ ] 20.9 JWKS proxy availability: more than one replica and a PodDisruptionBudget; support affinity, tolerations, nodeSelector, priorityClassName, extra labels and resources overrides; optional NetworkPolicy restricting access to Consul servers
 - [ ] 20.10 Document the upgrade path and clean-up of binding rules left under `{fullname}-k8s-auth-method`; update `docs/public/acl-configurator.md`, `connect-inject` login settings and `backup-daemon/scripts/restore.py` where they still reference the old methods
 - [ ] 20.11 Unit tests for `EnsureApplicationsAuthMethod` (create, update, unchanged)
@@ -220,7 +219,7 @@
 - [x] 21.2 Clean up stale explicit policies on update using the previous `policiesStatus`
 - [ ] 21.3 **[bugfix]** Fix variable shadowing of `err` in `processBindRules` (`existingRules, _, err :=` hides the outer `err`) so that network errors from `BindingRuleCreate`/`BindingRuleUpdate` are returned and the request is requeued; add a unit test "network error in create → error returned"; enable `govet` `shadow` in the linter
 - [ ] 21.4 Replace parsing of the human-readable status string in `parsePolicyNamesFromStatus` with a structured source (a status field such as `appliedPolicies`, or the owner marker in the policy description in Consul) so that cleanup survives restore from backup and status format changes; add tests for `parsePolicyNamesFromStatus` and `removeStaleExplicitPolicies`
-- [ ] 21.5 Extend the owner mechanism to roles and binding rules (they have a `Description` field) so that deleting one CR does not delete a role/rule, nor revoke tokens, still used by another CR with `explicitName: true`; enable stale clean-up of roles and rules in explicit mode
+- [ ] 21.5 Extend the owner mechanism to roles and binding rules: store the owner list in their `Description` in the same format as for policies (`[consul-acl-owners: ns1, ns2]`, namespaces only; the operator already selects CRs by name, so the CR name is not stored). Create/update adds the namespace; deleting a CR or removing the entity from its spec removes the namespace; the role or rule is deleted, and the role tokens revoked, only when the last owner is removed. Entities without a marker (created before the upgrade) keep the current behaviour. This also enables stale clean-up of roles and rules in explicit mode
 - [ ] 21.6 **[bugfix]** Fix `StatusHolder.GetStatus()` for `innerErrorHandlingItem` (missing `continue` duplicates the message)
 - [ ] 21.7 Remove the unused `AuthMethodsStatus` field from `ConsulACLStatus` and from both CRDs
 
@@ -233,9 +232,9 @@
 - [x] 22.1 Track ownership of keys with the `Flags` reference counter (create → `Flags=1`, additional owner → `Flags+1`, externally created key (`Flags=0`) is not owned)
 - [x] 22.2 Write and delete in transactional batches of at most 64 operations (Consul limit) using CAS with retries
 - [x] 22.3 Support `purgeOnDelete` (recursive delete of the declared keys on CR deletion) and `operatorNamespace`
-- [ ] 22.4 **[bugfix]** `purgeOnDelete`: require the key to end with `/` (validation in the controller and a CEL rule in the CRD), delete only keys with `Owned=true` and `Flags<=1`, and refuse to purge when keys of other CRs exist under the prefix; add tests for prefix collision (`config/app` vs `config/application/...`) and foreign keys
-- [ ] 22.5 **[bugfix]** Reject duplicate keys within one CR with a clear error (`duplicate key "..."`) before building the transaction, and add a CEL uniqueness rule to the CRD
-- [ ] 22.6 **[bugfix]** Partial batch failure: return per-batch results from `writeKVBatchWithOwnership` and `deleteRemovedEntries` so that status reflects the batches that were committed (no double increment of `Flags` on retry, no double decrement on removal); correct the "batch is atomic" comment; add a test "second batch fails"
+- [ ] 22.4 **[bugfix]** `purgeOnDelete`: delete the exact declared key and the tree `<key>/` (append `/` when missing; a key without `/` is accepted), regardless of other users of those keys, so that `config/app` never removes `config/application/...` or `config/app-gateway/...`; add tests for the prefix collision and for keys shared with another CR
+- [ ] 22.5 **[bugfix]** Duplicate keys within one CR: do not fail the transaction; the last entry for a key wins, earlier duplicates get status `skipped (duplicate key)` in `status.entries`, all other keys are written normally
+- [ ] 22.6 **[bugfix]** Partial batch failure (more than 64 keys, a later batch fails): keys of the batches that were committed are recorded in `status.entries` with `Owned=true`, so on the next reconcile their `Flags` are not incremented again; only the keys of the failed batch get an error status and are retried; `generalStatus`/`Successful` becomes success only after all batches are written. The same for removal of keys: keys already released are not decremented again. Add a test "second batch fails" and correct the "batch is atomic" comment
 - [ ] 22.7 Tests for `purgeOnDelete`
 
 > Covers: Key Ownership, Purge on Delete, Duplicate Keys, Batched Writes
@@ -245,6 +244,5 @@
 ## 23. Deployment and housekeeping
 
 - [ ] 23.1 Enable leader election for the operator (`args: ["--leader-elect"]`; the RBAC for `coordination.k8s.io/leases` is already in the ClusterRole) or set `strategy: Recreate`, so that two operator pods never reconcile in parallel during a rolling update
-- [ ] 23.2 **[bugfix]** Verify and, if accidental, revert the change of `statusWritingEnabled` in `values.yaml` (integration-test parameter, unrelated to this change)
-- [ ] 23.3 Move the `kubeconfig` change in `scheduler/deployment.yaml` to a separate change if it is not required by this feature
+- [x] 23.2 **[bugfix]** Revert the accidental change of `statusWritingEnabled` in `values.yaml` back to `true` (integration-test parameter, unrelated to this change)
 - [ ] 23.4 **[bugfix]** Align the CRD version annotation: ConsulACL CRD uses `crd.netcracker.com/version: 0.0.19`, ConsulKV CRD and kustomize bases use `crd/version: 0.0.18`; use one key and bump the version of the ConsulKV CRD

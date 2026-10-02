@@ -108,7 +108,6 @@ ConsulKVStatus {
 - `BoundIssuer`/`BoundAudiences` are hard-coded to `https://kubernetes.default.svc.cluster.local`. Clusters with a different `--service-account-issuer` (OpenShift, EKS, GKE, AKS, custom cluster domain) reject every login until these values are configurable.
 - The selector format depends on the method type. It is currently always `value.*`, so a per-rule `AuthMethod` of type `kubernetes` yields a rule that never matches.
 - The proxy is a single replica without PodDisruptionBudget and without the scheduling knobs available for the other components; while it is down, key lookups for unknown `kid` (key rotation, Consul restart) fail and new logins are rejected.
-- The proxy path filter `^(?:/openid/v1/jwks)|(?:/.well-known/openid-configuration)$` is split by `|` into a prefix match and a suffix match and has an unescaped dot. It still allows the two required paths, but is wider than intended; the fix is `^(?:/openid/v1/jwks|/\.well-known/openid-configuration)$`.
 - `EnsureApplicationsAuthMethod` overwrites the method on every start, so manual corrections are reverted.
 
 ### 9. Ownership of shared entities
@@ -127,7 +126,7 @@ ConsulKVStatus {
 
 **Decision:** with `purgeOnDelete: true` the controller removes the declared keys on CR deletion with a recursive delete (`DeleteTree`) instead of the ref-count decrement.
 
-**Known risk:** Consul `recurse` matches a string prefix, not a path hierarchy. A key `config/app` also removes `config/application/...` and `config/app-gateway/...`, and the ownership counters are bypassed. Until validation is added, keys used with `purgeOnDelete` must end with `/` (task 22.4).
+**Known risk:** Consul `recurse` matches a string prefix, not a path hierarchy. A key `config/app` also removes `config/application/...` and `config/app-gateway/...`. Planned fix (task 22.4): purge the exact key and the tree `<key>/` (the slash is appended, a key without it is not rejected). Purge is intentionally unconditional: it removes the whole path even if other resources use it.
 
 ### 11. Operator concurrency
 
@@ -147,10 +146,10 @@ ConsulKVStatus {
 | Switching the global auth method to `applications-k8s-m2m` (JWT) leaves binding rules under the old `-k8s-auth-method` that the operator no longer updates or deletes | High | Mark as breaking; document migration and manual clean-up; clients must log in through the new method (task 20.10) |
 | Hard-coded JWT `BoundIssuer`/`BoundAudiences` reject all logins on clusters with another service-account issuer | High | Make configurable (task 20.7) |
 | Network error in `processBindRules` swallowed by a shadowed `err`: condition `Successful=True`, no requeue | High | Fix the shadowing, add test, enable `govet shadow` (task 21.3) |
-| `purgeOnDelete` deletes by string prefix and ignores ownership | High | Require trailing `/`, delete only owned keys (task 22.4) |
+| `purgeOnDelete` deletes by raw string prefix and removes sibling keys such as `config/application/...` | High | Purge `<key>` and `<key>/` only (task 22.4) |
 | Shared role/rule deleted and role tokens revoked when one of several CRs is deleted (`explicitName: true`) | Medium | Owner tracking for roles and rules (tasks 7.2, 21.5) |
 | Partial failure across KV batches desynchronises `Flags` and status | Medium | Per-batch results (task 22.6) |
-| Duplicate key in one ConsulKV makes every transaction of the batch fail with a CAS conflict | Medium | Validate uniqueness (task 22.5) |
+| Duplicate key in one ConsulKV makes every transaction of the batch fail with a CAS conflict | Medium | Last entry wins, earlier duplicates marked skipped (task 22.5) |
 | JWKS proxy is a single replica and a single point of failure for new logins | Medium | Replicas and PDB (task 20.9) |
 | Two operator pods run in parallel during a rolling update | Medium | Leader election or `Recreate` (task 23.1) |
 

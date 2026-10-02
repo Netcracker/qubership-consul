@@ -286,7 +286,7 @@ The controller SHALL track ownership of each key in the Consul `Flags` field as 
 
 The controller SHALL write and delete keys in Consul transactions of at most 64 operations using check-and-set, retrying a batch on a CAS conflict. A batch is atomic; the operation as a whole is not.
 
-When a later batch fails after earlier batches committed, the controller SHALL record the outcome of the committed batches in `status` so that a retry neither increments `Flags` a second time for keys already written, nor decrements it a second time for keys already released.
+When a later batch fails after earlier batches committed, the controller SHALL record the keys of the committed batches in `status.entries` (with `Owned=true` where applicable) and give only the keys of the failed batch an error status, so that a retry neither increments `Flags` a second time for keys already written, nor decrements it a second time for keys already released. The overall status SHALL become successful only after all batches are written.
 
 > **Bug** (task 22.6, bugfix): on a failure all entries are given an `error` status without `Owned=true`, although earlier batches are committed, so the next reconcile increments `Flags` again and the key is never deleted. When removing keys, a failed later batch returns no result, so the next reconcile decrements the already released keys again and may delete a key still used by another CR.
 
@@ -297,34 +297,34 @@ When a later batch fails after earlier batches committed, the controller SHALL r
 
 ---
 
-### Requirement: Duplicate Keys Are Rejected
+### Requirement: Duplicate Keys
 
-A `ConsulKV` resource SHALL NOT contain the same `key` twice. The controller SHALL report `duplicate key "<key>"` in `status` and SHALL NOT include the duplicate in the transaction. The CRD SHOULD reject such a manifest with a validation rule.
+When a `ConsulKV` resource declares the same `key` more than once, the controller SHALL write the key once with the value of the last entry, SHALL mark the earlier entries in `status.entries` as `skipped (duplicate key)`, and SHALL write all other keys normally. A duplicate SHALL NOT make the transaction fail.
 
 > **Bug** (task 22.5, bugfix): a duplicate produces two `KVCAS` operations with the same `ModifyIndex` in one transaction, the second one fails, and every retry fails the same way until `max retries exceeded`, so none of the up to 64 keys in that batch is written.
 
 #### Scenario: Same key declared twice
 
 - **WHEN** `spec.kv.entries` contains `config/app/url` twice
-- **THEN** the controller SHALL report a clear duplicate-key error and SHALL still write the other valid entries
+- **THEN** the key SHALL be written once with the value of the last entry, the earlier entry SHALL be reported as `skipped (duplicate key)`, and the other entries SHALL be written
 
 ---
 
 ### Requirement: Purge on Delete
 
-When `spec.kv.purgeOnDelete` is `true`, the controller SHALL remove the declared keys on deletion of the CR with a recursive delete. Because Consul `recurse` matches a string prefix, a key used with `purgeOnDelete` SHALL end with `/`, and the controller SHALL delete a tree only for keys with `Owned=true` and `Flags<=1`. The controller SHALL NOT purge a prefix under which keys of other CRs exist.
+When `spec.kv.purgeOnDelete` is `true`, the controller SHALL, on deletion of the CR, remove each declared key and everything below it, regardless of which other resources use those keys. The declared key SHALL be treated as a directory: the controller SHALL delete the exact key and then the tree `<key>/` (the trailing `/` is appended when missing and a declared key without `/` is accepted as is), so that keys that merely share the string prefix, such as `config/application/...` for `config/app`, are not deleted.
 
-> **Bug** (task 22.4, bugfix): there is no validation, and `deleteKVTree` deletes by prefix for every entry in `status`, including keys that are not owned and keys with `Flags>1`. With `key: "config/app"`, `config/application/...` and `config/app-gateway/...` are deleted too, and the reference counting is bypassed. There are no tests for `purgeOnDelete`.
+> **Bug** (task 22.4, bugfix): `deleteKVTree` deletes by raw string prefix, so with `key: "config/app"` the keys `config/application/...` and `config/app-gateway/...` are deleted too. There are no tests for `purgeOnDelete`.
 
 #### Scenario: Prefix collision
 
-- **WHEN** a CR with `purgeOnDelete: true` and `key: "config/app/"` is deleted and `config/application/x` exists
-- **THEN** `config/application/x` SHALL remain in Consul
+- **WHEN** a CR with `purgeOnDelete: true` and `key: "config/app"` is deleted and `config/app`, `config/app/db_url` and `config/application/x` exist
+- **THEN** `config/app` and `config/app/db_url` SHALL be removed and `config/application/x` SHALL remain in Consul
 
-#### Scenario: Key without trailing slash
+#### Scenario: Keys used by other resources are purged too
 
-- **WHEN** a CR with `purgeOnDelete: true` declares `key: "config/app"`
-- **THEN** the controller or the CRD validation SHALL reject it
+- **WHEN** a CR with `purgeOnDelete: true` and `key: "config/app/"` is deleted and `config/app/shared` is also declared by another `ConsulKV`
+- **THEN** `config/app/shared` SHALL be removed
 
 ---
 

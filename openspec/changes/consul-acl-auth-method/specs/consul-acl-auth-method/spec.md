@@ -332,11 +332,11 @@ Binding rules created by earlier versions under `{fullname}-k8s-auth-method` SHA
 
 ### Requirement: JWKS Proxy
 
-The Helm chart SHALL deploy a read-only proxy that exposes only `/openid/v1/jwks` and `/.well-known/openid-configuration` of the Kubernetes API server, under a dedicated ServiceAccount without additional RBAC. The path filter SHALL match exactly these two paths: `^(?:/openid/v1/jwks|/\.well-known/openid-configuration)$`. All methods other than `GET` SHALL be rejected.
+The Helm chart SHALL deploy a read-only proxy that exposes only `/openid/v1/jwks` and `/.well-known/openid-configuration` of the Kubernetes API server, under a dedicated ServiceAccount without additional RBAC. The proxy SHALL serve these two paths (`--accept-paths`). All methods other than `GET` SHALL be rejected.
 
 The proxy SHOULD run with more than one replica and a PodDisruptionBudget and SHOULD support the same scheduling and labelling settings as the other components.
 
-> **Bug** (task 20.8, bugfix; replicas and scheduling options are task 20.9, not a bug): the deployed filter is `^(?:/openid/v1/jwks)|(?:/.well-known/openid-configuration)$`, which is a prefix match OR a suffix match. It serves the two required paths but also any path starting with `/openid/v1/jwks` or ending with `openid-configuration`. The deployment has `replicas: 1`, no PodDisruptionBudget, and no affinity, tolerations, nodeSelector, priorityClassName or extra labels.
+> **Not yet implemented** (task 20.9): the deployment has `replicas: 1`, no PodDisruptionBudget, and no affinity, tolerations, nodeSelector, priorityClassName or extra labels.
 
 #### Scenario: JWKS is served
 
@@ -375,7 +375,7 @@ With `spec.acl.explicitName: true` the operator SHALL record the namespace of ea
 
 ### Requirement: Shared Ownership of Explicit Roles and Binding Rules
 
-With `spec.acl.explicitName: true` a role or binding rule used by several CRs SHALL NOT be deleted, and the tokens of the role SHALL NOT be revoked, while another CR still declares it. Roles and binding rules removed from a CR spec SHALL be cleaned up in explicit mode under the same rule.
+With `spec.acl.explicitName: true` a role or binding rule used by several CRs SHALL NOT be deleted, and the tokens of the role SHALL NOT be revoked, while another CR still declares it. Roles and binding rules removed from a CR spec SHALL be cleaned up in explicit mode under the same rule. Owners SHALL be recorded in the `Description` of the role or binding rule as `[consul-acl-owners: ns1, ns2]` (namespaces only, the same format as for policies); the entity SHALL be deleted, and the tokens of a role revoked, only when the last owner is removed. Entities without the marker SHALL be handled as before.
 
 > **Not yet implemented** (tasks 7.2, 21.5): there is no owner tracking for roles and binding rules. Deleting one CR deletes a shared role and rule and revokes all tokens of the role, including those used through other CRs, and stale cleanup of roles and rules is disabled in explicit mode, so entries removed from a spec stay in Consul.
 
