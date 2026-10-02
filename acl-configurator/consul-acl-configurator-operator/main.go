@@ -15,6 +15,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"os"
@@ -36,6 +37,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	qubershiporgv1 "github.com/Netcracker/consul-acl-configurator/consul-acl-configurator-operator/api/v1alpha1"
@@ -95,6 +97,9 @@ func main() {
 		LeaderElection:          enableLeaderElection,
 		LeaderElectionID:        fmt.Sprintf("consulacls.%s.netcracker.com", ownNamespace),
 		LeaderElectionNamespace: ownNamespace,
+		// Release the lease on shutdown so that the new pod of a rolling update takes over
+		// without waiting for the lease to expire. The process exits right after the manager stops.
+		LeaderElectionReleaseOnCancel: true,
 	}
 
 	configureMgrNamespaces(&mgrOptions, watchNamespaces, ownNamespace)
@@ -133,9 +138,17 @@ func main() {
 		os.Exit(1)
 	}
 
-	ctx := ctrl.SetupSignalHandler()
-	go controllers.EnsureApplicationsAuthMethodWithRetry(ctx)
+	// The auth method is written only by the leader, like the reconcilers: a runnable that does not
+	// implement LeaderElectionRunnable is started after the lease is acquired.
+	if err := mgr.Add(manager.RunnableFunc(func(ctx context.Context) error {
+		controllers.EnsureApplicationsAuthMethodWithRetry(ctx)
+		return nil
+	})); err != nil {
+		setupLog.Error(err, "unable to add the auth method runnable")
+		os.Exit(1)
+	}
 
+	ctx := ctrl.SetupSignalHandler()
 	setupLog.Info("starting ConsulACL manager")
 	if err := mgr.Start(ctx); err != nil {
 		setupLog.Error(err, "problem running ConsulACL manager")

@@ -112,6 +112,9 @@ spec:
         - name: consul-acl-configurator-operator
           image: {{ template "consul-acl-configurator-operator.image" . }}
           imagePullPolicy: Always
+          args:
+            # Only one operator pod reconciles at a time, also while two pods run during a rolling update.
+            - --leader-elect
           volumeMounts:
             {{- if .Values.global.tls.enabled }}
             - name: consul-ca-cert

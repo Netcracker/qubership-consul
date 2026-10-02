@@ -250,6 +250,6 @@
 
 ## 23. Deployment and housekeeping
 
-- [ ] 23.1 Enable leader election for the operator (`args: ["--leader-elect"]`; the RBAC for `coordination.k8s.io/leases` is already in the ClusterRole) or set `strategy: Recreate`, so that two operator pods never reconcile in parallel during a rolling update
+- [x] 23.1 Enable leader election for the operator (`args: ["--leader-elect"]`; the RBAC for `coordination.k8s.io/leases` is already in the ClusterRole) or set `strategy: Recreate`, so that two operator pods never reconcile in parallel during a rolling update
 - [x] 23.2 **[bugfix]** Revert the accidental change of `statusWritingEnabled` in `values.yaml` back to `true` (integration-test parameter, unrelated to this change)
-- [ ] 23.3 **[bugfix]** Align the CRD version annotation: ConsulACL CRD uses `crd.netcracker.com/version: 0.0.19`, ConsulKV CRD and kustomize bases use `crd/version: 0.0.18`; use one key and bump the version of the ConsulKV CRD
+- [x] 23.3 **[bugfix]** Align the CRD version annotation: ConsulACL CRD uses `crd.netcracker.com/version: 0.0.19`, ConsulKV CRD and kustomize bases use `crd/version: 0.0.18`; use one key and bump the version of the ConsulKV CRD

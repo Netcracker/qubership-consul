@@ -458,9 +458,14 @@ The same SHALL hold for policies and roles. A network error of any entity SHALL 
 
 At most one operator instance SHALL reconcile ConsulACL and ConsulKV resources at a time, including during a rolling update.
 
-> **Not yet implemented** (task 23.1): the ClusterRole already allows `coordination.k8s.io/leases`, but `--leader-elect` is not passed to the operator and defaults to `false`, and the deployment uses `RollingUpdate`.
+The operator SHALL run with leader election (`--leader-elect`, a Lease in its own namespace). The reconcilers and the creation of the global auth method SHALL run only in the leader. The leader SHALL release the Lease on shutdown, so that the new pod of a rolling update takes over without waiting for the Lease to expire.
 
 #### Scenario: Upgrade of the operator
 
 - **WHEN** the operator deployment is updated and the new pod starts before the old pod stops
 - **THEN** only one of them SHALL run reconciliation
+
+#### Scenario: Auth method written by the leader only
+
+- **WHEN** two operator pods run at the same time
+- **THEN** only the pod holding the Lease SHALL create or update `applications-k8s-m2m`

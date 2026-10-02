@@ -135,7 +135,9 @@ Consul `recurse` matches a string prefix, not a path hierarchy, so the declared 
 
 ### 11. Operator concurrency
 
-**Decision:** the ClusterRole grants `coordination.k8s.io/leases`, but leader election is not enabled (`--leader-elect` defaults to `false`). With the default `RollingUpdate` strategy two operators run in parallel during an upgrade; ACL reconciliation (lookup-before-create, owner list in description) is not safe in that case. Task 23.1 enables leader election or switches to `Recreate`.
+**Decision:** the operator runs with leader election (`--leader-elect` in the chart and in the kustomize manifest). The Lease `consulacls.<namespace>.netcracker.com` is held in the operator namespace; the ClusterRole grants `coordination.k8s.io/leases` and `events` (leader election records an event when the Lease changes hands). ACL reconciliation (lookup-before-create, owner list in description) and the ref-count of ConsulKV keys are not safe with two active operators, so the reconcilers and `EnsureApplicationsAuthMethodWithRetry` run only in the leader (the latter is added to the manager as a runnable instead of a goroutine started before the manager). `LeaderElectionReleaseOnCancel` releases the Lease on shutdown, so a rolling update keeps the `RollingUpdate` strategy without waiting for the Lease to expire (task 23.1).
+
+**Trade-off:** while a new pod waits for the Lease it is ready (the probes do not depend on leadership), but does not reconcile; the REST server in the same pod is not affected.
 
 ---
 
@@ -159,7 +161,7 @@ Consul `recurse` matches a string prefix, not a path hierarchy, so the declared 
 | Partial failure across KV batches desynchronises `Flags` and status | Medium | Fixed: per-batch results recorded in status (task 22.6) |
 | Duplicate key in one ConsulKV makes every transaction of the batch fail with a CAS conflict | Medium | Fixed: last entry wins, earlier duplicates marked skipped (task 22.5) |
 | JWKS proxy is a single replica and a single point of failure for new logins | Medium | Fixed: 2 replicas, anti-affinity and PDB by default (task 20.7) |
-| Two operator pods run in parallel during a rolling update | Medium | Leader election or `Recreate` (task 23.1) |
+| Two operator pods run in parallel during a rolling update | Medium | Fixed: leader election, the auth method is written by the leader only (task 23.1) |
 
 ---
 

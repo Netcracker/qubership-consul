@@ -61,4 +61,13 @@ rules:
       - update
       - patch
       - delete
+  # Leader election records events when the lease changes hands.
+  - apiGroups:
+      - ""
+      - events.k8s.io
+    resources:
+      - events
+    verbs:
+      - create
+      - patch
 {{- end }}
