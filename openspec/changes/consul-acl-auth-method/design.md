@@ -105,7 +105,7 @@ ConsulKVStatus {
 **Rationale:** a `jwt` method does not need a reviewer token with `TokenReview` permissions in Consul and works for services outside the Consul datacenter's Kubernetes cluster as long as they present a service-account JWT.
 
 **Trade-offs and known limitations (tracked in tasks 20.x):**
-- `BoundIssuer`/`BoundAudiences` are hard-coded to `https://kubernetes.default.svc.cluster.local`. Clusters with a different `--service-account-issuer` (OpenShift, EKS, GKE, AKS, custom cluster domain) reject every login until these values are configurable.
+- `BoundIssuer`/`BoundAudiences` are hard-coded to `https://kubernetes.default.svc.cluster.local`. Clusters with a different `--service-account-issuer` (OpenShift, EKS, GKE, AKS, custom cluster domain) reject every login until these values are detected from the cluster (task 20.6: by default the `issuer` of `/.well-known/openid-configuration`, overridable in `values.yaml`; audience is assumed to equal the issuer, which is the default `--api-audiences`).
 - The selector format depends on the method type. It is currently always `value.*`, so a per-rule `AuthMethod` of type `kubernetes` yields a rule that never matches.
 - The proxy is a single replica without PodDisruptionBudget and without the scheduling knobs available for the other components; while it is down, key lookups for unknown `kid` (key rotation, Consul restart) fail and new logins are rejected.
 - `EnsureApplicationsAuthMethod` overwrites the method on every start, so manual corrections are reverted.
@@ -143,14 +143,14 @@ ConsulKVStatus {
 | `ConsulKV` controller shares the Consul token with the ACL controller; the bootstrap token must have KV write permissions | Medium | Document requirement; the bootstrap token in standard Consul deployments already has full permissions. Teams using scoped bootstrap tokens must extend it |
 | ExplicitName flag in JSON is invisible to Kubernetes admission (no schema validation) | Low | Invalid configurations surface as Consul API errors reflected in `.status`; acceptable given the existing pattern |
 | CRDs in `crds/` are not updated on `helm upgrade` (Helm limitation) | Low | Documented in Helm's own docs; operators must run `kubectl apply -f crds/` on upgrade when the CRD schema changes |
-| Switching the global auth method to `applications-k8s-m2m` (JWT) leaves binding rules under the old `-k8s-auth-method` that the operator no longer updates or deletes | High | Mark as breaking; document migration and manual clean-up; clients must log in through the new method (task 20.10) |
-| Hard-coded JWT `BoundIssuer`/`BoundAudiences` reject all logins on clusters with another service-account issuer | High | Make configurable (task 20.7) |
+| Switching the global auth method to `applications-k8s-m2m` (JWT) leaves binding rules under the old `-k8s-auth-method` that the operator no longer updates or deletes | High | Mark as breaking; document migration and manual clean-up; clients must log in through the new method (task 20.8) |
+| Hard-coded JWT `BoundIssuer`/`BoundAudiences` reject all logins on clusters with another service-account issuer | High | Detect from the cluster OpenID configuration, overridable in values (task 20.6) |
 | Network error in `processBindRules` swallowed by a shadowed `err`: condition `Successful=True`, no requeue | High | Fix the shadowing, add test, enable `govet shadow` (task 21.3) |
 | `purgeOnDelete` deletes by raw string prefix and removes sibling keys such as `config/application/...` | High | Purge `<key>` and `<key>/` only (task 22.4) |
 | Shared role/rule deleted and role tokens revoked when one of several CRs is deleted (`explicitName: true`) | Medium | Owner tracking for roles and rules (tasks 7.2, 21.5) |
 | Partial failure across KV batches desynchronises `Flags` and status | Medium | Per-batch results (task 22.6) |
 | Duplicate key in one ConsulKV makes every transaction of the batch fail with a CAS conflict | Medium | Last entry wins, earlier duplicates marked skipped (task 22.5) |
-| JWKS proxy is a single replica and a single point of failure for new logins | Medium | Replicas and PDB (task 20.9) |
+| JWKS proxy is a single replica and a single point of failure for new logins | Medium | Replicas and PDB (task 20.7) |
 | Two operator pods run in parallel during a rolling update | Medium | Leader election or `Recreate` (task 23.1) |
 
 ---

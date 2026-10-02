@@ -36,9 +36,9 @@ Defects found in review of the changes above. They are fixed as bugfixes within 
 - A failure in a later KV batch leaves `Flags` out of sync with `status`; a key shared by two CRs can be deleted or never released (22.6).
 - A duplicate key in one ConsulKV makes the whole transaction fail on every retry; the last entry should win and the others be skipped (22.5).
 - `StatusHolder.GetStatus()` duplicates the message for `innerErrorHandlingItem` (21.6).
-- `statusWritingEnabled` in `values.yaml` was changed unintentionally and is reverted (23.2); the CRD version annotation keys are inconsistent (23.4).
+- `statusWritingEnabled` in `values.yaml` was changed unintentionally and is reverted (23.2); the CRD version annotation keys are inconsistent (23.3).
 
-Review items that add behaviour or harden the design (configurable JWT issuer and auth method name, owner tracking for roles and binding rules, structured status, JWKS proxy availability, leader election) are tracked as regular tasks, not as bug fixes.
+Review items that add behaviour or harden the design (JWT issuer detection and override, owner tracking for roles and binding rules, structured status, JWKS proxy availability, leader election) are tracked as regular tasks, not as bug fixes.
 
 ## Capabilities
 

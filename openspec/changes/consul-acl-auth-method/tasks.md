@@ -203,11 +203,13 @@
 - [x] 20.3 Add JWKS proxy deployment, service and ServiceAccount to the Helm chart; set `JWKS_URL` for the operator
 - [x] 20.4 Set `CONSUL_AUTH_METHOD_NAME` of the operator to `applications-k8s-m2m`
 - [ ] 20.5 Generate the selector depending on the auth-method type (`AuthMethodRead`: `kubernetes` → `serviceaccount.*`, `jwt` → `value.*`) so that a per-rule `AuthMethod` of type `kubernetes` keeps working
-- [ ] 20.6 Make the global auth method name configurable in `values.yaml` instead of the hard-coded `applications-k8s-m2m`
-- [ ] 20.7 Make `BoundIssuer` and `BoundAudiences` configurable (default: derived from the `issuer` field of `/.well-known/openid-configuration` or a `values.yaml` setting) — the current value is only valid for clusters whose `--service-account-issuer` is `https://kubernetes.default.svc.cluster.local`; do not call `AuthMethodUpdate` when the config is unchanged
-- [ ] 20.9 JWKS proxy availability: more than one replica and a PodDisruptionBudget; support affinity, tolerations, nodeSelector, priorityClassName, extra labels and resources overrides; optional NetworkPolicy restricting access to Consul servers
-- [ ] 20.10 Document the upgrade path and clean-up of binding rules left under `{fullname}-k8s-auth-method`; update `docs/public/acl-configurator.md`, `connect-inject` login settings and `backup-daemon/scripts/restore.py` where they still reference the old methods
-- [ ] 20.11 Unit tests for `EnsureApplicationsAuthMethod` (create, update, unchanged)
+- [ ] 20.6 `BoundIssuer` and `BoundAudiences`: by default detect them automatically from the `issuer` field of `/.well-known/openid-configuration` served by the JWKS proxy (same host as `JWKS_URL`), using the issuer for both values; allow overriding them in `values.yaml` (`boundIssuer`, `boundAudiences`, passed to the operator as environment variables) — explicit values take precedence over detection. If detection is needed and the request fails, retry with the existing backoff instead of falling back to a hard-coded value. Do not call `AuthMethodUpdate` when the resulting config is unchanged. Add unit tests (issuer detected, override used, request fails, config unchanged)
+- [ ] 20.7 JWKS proxy availability: more than one replica and a PodDisruptionBudget; support affinity, tolerations, nodeSelector, priorityClassName, extra labels and resources overrides; optional NetworkPolicy restricting access to Consul servers
+- [ ] 20.8 Document the upgrade path and clean-up of binding rules left under `{fullname}-k8s-auth-method`; update `docs/public/acl-configurator.md` (the `AuthMethod` default and the `Selector` description, which also has namespace and service account name swapped), `connect-inject` login settings and `backup-daemon/scripts/restore.py` where they still reference the old methods
+- [ ] 20.9 Unit tests for `EnsureApplicationsAuthMethod` (create, update, unchanged)
+- [ ] 20.10 Document the JWT auth method settings:
+  - `docs/public/installation.md`: add `consulAclConfigurator.boundIssuer` and `consulAclConfigurator.boundAudiences` to the parameters table (optional, empty by default, explicit values take precedence over detection);
+  - `docs/public/acl-configurator.md`: describe the global JWT auth method `applications-k8s-m2m` (claim mappings, JWKS proxy) and how `BoundIssuer`/`BoundAudiences` are determined: detected automatically from the `issuer` of `/.well-known/openid-configuration`, audience assumed equal to the issuer (the default `--api-audiences`), overridable in `values.yaml` for clusters where it differs; how to check the issuer manually (`kubectl get --raw /.well-known/openid-configuration`); that the operator retries until the issuer can be read.
 
 > Covers: Global JWT Auth Method, JWKS Proxy, Binding-Rule Selector from Claim Mappings
 
@@ -245,4 +247,4 @@
 
 - [ ] 23.1 Enable leader election for the operator (`args: ["--leader-elect"]`; the RBAC for `coordination.k8s.io/leases` is already in the ClusterRole) or set `strategy: Recreate`, so that two operator pods never reconcile in parallel during a rolling update
 - [x] 23.2 **[bugfix]** Revert the accidental change of `statusWritingEnabled` in `values.yaml` back to `true` (integration-test parameter, unrelated to this change)
-- [ ] 23.4 **[bugfix]** Align the CRD version annotation: ConsulACL CRD uses `crd.netcracker.com/version: 0.0.19`, ConsulKV CRD and kustomize bases use `crd/version: 0.0.18`; use one key and bump the version of the ConsulKV CRD
+- [ ] 23.3 **[bugfix]** Align the CRD version annotation: ConsulACL CRD uses `crd.netcracker.com/version: 0.0.19`, ConsulKV CRD and kustomize bases use `crd/version: 0.0.18`; use one key and bump the version of the ConsulKV CRD

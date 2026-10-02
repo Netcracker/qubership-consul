@@ -282,9 +282,9 @@ A binding-rule entry that has no `BindName` value SHALL be skipped during reconc
 
 At startup the operator SHALL create the Consul auth method `applications-k8s-m2m` of type `jwt` if it does not exist, and update it if it does, retrying with exponential backoff until it succeeds. The method SHALL validate tokens against the keys served at `JWKS_URL` and map the claims `/kubernetes.io/namespace` to `namespace` and `/kubernetes.io/serviceaccount/name` to `serviceaccount`.
 
-The `BoundIssuer` and `BoundAudiences` of the method SHALL match the `--service-account-issuer` of the cluster. The values SHALL be configurable and SHALL NOT be overwritten on start when the effective configuration is unchanged.
+The `BoundIssuer` and `BoundAudiences` of the method SHALL be taken from the deployment parameters `boundIssuer` and `boundAudiences` when they are set. When they are not set, the operator SHALL detect them from the `issuer` field of the OpenID configuration served by the JWKS proxy (`/.well-known/openid-configuration`) and use it for both values, so that they match the `--service-account-issuer` of the cluster. If detection is needed and the issuer cannot be read, the operator SHALL retry with backoff and SHALL NOT fall back to a fixed value. The method SHALL NOT be updated on start when the resulting configuration is unchanged.
 
-> **Not yet implemented**: `BoundIssuer` and `BoundAudiences` are hard-coded to `https://kubernetes.default.svc.cluster.local` and the method is updated on every start (tasks 20.6, 20.7). On clusters with a different issuer all logins through this method are rejected.
+> **Not yet implemented** (task 20.6): `BoundIssuer` and `BoundAudiences` are hard-coded to `https://kubernetes.default.svc.cluster.local` and the method is updated on every start. On clusters with a different issuer all logins through this method are rejected.
 
 #### Scenario: Auth method created on first start
 
@@ -336,7 +336,7 @@ The Helm chart SHALL deploy a read-only proxy that exposes only `/openid/v1/jwks
 
 The proxy SHOULD run with more than one replica and a PodDisruptionBudget and SHOULD support the same scheduling and labelling settings as the other components.
 
-> **Not yet implemented** (task 20.9): the deployment has `replicas: 1`, no PodDisruptionBudget, and no affinity, tolerations, nodeSelector, priorityClassName or extra labels.
+> **Not yet implemented** (task 20.7): the deployment has `replicas: 1`, no PodDisruptionBudget, and no affinity, tolerations, nodeSelector, priorityClassName or extra labels.
 
 #### Scenario: JWKS is served
 
