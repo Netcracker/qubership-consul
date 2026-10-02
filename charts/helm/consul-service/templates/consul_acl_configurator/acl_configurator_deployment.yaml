@@ -80,7 +80,7 @@ spec:
               protocol: TCP
           env:
             - name: ALLOWED_NAMESPACES
-              value: {{ default "" .Values.consulAclConfigurator.allowedNamespaces }}
+              value: {{ default "" .Values.consulAclConfigurator.allowedNamespaces | quote }}
             - name: API_GROUP
               value: {{ .Values.consulAclConfigurator.apiGroup }}
           resources:
@@ -123,7 +123,7 @@ spec:
               readOnly: true
           env:
             - name: WATCH_NAMESPACE
-              value: {{ default "" .Values.consulAclConfigurator.namespaces }}
+              value: {{ default "" .Values.consulAclConfigurator.namespaces | quote }}
             - name: NAMESPACE
               valueFrom:
                 fieldRef:
