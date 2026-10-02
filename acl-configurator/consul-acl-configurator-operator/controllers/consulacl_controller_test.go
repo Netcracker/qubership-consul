@@ -16,6 +16,7 @@ package controllers
 
 import (
 	"fmt"
+	"net"
 	"strings"
 	"testing"
 
@@ -33,14 +34,20 @@ type mockACLClient struct {
 	roleDeletedIDs     []string
 	roleCreateFunc     func(*consulApi.ACLRole, *consulApi.WriteOptions) (*consulApi.ACLRole, *consulApi.WriteMeta, error)
 	roleUpdateFunc     func(*consulApi.ACLRole, *consulApi.WriteOptions) (*consulApi.ACLRole, *consulApi.WriteMeta, error)
+	roleUpdated        []*consulApi.ACLRole
 	// BindingRule
 	bindingRuleListFunc     func(string, *consulApi.QueryOptions) ([]*consulApi.ACLBindingRule, *consulApi.QueryMeta, error)
 	bindingRuleCreateCalled bool
 	bindingRuleUpdateCalled bool
+	bindingRuleCreateFunc   func(*consulApi.ACLBindingRule, *consulApi.WriteOptions) (*consulApi.ACLBindingRule, *consulApi.WriteMeta, error)
+	bindingRuleCreated      []*consulApi.ACLBindingRule
+	bindingRuleUpdated      []*consulApi.ACLBindingRule
 	bindingRuleDeletedIDs   []string
 	// Policy
-	policyListFunc   func(*consulApi.QueryOptions) ([]*consulApi.ACLPolicyListEntry, *consulApi.QueryMeta, error)
-	policyDeletedIDs []string
+	policyListFunc       func(*consulApi.QueryOptions) ([]*consulApi.ACLPolicyListEntry, *consulApi.QueryMeta, error)
+	policyReadByNameFunc func(string, *consulApi.QueryOptions) (*consulApi.ACLPolicy, *consulApi.QueryMeta, error)
+	policyUpdated        []*consulApi.ACLPolicy
+	policyDeletedIDs     []string
 	// Token
 	tokenListFilteredFunc func(consulApi.ACLTokenFilterOptions, *consulApi.QueryOptions) ([]*consulApi.ACLTokenListEntry, *consulApi.QueryMeta, error)
 	tokenDeletedIDs       []string
@@ -50,9 +57,13 @@ func (m *mockACLClient) PolicyCreate(p *consulApi.ACLPolicy, q *consulApi.WriteO
 	return p, nil, nil
 }
 func (m *mockACLClient) PolicyUpdate(p *consulApi.ACLPolicy, q *consulApi.WriteOptions) (*consulApi.ACLPolicy, *consulApi.WriteMeta, error) {
+	m.policyUpdated = append(m.policyUpdated, p)
 	return p, nil, nil
 }
 func (m *mockACLClient) PolicyReadByName(name string, q *consulApi.QueryOptions) (*consulApi.ACLPolicy, *consulApi.QueryMeta, error) {
+	if m.policyReadByNameFunc != nil {
+		return m.policyReadByNameFunc(name, q)
+	}
 	return nil, nil, nil
 }
 func (m *mockACLClient) PolicyDelete(id string, q *consulApi.WriteOptions) (*consulApi.WriteMeta, error) {
@@ -74,6 +85,7 @@ func (m *mockACLClient) RoleCreate(r *consulApi.ACLRole, q *consulApi.WriteOptio
 }
 func (m *mockACLClient) RoleUpdate(r *consulApi.ACLRole, q *consulApi.WriteOptions) (*consulApi.ACLRole, *consulApi.WriteMeta, error) {
 	m.roleUpdateCalled = true
+	m.roleUpdated = append(m.roleUpdated, r)
 	if m.roleUpdateFunc != nil {
 		return m.roleUpdateFunc(r, q)
 	}
@@ -97,10 +109,15 @@ func (m *mockACLClient) RoleDelete(id string, q *consulApi.WriteOptions) (*consu
 }
 func (m *mockACLClient) BindingRuleCreate(br *consulApi.ACLBindingRule, q *consulApi.WriteOptions) (*consulApi.ACLBindingRule, *consulApi.WriteMeta, error) {
 	m.bindingRuleCreateCalled = true
+	m.bindingRuleCreated = append(m.bindingRuleCreated, br)
+	if m.bindingRuleCreateFunc != nil {
+		return m.bindingRuleCreateFunc(br, q)
+	}
 	return br, nil, nil
 }
 func (m *mockACLClient) BindingRuleUpdate(br *consulApi.ACLBindingRule, q *consulApi.WriteOptions) (*consulApi.ACLBindingRule, *consulApi.WriteMeta, error) {
 	m.bindingRuleUpdateCalled = true
+	m.bindingRuleUpdated = append(m.bindingRuleUpdated, br)
 	return br, nil, nil
 }
 func (m *mockACLClient) BindingRuleList(am string, q *consulApi.QueryOptions) ([]*consulApi.ACLBindingRule, *consulApi.QueryMeta, error) {
@@ -136,16 +153,10 @@ func (m *mockACLClient) TokenDelete(accessorID string, q *consulApi.WriteOptions
 // --- Tests for revokeRoleTokens ---
 
 // The token list filter must use the role ID (UUID), not its name.
-func TestRevokeRoleTokens_ResolvesRoleIDBeforeFiltering(t *testing.T) {
+func TestRevokeRoleTokens_FiltersByRoleID(t *testing.T) {
 	const roleID = "11111111-1111-1111-1111-111111111111"
 	var capturedFilter consulApi.ACLTokenFilterOptions
 	mock := &mockACLClient{
-		roleReadByNameFunc: func(name string, _ *consulApi.QueryOptions) (*consulApi.ACLRole, *consulApi.QueryMeta, error) {
-			if name == "my_role" {
-				return &consulApi.ACLRole{ID: roleID, Name: name}, nil, nil
-			}
-			return nil, nil, nil
-		},
 		tokenListFilteredFunc: func(f consulApi.ACLTokenFilterOptions, _ *consulApi.QueryOptions) ([]*consulApi.ACLTokenListEntry, *consulApi.QueryMeta, error) {
 			capturedFilter = f
 			return []*consulApi.ACLTokenListEntry{{AccessorID: "acc-1"}}, nil, nil
@@ -155,7 +166,7 @@ func TestRevokeRoleTokens_ResolvesRoleIDBeforeFiltering(t *testing.T) {
 	aclClient = mock
 	defer func() { aclClient = orig }()
 
-	revokeRoleTokens([]string{"my_role"})
+	revokeRoleTokens(&consulApi.ACLRole{ID: roleID, Name: "my_role"})
 
 	if capturedFilter.Role != roleID {
 		t.Errorf("filter must use role ID, got %q", capturedFilter.Role)
@@ -166,7 +177,7 @@ func TestRevokeRoleTokens_ResolvesRoleIDBeforeFiltering(t *testing.T) {
 }
 
 // A role that no longer exists is skipped without calling the token filter.
-func TestRevokeRoleTokens_RoleNotFound_Skips(t *testing.T) {
+func TestDeleteRoles_RoleNotFound_Skips(t *testing.T) {
 	called := false
 	mock := &mockACLClient{
 		roleReadByNameFunc: func(string, *consulApi.QueryOptions) (*consulApi.ACLRole, *consulApi.QueryMeta, error) {
@@ -181,10 +192,15 @@ func TestRevokeRoleTokens_RoleNotFound_Skips(t *testing.T) {
 	aclClient = mock
 	defer func() { aclClient = orig }()
 
-	revokeRoleTokens([]string{"missing"})
-
+	cfg := &ACLConfig{Roles: []ACLRoleAdapter{{Name: "missing"}}}
+	if err := deleteRoles(cfg, "myapp", "staging", true, nil); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 	if called {
 		t.Error("TokenListFiltered must not be called when the role is not found")
+	}
+	if len(mock.roleDeletedIDs) != 0 {
+		t.Errorf("no roles should be deleted, got %v", mock.roleDeletedIDs)
 	}
 }
 
@@ -402,6 +418,55 @@ func TestProcessBindRules_RulePresent_UpdateCalledWithID(t *testing.T) {
 	}
 }
 
+// 21.3: network error in BindingRuleCreate → error returned so the request is requeued
+func TestProcessBindRules_NetworkErrorInCreate_ErrorReturned(t *testing.T) {
+	netErr := &net.OpError{Op: "dial", Net: "tcp", Err: fmt.Errorf("connection refused")}
+	mock := &mockACLClient{
+		bindingRuleListFunc: func(am string, _ *consulApi.QueryOptions) ([]*consulApi.ACLBindingRule, *consulApi.QueryMeta, error) {
+			return nil, nil, nil
+		},
+		bindingRuleCreateFunc: func(*consulApi.ACLBindingRule, *consulApi.WriteOptions) (*consulApi.ACLBindingRule, *consulApi.WriteMeta, error) {
+			return nil, nil, netErr
+		},
+	}
+	orig := aclClient
+	aclClient = mock
+	defer func() { aclClient = orig }()
+
+	rules := []ACLBindingRuleAdapter{{BindName: "reader"}}
+	status, err := processBindRules(rules, "myapp", "staging", false)
+	if err == nil {
+		t.Fatal("expected network error to be returned, got nil")
+	}
+	if !strings.HasPrefix((*status)["myapp_staging_reader"], "error:") {
+		t.Errorf("expected error status for the rule, got %v", *status)
+	}
+}
+
+// 21.3: non-network error in BindingRuleCreate → recorded in status, not returned
+func TestProcessBindRules_NonNetworkErrorInCreate_NotReturned(t *testing.T) {
+	mock := &mockACLClient{
+		bindingRuleListFunc: func(am string, _ *consulApi.QueryOptions) ([]*consulApi.ACLBindingRule, *consulApi.QueryMeta, error) {
+			return nil, nil, nil
+		},
+		bindingRuleCreateFunc: func(*consulApi.ACLBindingRule, *consulApi.WriteOptions) (*consulApi.ACLBindingRule, *consulApi.WriteMeta, error) {
+			return nil, nil, fmt.Errorf("invalid selector")
+		},
+	}
+	orig := aclClient
+	aclClient = mock
+	defer func() { aclClient = orig }()
+
+	rules := []ACLBindingRuleAdapter{{BindName: "reader"}}
+	status, err := processBindRules(rules, "myapp", "staging", false)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.HasPrefix((*status)["myapp_staging_reader"], "error:") {
+		t.Errorf("expected error status for the rule, got %v", *status)
+	}
+}
+
 // 5.3c: rule present under different auth method → not matched, BindingRuleCreate called
 func TestProcessBindRules_RulePresentUnderDifferentAuthMethod_CreateCalled(t *testing.T) {
 	mock := &mockACLClient{
@@ -471,7 +536,7 @@ func TestRemoveStaleEntities_StalePolicyDeleted(t *testing.T) {
 	defer func() { aclClient = orig }()
 
 	cfg := &ACLConfig{Policies: []consulApi.ACLPolicy{{Name: "reader"}}}
-	if err := removeStaleEntities(cfg, "myapp", "staging", false, ""); err != nil {
+	if err := removeStaleEntities(cfg, "myapp", "staging", false, nil); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if len(mock.policyDeletedIDs) != 1 || mock.policyDeletedIDs[0] != "pol-stale" {
@@ -494,7 +559,7 @@ func TestRemoveStaleEntities_StaleRoleDeleted(t *testing.T) {
 	defer func() { aclClient = orig }()
 
 	cfg := &ACLConfig{Roles: []ACLRoleAdapter{{Name: "writer"}}}
-	if err := removeStaleEntities(cfg, "myapp", "staging", false, ""); err != nil {
+	if err := removeStaleEntities(cfg, "myapp", "staging", false, nil); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if len(mock.roleDeletedIDs) != 1 || mock.roleDeletedIDs[0] != "role-stale" {
@@ -516,7 +581,7 @@ func TestRemoveStaleEntities_StaleBindingRuleDeleted(t *testing.T) {
 	defer func() { aclClient = orig }()
 
 	cfg := &ACLConfig{BindRules: []ACLBindingRuleAdapter{{BindName: "active"}}}
-	if err := removeStaleEntities(cfg, "myapp", "staging", false, ""); err != nil {
+	if err := removeStaleEntities(cfg, "myapp", "staging", false, nil); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if len(mock.bindingRuleDeletedIDs) != 1 || mock.bindingRuleDeletedIDs[0] != "br-stale" {
@@ -553,7 +618,7 @@ func TestDeleteBindingRules_GlobalAuthMethod_AllDeleted(t *testing.T) {
 			{BindName: "svc-b"},
 		},
 	}
-	if err := deleteBindingRules(cfg, "myapp", "staging", false); err != nil {
+	if err := deleteBindingRules(cfg, "myapp", "staging", false, nil); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if len(mock.bindingRuleDeletedIDs) != 2 {
@@ -592,7 +657,7 @@ func TestDeleteBindingRules_MixedAuthMethods_AllDeleted(t *testing.T) {
 			{BindName: "svc-b", AuthMethod: "custom-auth"},
 		},
 	}
-	if err := deleteBindingRules(cfg, "myapp", "staging", false); err != nil {
+	if err := deleteBindingRules(cfg, "myapp", "staging", false, nil); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	deleted := map[string]bool{}
@@ -861,7 +926,7 @@ func TestRemoveStaleEntities_DeclaredEntitiesNotDeleted(t *testing.T) {
 		Roles:     []ACLRoleAdapter{{Name: "writer"}},
 		BindRules: []ACLBindingRuleAdapter{{BindName: "svc"}},
 	}
-	if err := removeStaleEntities(cfg, "myapp", "staging", false, ""); err != nil {
+	if err := removeStaleEntities(cfg, "myapp", "staging", false, nil); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if len(mock.policyDeletedIDs) != 0 {

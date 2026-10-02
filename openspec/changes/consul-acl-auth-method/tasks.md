@@ -62,7 +62,7 @@
 > **Resolved**: the operator calls the Consul token API directly (`revokeRoleTokens`: `TokenListFiltered` by role, then `TokenDelete`) as part of `deleteAclEntities`, before the roles are removed.
 
 - [x] 7.1 Implement token revocation as part of `deleteACL`, called before finalizer removal
-- [ ] 7.2 Revoke role tokens only when the last owner of the role is removed (relevant for `explicitName: true` roles shared between several CRs; today tokens of a shared role are revoked when any one CR is deleted)
+- [x] 7.2 Revoke role tokens only when the last owner of the role is removed (relevant for `explicitName: true` roles shared between several CRs; today tokens of a shared role are revoked when any one CR is deleted)
 
 > Covers: Deletion via Finalizer (token revocation clause)
 
@@ -219,11 +219,14 @@
 
 - [x] 21.1 Track owners of explicitly named policies in the policy description (`[consul-acl-owners: ns1, ns2]`); delete the policy only when the last owner is removed
 - [x] 21.2 Clean up stale explicit policies on update using the previous `policiesStatus`
-- [ ] 21.3 **[bugfix]** Fix variable shadowing of `err` in `processBindRules` (`existingRules, _, err :=` hides the outer `err`) so that network errors from `BindingRuleCreate`/`BindingRuleUpdate` are returned and the request is requeued; add a unit test "network error in create → error returned"; enable `govet` `shadow` in the linter
-- [ ] 21.4 Replace parsing of the human-readable status string in `parsePolicyNamesFromStatus` with a structured source (a status field such as `appliedPolicies`, or the owner marker in the policy description in Consul) so that cleanup survives restore from backup and status format changes; add tests for `parsePolicyNamesFromStatus` and `removeStaleExplicitPolicies`
-- [ ] 21.5 Extend the owner mechanism to roles and binding rules: store the owner list in their `Description` in the same format as for policies (`[consul-acl-owners: ns1, ns2]`, namespaces only; the operator already selects CRs by name, so the CR name is not stored). Create/update adds the namespace; deleting a CR or removing the entity from its spec removes the namespace; the role or rule is deleted, and the role tokens revoked, only when the last owner is removed. Entities without a marker (created before the upgrade) keep the current behaviour. This also enables stale clean-up of roles and rules in explicit mode
-- [ ] 21.6 **[bugfix]** Fix `StatusHolder.GetStatus()` for `innerErrorHandlingItem` (missing `continue` duplicates the message)
-- [ ] 21.7 Remove the unused `AuthMethodsStatus` field from `ConsulACLStatus` and from both CRDs
+- [x] 21.3 **[bugfix]** Fix variable shadowing of `err` in `processBindRules` (`existingRules, _, err :=` hides the outer `err`) so that network errors from `BindingRuleCreate`/`BindingRuleUpdate` are returned and the request is requeued; add a unit test "network error in create → error returned"
+- [ ] 21.3a Enable `govet` `shadow` in the shared golangci config (`netcracker/.github`, `config/linters`); a local `.github/linters/.golangci.yml` would replace the shared config. The operator code currently has no findings in non-strict mode
+- [x] 21.4 Replace parsing of the human-readable status string in `parsePolicyNamesFromStatus` with a structured source (a status field such as `appliedPolicies`, or the owner marker in the policy description in Consul) so that cleanup survives restore from backup and status format changes; add tests for `parsePolicyNamesFromStatus` and `removeStaleExplicitPolicies`
+- [x] 21.5 Extend the owner mechanism to roles and binding rules: store the owner list in their `Description` in the same format as for policies (`[consul-acl-owners: ns1, ns2]`, namespaces only; the operator already selects CRs by name, so the CR name is not stored). Create/update adds the namespace; deleting a CR or removing the entity from its spec removes the namespace; the role or rule is deleted, and the role tokens revoked, only when the last owner is removed. Entities without a marker (created before the upgrade) keep the current behaviour. This also enables stale clean-up of roles and rules in explicit mode
+- [x] 21.6 **[bugfix]** Fix `StatusHolder.GetStatus()` for `innerErrorHandlingItem` (missing `continue` duplicates the message)
+- [x] 21.7 Remove the unused `AuthMethodsStatus` field from `ConsulACLStatus` and from both CRDs
+- [x] 21.8 **[bugfix]** Keep the first network error in `processPolicies`, `processRoles` and `processBindRules`: only the error of the last entity was checked, so a network error of an earlier entity was lost when a later call succeeded; add a test "network error on the first role, second succeeds → error returned"
+- [x] 21.9 Do not release an entity declared by another ConsulACL resource of the same namespace (the owner list stores namespaces only); applies to deletion and stale clean-up of policies, roles and binding rules; an unparsable sibling configuration fails the operation so that it is retried
 
 > Covers: Explicit Policies, Shared Ownership of Explicit Entities, Network Error Handling
 

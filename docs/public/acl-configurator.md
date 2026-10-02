@@ -119,6 +119,23 @@ spec:
 With `explicitName: false` (default) the role above is created as `{crName}_{crNamespace}_my-role`.
 With `explicitName: true` it is created as `my-role`.
 
+#### Shared entities
+
+With `explicitName: true` several CRs can declare the same policy, role or binding rule. The operator records
+the namespaces of the owning CRs at the end of the entity `Description`:
+
+```text
+my description
+[consul-acl-owners: ns1, ns2]
+```
+
+When a CR is deleted, or an entity is removed from its configuration, the operator removes the CR namespace from
+this list. The entity is deleted, and the tokens of a role revoked, only when no other owners remain. An entity
+that is still declared by another CR of the same namespace is not changed. Entities created before the owner list
+was introduced have no marker and are deleted together with the CR as before.
+
+Do not edit the `[consul-acl-owners: ...]` line manually: the operator uses it to decide when an entity can be deleted.
+
 ### Operator ownership via spec.acl.operatorNamespace
 
 When multiple Consul ACL Configurator operators are deployed in different namespaces and all watch the cluster

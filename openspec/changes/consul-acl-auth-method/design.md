@@ -113,13 +113,13 @@ ConsulKVStatus {
 ### 9. Ownership of shared entities
 
 **Decision:** for `explicitName: true` the operator cannot identify its own entities by name prefix, so shared ownership is tracked in the entity itself:
-- **Policies:** the namespaces of the owning CRs are stored in the description as `[consul-acl-owners: ns1, ns2]`. A policy is deleted when its last owner is removed.
+- **Policies, roles and binding rules:** the namespaces of the owning CRs are stored in the description as `[consul-acl-owners: ns1, ns2]`. On apply the namespace is added to the list already recorded in Consul. On CR deletion, or when the entity disappears from the spec, the namespace is removed; the entity is deleted, and the tokens of a role revoked, only when the last owner is removed. Entities without the marker (created before the upgrade) are deleted as before.
+- **Several CRs in one namespace:** the owner list stores namespaces only, so it can not tell two CRs of the same namespace apart. Before a namespace is removed from an owner list, the operator lists the other ConsulACL resources of the namespace managed by it (not being deleted) and skips entities they still declare. If the configuration of such a resource can not be parsed, the operation fails and is retried, because the owners can not be resolved safely.
 - **ConsulKV keys:** the `Flags` field is a reference counter. A new key is created with `Flags=1`; another CR using the same key increments the counter; removal decrements it and deletes the key at `Flags<=1`. A key created outside the operator (`Flags=0`) is written but never owned and never deleted.
-- **Stale policies on update** are found by parsing the previous `policiesStatus` string.
+- **Stale entities on update (explicit mode)** are found in Consul, not in the CR status: an entity is stale when the namespace of the CR is in its owner list and neither the CR nor another resource of the namespace declares it. This survives restore from backup and does not depend on the status format. Entities without the marker are never treated as stale.
 
-**Limitations (tasks 21.x, 22.x):**
-- Roles and binding rules have no owner tracking. Deleting one CR deletes a shared role/rule and revokes all tokens of the role, including tokens used by other CRs; stale clean-up of roles and rules is disabled in explicit mode, so entries removed from the spec stay in Consul.
-- The status string is a human-readable value, not a reliable store: it is lost on restore from backup and its format is not a contract. A structured source is needed.
+**Limitations (tasks 22.x):**
+- Stale binding rules are searched under the auth methods referenced in the current spec; a rule whose per-rule `AuthMethod` was removed from the spec together with the rule stays in Consul (the same holds for prefixed mode).
 - Both batch operations are atomic per batch of 64 operations, not as a whole. A failure after the first batch leaves `Flags` out of sync with `status` (counter incremented twice on retry, or decremented twice on removal, which can delete a key still used by another CR).
 
 ### 10. `purgeOnDelete` for ConsulKV
@@ -145,9 +145,11 @@ ConsulKVStatus {
 | CRDs in `crds/` are not updated on `helm upgrade` (Helm limitation) | Low | Documented in Helm's own docs; operators must run `kubectl apply -f crds/` on upgrade when the CRD schema changes |
 | Switching the global auth method to `applications-k8s-m2m` (JWT) leaves binding rules under the old `-k8s-auth-method` that the operator no longer updates or deletes | High | Mark as breaking; document migration and manual clean-up; clients must log in through the new method (task 20.8) |
 | Hard-coded JWT `BoundIssuer`/`BoundAudiences` reject all logins on clusters with another service-account issuer | High | Detect from the cluster OpenID configuration, overridable in values (task 20.6) |
-| Network error in `processBindRules` swallowed by a shadowed `err`: condition `Successful=True`, no requeue | High | Fix the shadowing, add test, enable `govet shadow` (task 21.3) |
+| Network error in `processBindRules` swallowed by a shadowed `err`: condition `Successful=True`, no requeue | High | Fixed, test added (task 21.3); `govet shadow` to be enabled in the shared linter config (task 21.3a) |
+| Network error of an earlier entity hidden by a later successful call in `processPolicies`/`processRoles`/`processBindRules` | High | Fixed: the first network error is kept (task 21.8) |
 | `purgeOnDelete` deletes by raw string prefix and removes sibling keys such as `config/application/...` | High | Purge `<key>` and `<key>/` only (task 22.4) |
-| Shared role/rule deleted and role tokens revoked when one of several CRs is deleted (`explicitName: true`) | Medium | Owner tracking for roles and rules (tasks 7.2, 21.5) |
+| Shared role/rule deleted and role tokens revoked when one of several CRs is deleted (`explicitName: true`) | Medium | Fixed: owner tracking for roles and rules (tasks 7.2, 21.5) |
+| Two CRs of one namespace share an owner entry; one could release an entity the other still declares | Medium | Entities declared by other resources of the namespace are skipped (Decision 9) |
 | Partial failure across KV batches desynchronises `Flags` and status | Medium | Per-batch results (task 22.6) |
 | Duplicate key in one ConsulKV makes every transaction of the batch fail with a CAS conflict | Medium | Last entry wins, earlier duplicates marked skipped (task 22.5) |
 | JWKS proxy is a single replica and a single point of failure for new logins | Medium | Replicas and PDB (task 20.7) |
@@ -171,7 +173,7 @@ ConsulKVStatus {
 
 ## Open Questions
 
-1. **Explicit role name and cross-namespace sharing** — _Partially resolved_: sharing is intentional (see Decision 9). Owner tracking exists for policies and ConsulKV keys; it is still missing for roles and binding rules (tasks 7.2, 21.5).
+1. **Explicit role name and cross-namespace sharing** — _Resolved_: sharing is intentional (see Decision 9). Owner tracking exists for policies, roles, binding rules and ConsulKV keys.
 
 2. **ConsulKV value encoding**: should the `spec.value` field support arbitrary binary data (base64-encoded) or only UTF-8 strings? The Consul KV API accepts `[]byte`, so base64 is possible without extra dependencies.
 
@@ -179,4 +181,4 @@ ConsulKVStatus {
 
 4. **Binding-rule deletion with per-rule auth method** — _Resolved_: `deleteBindingRules` iterates over every distinct auth method referenced in the config (task 8). Rules left under an auth method that was removed from the config, including the pre-upgrade `-k8s-auth-method`, are not found and need manual clean-up.
 
-5. **ConsulACL status for binding rules** — _Resolved for ConsulKV_: `ConsulKVStatus` has per-key `entries`, `generalStatus`, `managedBy` and `conditions`. ConsulACL keeps free-form status strings; making them structured is required for reliable stale clean-up (task 21.4).
+5. **ConsulACL status for binding rules** — _Resolved for ConsulKV_: `ConsulKVStatus` has per-key `entries`, `generalStatus`, `managedBy` and `conditions`. ConsulACL keeps free-form status strings; stale clean-up no longer reads them, it uses the owner list in Consul (task 21.4, Decision 9).

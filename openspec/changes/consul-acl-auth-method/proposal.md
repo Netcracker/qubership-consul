@@ -32,6 +32,7 @@ In addition, there is currently no declarative mechanism for provisioning and ma
 Defects found in review of the changes above. They are fixed as bugfixes within this change and do not extend its scope (tasks marked `[bugfix]`):
 
 - Network errors from binding-rule create/update are swallowed because of a shadowed `err` in `processBindRules`: the CR gets `Successful=True` and is not requeued (21.3).
+- In `processPolicies`, `processRoles` and `processBindRules` only the error of the last entity is checked, so a network error of an earlier entity is lost when a later call succeeds (21.8).
 - `purgeOnDelete` deletes by raw string prefix, so with `config/app` the keys `config/application/...` are removed too (22.4).
 - A failure in a later KV batch leaves `Flags` out of sync with `status`; a key shared by two CRs can be deleted or never released (22.6).
 - A duplicate key in one ConsulKV makes the whole transaction fail on every retry; the last entry should win and the others be skipped (22.5).

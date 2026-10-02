@@ -93,6 +93,7 @@ func (sh StatusHolder) GetStatus() string {
 		}
 		if key == "innerErrorHandlingItem" {
 			resString += value
+			continue
 		}
 		resString += fmt.Sprintf("%s: %s", key, value)
 	}

@@ -354,6 +354,10 @@ The proxy SHOULD run with more than one replica and a PodDisruptionBudget and SH
 
 With `spec.acl.explicitName: true` the operator SHALL record the namespace of each owning CR in the owner list of the policy description. The operator SHALL delete a policy only when the CR being deleted or updated is its last owner; otherwise it SHALL remove only the namespace from the owner list. On update, policies that were applied earlier and are absent from the new spec SHALL be released the same way.
 
+Policies applied earlier SHALL be identified by the owner list in Consul, not by the CR status: a policy is released on update when the namespace of the CR is in its owner list and neither the CR nor another ConsulACL resource of the same namespace managed by the operator declares it. A policy without the owner marker SHALL NOT be released on update.
+
+The operator SHALL NOT remove a namespace from an owner list while another ConsulACL resource of that namespace managed by the operator, and not being deleted, still declares the entity. If the configuration of such a resource can not be parsed, the operator SHALL fail the operation and retry it.
+
 #### Scenario: Second CR adds itself as owner
 
 - **WHEN** a CR in `ns2` declares an explicit policy that already exists with `[consul-acl-owners: ns1]`
@@ -369,7 +373,15 @@ With `spec.acl.explicitName: true` the operator SHALL record the namespace of ea
 - **WHEN** the CR in `ns2` is deleted and it is the only remaining owner
 - **THEN** the operator SHALL delete the policy
 
-> **Known limitation** (task 21.4): stale policies are identified by parsing the previous `status.policiesStatus` string, which is lost on restore from backup.
+#### Scenario: Stale policy found after restore from backup
+
+- **WHEN** the CR status was lost and the CR in `ns1` no longer declares a policy whose owner list contains `ns1`
+- **THEN** the operator SHALL release the policy on the next reconcile
+
+#### Scenario: Policy declared by another CR of the same namespace
+
+- **WHEN** two CRs in `ns1` declare the explicit policy `shared-policy` and one of them is deleted
+- **THEN** the operator SHALL keep the policy and its owner list unchanged
 
 ---
 
@@ -377,12 +389,22 @@ With `spec.acl.explicitName: true` the operator SHALL record the namespace of ea
 
 With `spec.acl.explicitName: true` a role or binding rule used by several CRs SHALL NOT be deleted, and the tokens of the role SHALL NOT be revoked, while another CR still declares it. Roles and binding rules removed from a CR spec SHALL be cleaned up in explicit mode under the same rule. Owners SHALL be recorded in the `Description` of the role or binding rule as `[consul-acl-owners: ns1, ns2]` (namespaces only, the same format as for policies); the entity SHALL be deleted, and the tokens of a role revoked, only when the last owner is removed. Entities without the marker SHALL be handled as before.
 
-> **Not yet implemented** (tasks 7.2, 21.5): there is no owner tracking for roles and binding rules. Deleting one CR deletes a shared role and rule and revokes all tokens of the role, including those used through other CRs, and stale cleanup of roles and rules is disabled in explicit mode, so entries removed from a spec stay in Consul.
+Stale roles and binding rules SHALL be identified in the same way as stale policies (owner list in Consul, other resources of the namespace taken into account).
 
 #### Scenario: Shared role survives deletion of one CR
 
 - **WHEN** two CRs declare the role `shared-reader` with `explicitName: true` and one CR is deleted
 - **THEN** the role, its binding rule and the tokens of the role SHALL remain until the other CR is also deleted
+
+#### Scenario: Role removed from the spec of its last owner
+
+- **WHEN** the role `old-reader` with owner list `ns1` is removed from the spec of the CR in `ns1`
+- **THEN** the operator SHALL revoke the tokens of the role and delete the role
+
+#### Scenario: Role created before the upgrade
+
+- **WHEN** a CR declaring a role whose description has no owner marker is deleted
+- **THEN** the operator SHALL delete the role and revoke its tokens as before
 
 ---
 
@@ -390,12 +412,17 @@ With `spec.acl.explicitName: true` a role or binding rule used by several CRs SH
 
 A network error returned by `BindingRuleList`, `BindingRuleCreate` or `BindingRuleUpdate` SHALL be returned from `processBindRules`, so that the reconcile ends with `Successful=False` and is requeued after `RECONCILE_PERIOD_SECONDS`. Other errors SHALL be recorded in `status.bindRulesStatus` and SHALL NOT stop processing of the remaining rules.
 
-> **Bug** (task 21.3, bugfix): a variable declared with `:=` inside the loop shadows the outer `err`, so an error from `BindingRuleCreate` or `BindingRuleUpdate` is only written to the status string and the function returns `nil`. The condition becomes `Successful=True` and no requeue happens.
+The same SHALL hold for policies and roles. A network error of any entity SHALL be returned even if the calls for later entities of the same type succeed.
 
 #### Scenario: Consul unavailable while creating a rule
 
 - **WHEN** `BindingRuleCreate` fails with a network error
 - **THEN** `processBindRules` SHALL return that error and the reconcile SHALL be requeued
+
+#### Scenario: Network error followed by a successful call
+
+- **WHEN** the create call for the first role fails with a network error and the call for the second role succeeds
+- **THEN** `processRoles` SHALL return the network error
 
 ---
 
