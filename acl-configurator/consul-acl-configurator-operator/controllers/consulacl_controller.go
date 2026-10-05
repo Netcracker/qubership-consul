@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	goerrors "errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -133,8 +134,8 @@ func (r *ConsulACLReconciler) Reconcile(ctx context.Context, request ctrl.Reques
 
 	policiesStatus, rolesStatus, bindRulesStatus, applyErr := r.applyACL(instance)
 	if applyErr != nil {
-		if _, ok := applyErr.(net.Error); ok {
-			log.Error(applyErr, "Error during connection to Consul")
+		if isRetryable(applyErr) {
+			log.Error(applyErr, "Transient error of Consul, the request is requeued")
 		} else {
 			log.Error(applyErr, "Can not parse ACL configuration")
 		}
@@ -264,7 +265,7 @@ func (r *ConsulACLReconciler) deleteAclEntities(aclConfig *ACLConfig, name strin
 	if err := deleteBindingRules(aclConfig, name, namespace, explicitName, siblings); err != nil {
 		return err
 	}
-	if err := removeLegacyBindingRules(aclConfig, name, namespace, false); err != nil {
+	if err := removeLegacyBindingRules(aclConfig, name, namespace, false, nil); err != nil {
 		return err
 	}
 	if err := deleteRoles(aclConfig, name, namespace, explicitName, siblings); err != nil {
@@ -355,6 +356,17 @@ func releasePolicy(policy *consulApi.ACLPolicy, namespace string) error {
 	return nil
 }
 
+// failedEntities returns the names of the entities whose last write failed (status "error: ...").
+func failedEntities(status *StatusHolder) map[string]bool {
+	failed := map[string]bool{}
+	for name, value := range *status {
+		if strings.HasPrefix(value, "error:") {
+			failed[name] = true
+		}
+	}
+	return failed
+}
+
 // bindRuleAuthMethods returns all distinct auth methods referenced in the config (global + per-rule overrides).
 func bindRuleAuthMethods(aclConfig *ACLConfig) map[string]struct{} {
 	authMethods := map[string]struct{}{authMethod: {}}
@@ -370,8 +382,10 @@ func bindRuleAuthMethods(aclConfig *ACLConfig) map[string]struct{} {
 // methods by earlier versions of the operator. Earlier versions created only prefixed names
 // ({crName}_{crNamespace}_...) with BindType "role", so only such rules are matched. When keepDeclared
 // is set, a rule that the current spec still declares with that legacy method as its per-rule
-// AuthMethod is kept. The current global method is never treated as legacy.
-func removeLegacyBindingRules(aclConfig *ACLConfig, name string, namespace string, keepDeclared bool) error {
+// AuthMethod is kept. A rule whose name is in failed is kept too: its replacement under the current
+// method was not written, and removing it would leave the service without the rule. The current
+// global method is never treated as legacy.
+func removeLegacyBindingRules(aclConfig *ACLConfig, name string, namespace string, keepDeclared bool, failed map[string]bool) error {
 	prefix := fmt.Sprintf("%s_%s_", name, namespace)
 	for _, legacy := range legacyAuthMethods {
 		if legacy == authMethod {
@@ -402,7 +416,7 @@ func removeLegacyBindingRules(aclConfig *ACLConfig, name string, namespace strin
 			if rule.BindType != consulApi.BindingRuleBindTypeRole || !strings.HasPrefix(rule.BindName, prefix) {
 				continue
 			}
-			if _, ok := declared[rule.BindName]; ok {
+			if _, ok := declared[rule.BindName]; ok || failed[rule.BindName] {
 				continue
 			}
 			if _, err = aclClient.BindingRuleDelete(rule.ID, &consulApi.WriteOptions{}); err != nil {
@@ -579,7 +593,7 @@ func (r *ConsulACLReconciler) applyACL(cr *consulacl.ConsulACL) (string, string,
 		return "", "", "", err
 	}
 	// Migration: the rules now live under the current global method, drop the copies under legacy ones.
-	if err = removeLegacyBindingRules(aclConfig, customResourceName, customResourceNamespace, true); err != nil {
+	if err = removeLegacyBindingRules(aclConfig, customResourceName, customResourceNamespace, true, failedEntities(bindRulesStatus)); err != nil {
 		return "", "", "", err
 	}
 	var siblings *declaredEntities
@@ -842,7 +856,7 @@ func mergeOwnerIntoPolicy(demand *consulApi.ACLPolicy, existing *consulApi.ACLPo
 func processPolicies(policies []consulApi.ACLPolicy, customResourceName string, customResourceNamespace string, explicitName bool) (*StatusHolder, map[string]string, error) {
 	statusMap := StatusHolder{}
 	processedPolicies := map[string]string{}
-	var err, netErr error
+	var err, retryErr error
 	for _, policyDemand := range policies {
 		if policyDemand.Name == "" {
 			statusMap["innerErrorHandlingItem"] = "Some policies have not got a name"
@@ -857,7 +871,11 @@ func processPolicies(policies []consulApi.ACLPolicy, customResourceName string, 
 		if policyDemand.ID == "" {
 			existingPolicy, err = readPolicy(policyDemand.Name)
 			if err != nil {
-				log.Info(fmt.Sprintf("Error occurred during reading a policy by name - %s, %s", policyDemand.Name, err.Error()))
+				// Without the read the operator can not tell create from update, nor keep the owners.
+				log.Error(err, fmt.Sprintf("Can not read a policy by name - %s", policyDemand.Name))
+				statusMap[policyDemand.Name] = fmt.Sprintf("error: %s", err)
+				retryErr = firstRetryableError(retryErr, err)
+				continue
 			} else if existingPolicy != nil {
 				policyDemand.ID = existingPolicy.ID
 			}
@@ -876,24 +894,49 @@ func processPolicies(policies []consulApi.ACLPolicy, customResourceName string, 
 		if err != nil {
 			log.Error(err, fmt.Sprintf("Can not %s a policy", action))
 			statusMap[policyDemand.Name] = fmt.Sprintf("error: %s", err)
-			netErr = firstNetError(netErr, err)
+			retryErr = firstRetryableError(retryErr, err)
 		} else {
 			processedPolicies[policyDemand.Name] = resPolicy.ID
 			statusMap[policyDemand.Name] = fmt.Sprintf("%sd", action)
 		}
 	}
-	// Only network errors are returned, other errors were logged and recorded in the status
-	return &statusMap, processedPolicies, netErr
+	// Only transient errors are returned (the request is requeued), other errors were logged and recorded in the status
+	return &statusMap, processedPolicies, retryErr
 }
 
-// firstNetError returns current if it is already set, otherwise err when it is a network error.
-// It keeps the first network error seen while processing a list of entities, so that a later
+// retryableError marks an error that is not reported by Consul as transient but must be retried,
+// for example an auth method that does not exist yet.
+type retryableError struct{ error }
+
+func (e retryableError) Unwrap() error { return e.error }
+
+// isRetryable reports whether err is a transient failure after which the reconcile must be repeated:
+// a network error, a 5xx or 429 response of Consul (no cluster leader, leadership lost, rate limit)
+// or a retryableError.
+func isRetryable(err error) bool {
+	if err == nil {
+		return false
+	}
+	var netErr net.Error
+	if goerrors.As(err, &netErr) {
+		return true
+	}
+	var statusErr consulApi.StatusError
+	if goerrors.As(err, &statusErr) {
+		return statusErr.Code >= http.StatusInternalServerError || statusErr.Code == http.StatusTooManyRequests
+	}
+	var retryErr retryableError
+	return goerrors.As(err, &retryErr)
+}
+
+// firstRetryableError returns current if it is already set, otherwise err when it is retryable.
+// It keeps the first transient error seen while processing a list of entities, so that a later
 // successful call does not hide it.
-func firstNetError(current, err error) error {
+func firstRetryableError(current, err error) error {
 	if current != nil {
 		return current
 	}
-	if _, ok := err.(net.Error); ok {
+	if isRetryable(err) {
 		return err
 	}
 	return nil
@@ -901,7 +944,7 @@ func firstNetError(current, err error) error {
 
 func processRoles(roles []ACLRoleAdapter, policies map[string]string, customResourceName string, customResourceNamespace string, explicitName bool) (*StatusHolder, error) {
 	statusMap := StatusHolder{}
-	var err, netErr error
+	var err, retryErr error
 	for _, roleAdapter := range roles {
 		if roleAdapter.Name == "" {
 			statusMap["innerErrorHandlingItem"] = "Some roles have not got a name"
@@ -914,8 +957,11 @@ func processRoles(roles []ACLRoleAdapter, policies map[string]string, customReso
 		// The existing role is read even when the ID is set in the spec, its owner list must be kept.
 		existingRole, err = readRole(role.Name)
 		if err != nil {
-			log.Info(fmt.Sprintf("Error occurred during reading a role by name - %s, %s", role.Name, err.Error()))
-			existingRole = nil
+			// Without the read the operator can not tell create from update, nor keep the owners.
+			log.Error(err, fmt.Sprintf("Can not read a role by name - %s", role.Name))
+			statusMap[role.Name] = fmt.Sprintf("error: %s", err)
+			retryErr = firstRetryableError(retryErr, err)
+			continue
 		} else if existingRole != nil && role.ID == "" {
 			role.ID = existingRole.ID
 		}
@@ -936,13 +982,13 @@ func processRoles(roles []ACLRoleAdapter, policies map[string]string, customReso
 		if err != nil {
 			log.Error(err, fmt.Sprintf("can not %s a role", action))
 			statusMap[role.Name] = fmt.Sprintf("error: %s", err)
-			netErr = firstNetError(netErr, err)
+			retryErr = firstRetryableError(retryErr, err)
 		} else {
 			statusMap[role.Name] = fmt.Sprintf("%sd", action)
 		}
 	}
-	// Only network errors are returned, other errors were logged and recorded in the status
-	return &statusMap, netErr
+	// Only transient errors are returned (the request is requeued), other errors were logged and recorded in the status
+	return &statusMap, retryErr
 }
 
 func convertRoleAdapterToRole(roleAdapter ACLRoleAdapter, policies map[string]string, customResourceName string, customResourceNamespace string, explicitName bool) consulApi.ACLRole {
@@ -986,7 +1032,7 @@ func getPolicyLinks(roleAdapter ACLRoleAdapter, policies map[string]string, cust
 
 func processBindRules(bindRules []ACLBindingRuleAdapter, customResourceName string, customResourceNamespace string, explicitName bool) (*StatusHolder, error) {
 	statusMap := StatusHolder{}
-	var err, netErr error
+	var err, retryErr error
 	authMethodType := authMethodTypeResolver()
 	for _, bindRuleAdapter := range bindRules {
 		if bindRuleAdapter.BindName == "" {
@@ -994,9 +1040,18 @@ func processBindRules(bindRules []ACLBindingRuleAdapter, customResourceName stri
 			continue
 		}
 		applicableAuthMethod := bindRuleAuthMethod(bindRuleAdapter)
-		var methodType string
-		if methodType, err = authMethodType(applicableAuthMethod); err != nil {
-			return &statusMap, err
+		methodType, found, typeErr := authMethodType(applicableAuthMethod)
+		if typeErr != nil {
+			return &statusMap, typeErr
+		}
+		if !found {
+			// Consul rejects a rule of an unknown method. The global method may be created a moment
+			// later (at start-up), so the reconcile is repeated instead of being reported as successful.
+			missingErr := retryableError{fmt.Errorf("auth method %q does not exist", applicableAuthMethod)}
+			log.Error(missingErr, fmt.Sprintf("can not apply a bind rule [%s]", bindRuleAdapter.BindName))
+			statusMap[resolveEntityName(bindRuleAdapter.BindName, customResourceName, customResourceNamespace, explicitName)] = fmt.Sprintf("error: %s", missingErr)
+			retryErr = firstRetryableError(retryErr, missingErr)
+			continue
 		}
 		bindRuleDemand := convertBindRuleAdapterToBindRule(bindRuleAdapter, customResourceName, customResourceNamespace, explicitName, methodType)
 		var existingRules []*consulApi.ACLBindingRule
@@ -1024,14 +1079,14 @@ func processBindRules(bindRules []ACLBindingRuleAdapter, customResourceName stri
 		if err != nil {
 			log.Error(err, fmt.Sprintf("can not %s a bind rule", action))
 			statusMap[bindRuleDemand.BindName] = fmt.Sprintf("error: %s", err)
-			netErr = firstNetError(netErr, err)
+			retryErr = firstRetryableError(retryErr, err)
 		} else {
 			statusMap[fmt.Sprintf("Bind rule for %s with name %s",
 				bindRuleDemand.BindType, bindRuleDemand.BindName)] = fmt.Sprintf("%sd", action)
 		}
 	}
-	// Only network errors are returned, other errors were logged and recorded in the status
-	return &statusMap, netErr
+	// Only transient errors are returned (the request is requeued), other errors were logged and recorded in the status
+	return &statusMap, retryErr
 }
 
 // bindRuleAuthMethod returns the auth method of the binding rule: the per-rule override or the global one.
@@ -1042,24 +1097,28 @@ func bindRuleAuthMethod(bindRuleAdapter ACLBindingRuleAdapter) string {
 	return authMethod
 }
 
-// authMethodTypeResolver returns the type of a Consul auth method, reading each method once.
-// An auth method that does not exist yet resolves to an empty type.
-func authMethodTypeResolver() func(name string) (string, error) {
-	types := map[string]string{}
-	return func(name string) (string, error) {
-		if t, ok := types[name]; ok {
-			return t, nil
+// authMethodTypeResolver returns the type of a Consul auth method and whether the method exists,
+// reading each method once.
+func authMethodTypeResolver() func(name string) (string, bool, error) {
+	type method struct {
+		typ   string
+		found bool
+	}
+	methods := map[string]method{}
+	return func(name string) (string, bool, error) {
+		if m, ok := methods[name]; ok {
+			return m.typ, m.found, nil
 		}
 		am, _, err := aclClient.AuthMethodRead(name, &consulApi.QueryOptions{})
 		if err != nil && !isErrNotFound(err) {
-			return "", err
+			return "", false, err
 		}
-		var t string
+		var m method
 		if am != nil {
-			t = am.Type
+			m = method{typ: am.Type, found: true}
 		}
-		types[name] = t
-		return t, nil
+		methods[name] = m
+		return m.typ, m.found, nil
 	}
 }
 
@@ -1260,22 +1319,32 @@ func EnsureApplicationsAuthMethodWithRetry(ctx context.Context) {
 	}
 }
 
+// readRole returns the role or nil when it does not exist. Any other error is returned, so that a
+// failed read (for example no cluster leader) is not taken for an absent role.
 func readRole(roleName string) (*consulApi.ACLRole, error) {
 	role, _, err := aclClient.RoleReadByName(roleName, &consulApi.QueryOptions{})
-	if role == nil || isErrNotFound(err) {
-		log.Info(fmt.Sprintf("There is no role with name %s", roleName))
-		return role, nil
+	if err != nil && !isErrNotFound(err) {
+		return nil, err
 	}
-	return role, err
+	if role == nil || err != nil {
+		log.Info(fmt.Sprintf("There is no role with name %s", roleName))
+		return nil, nil
+	}
+	return role, nil
 }
 
+// readPolicy returns the policy or nil when it does not exist. Any other error is returned, so that a
+// failed read (for example no cluster leader) is not taken for an absent policy.
 func readPolicy(policyName string) (*consulApi.ACLPolicy, error) {
 	policy, _, err := aclClient.PolicyReadByName(policyName, &consulApi.QueryOptions{})
-	if policy == nil || isErrNotFound(err) {
-		log.Info(fmt.Sprintf("There is no policy with name %s", policyName))
-		return policy, nil
+	if err != nil && !isErrNotFound(err) {
+		return nil, err
 	}
-	return policy, err
+	if policy == nil || err != nil {
+		log.Info(fmt.Sprintf("There is no policy with name %s", policyName))
+		return nil, nil
+	}
+	return policy, nil
 }
 
 func isErrNotFound(err error) bool {

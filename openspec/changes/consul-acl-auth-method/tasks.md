@@ -213,6 +213,7 @@
 - [x] 20.11 **[bugfix]** Anchor both alternatives of the JWKS proxy `--accept-paths` (`^(?:/openid/v1/jwks|/\.well-known/openid-configuration)$`): the old expression `^a|b$` let `/openid/v1/jwks/...` and `.../.well-known/openid-configuration` through; remove the duplicated `allowPrivilegeEscalation`/`capabilities` keys from the proxy container `securityContext`
 - [x] 20.12 **[bugfix]** Remove the second `tolerations` block at the end of the operator Deployment: with `consulAclConfigurator.tolerations` set, the pod spec had the key twice
 - [x] 20.13 Make the global auth method configurable (`consulAclConfigurator.authMethod`, default `applications-k8s-m2m`) and migrate binding rules from legacy global methods (`consulAclConfigurator.legacyAuthMethods`, empty by default; set to `["{fullname}-k8s-auth-method"]` after the clients are switched): on reconcile and on deletion delete the rules of the CR under existing legacy methods (`BindType` `role`, prefix `{crName}_{crNamespace}_`), keep rules declared with a legacy per-rule `AuthMethod` on reconcile; unit tests; document the upgrade (review comment)
+- [x] 20.14 **[bugfix]** A binding rule under an auth method that does not exist (the global method before `EnsureApplicationsAuthMethod` succeeds at start-up) failed with a non-network error, the reconcile was reported as successful and never retried; now it is not created, the error is recorded and the request is requeued. The legacy cleanup keeps an old rule whose replacement failed in the same reconcile
 
 > Covers: Global JWT Auth Method, JWKS Proxy, Binding-Rule Selector from Claim Mappings
 
@@ -230,6 +231,7 @@
 - [x] 21.7 Remove the unused `AuthMethodsStatus` field from `ConsulACLStatus` and from both CRDs
 - [x] 21.8 **[bugfix]** Keep the first network error in `processPolicies`, `processRoles` and `processBindRules`: only the error of the last entity was checked, so a network error of an earlier entity was lost when a later call succeeded; add a test "network error on the first role, second succeeds → error returned"
 - [x] 21.9 Do not release an entity declared by another ConsulACL resource of the same namespace (the owner list stores namespaces only); applies to deletion and stale clean-up of policies, roles and binding rules; an unparsable sibling configuration fails the operation so that it is retried
+- [x] 21.10 **[bugfix]** Retry transient Consul errors, not only network errors: responses `5xx`/`429` (`No cluster leader`, `leadership lost while committing log`) were recorded in the status with `Successful=True` and never retried; `readPolicy`/`readRole` took every read error for an absent entity (create after a failed read, a role skipped on deletion during an outage); classify errors with `isRetryable`, return read errors other than not-found; unit tests
 
 > Covers: Explicit Policies, Shared Ownership of Explicit Entities, Network Error Handling
 

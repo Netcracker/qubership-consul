@@ -184,6 +184,11 @@ func TestBoundIssuerAndAudiences_RequestFails_ErrorReturned(t *testing.T) {
 
 // --- 20.9: EnsureApplicationsAuthMethod ---
 
+// noAuthMethod simulates Consul without the auth method.
+func noAuthMethod(string, *consulApi.QueryOptions) (*consulApi.ACLAuthMethod, *consulApi.QueryMeta, error) {
+	return nil, nil, nil
+}
+
 func setupEnsureTest(t *testing.T) string {
 	srv, _ := newOpenIDServer(t, http.StatusOK, `{"issuer":"https://issuer.example"}`)
 	jwksURL := srv.URL + "/openid/v1/jwks"
@@ -209,7 +214,7 @@ func consulStoredMethod(t *testing.T, am *consulApi.ACLAuthMethod) *consulApi.AC
 
 func TestEnsureApplicationsAuthMethod_Create(t *testing.T) {
 	jwksURL := setupEnsureTest(t)
-	mock := &mockACLClient{}
+	mock := &mockACLClient{authMethodReadFunc: noAuthMethod}
 	useACLClient(t, mock)
 
 	if err := EnsureApplicationsAuthMethod(); err != nil {
@@ -229,7 +234,7 @@ func TestEnsureApplicationsAuthMethod_Create(t *testing.T) {
 
 func TestEnsureApplicationsAuthMethod_Unchanged_NoUpdate(t *testing.T) {
 	setupEnsureTest(t)
-	first := &mockACLClient{}
+	first := &mockACLClient{authMethodReadFunc: noAuthMethod}
 	useACLClient(t, first)
 	if err := EnsureApplicationsAuthMethod(); err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -284,7 +289,7 @@ func TestEnsureApplicationsAuthMethod_IssuerNotAvailable_ErrorAndNoWrite(t *test
 	t.Setenv("JWKS_URL", srv.URL+"/openid/v1/jwks")
 	t.Setenv("BOUND_ISSUER", "")
 	t.Setenv("BOUND_AUDIENCES", "")
-	mock := &mockACLClient{}
+	mock := &mockACLClient{authMethodReadFunc: noAuthMethod}
 	useACLClient(t, mock)
 
 	if err := EnsureApplicationsAuthMethod(); err == nil {

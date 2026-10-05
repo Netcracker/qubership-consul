@@ -225,7 +225,19 @@ After each reconcile, the operator SHALL update `status.policiesStatus`, `status
 
 ### Requirement: Network Error Handling
 
-When a Consul API call fails due to a network error, the operator SHALL requeue the reconcile request after the configured `RECONCILE_PERIOD_SECONDS` interval. It SHALL NOT clear the existing status.
+When a Consul API call fails with a transient error, the operator SHALL requeue the reconcile request after the configured `RECONCILE_PERIOD_SECONDS` interval and set `Successful=False`. Transient errors are network errors, responses `5xx` and `429` of Consul (for example `No cluster leader`, `leadership lost while committing log`, rate limiting) and an auth method of a binding rule that does not exist (it may be created a moment later, for example the global method at start-up). Other responses (`4xx`) are configuration errors: they SHALL be recorded in the status of the entity and SHALL NOT be retried.
+
+A failed read of a policy or role SHALL NOT be taken for an absent entity: the operator SHALL NOT create the entity after a failed read, and the deletion of a CR SHALL fail and be retried instead of skipping the entity. Only a not-found response means that the entity is absent.
+
+#### Scenario: No cluster leader
+
+- **WHEN** Consul answers `500 No cluster leader` while a policy is created
+- **THEN** the operator SHALL record the error in `status.policiesStatus`, set `Successful=False` and requeue the request
+
+#### Scenario: Global auth method not created yet
+
+- **WHEN** a binding rule is reconciled before `applications-k8s-m2m` exists
+- **THEN** the operator SHALL NOT create the rule, SHALL record the error in `status.bindRulesStatus` and SHALL requeue the request
 
 #### Scenario: Network error causes requeue
 
@@ -343,7 +355,7 @@ An explicit `Selector` in the binding-rule entry SHALL be passed to Consul uncha
 
 The global auth method of binding rules SHALL be configurable (`consulAclConfigurator.authMethod`, default `applications-k8s-m2m`). The global auth methods of earlier versions SHALL be configurable as legacy methods (`consulAclConfigurator.legacyAuthMethods`, empty by default, so the rules under the old method are kept until the cleanup is enabled).
 
-On every reconcile and on deletion of a CR the operator SHALL delete the rules of the CR left under each existing legacy method: `BindType` `role` and a `BindName` with the prefix `{crName}_{crNamespace}_`. On reconcile, a rule that the CR declares with that legacy method as its per-rule `AuthMethod` SHALL be kept. A legacy method equal to the current global method SHALL be ignored, and a legacy method that does not exist in Consul SHALL be skipped. Rules with another `BindType` or name (for example the `service` rules of `server-acl-init`) SHALL NOT be touched. The upgrade procedure SHALL be documented, including that client services must log in through the current global method.
+On every reconcile and on deletion of a CR the operator SHALL delete the rules of the CR left under each existing legacy method: `BindType` `role` and a `BindName` with the prefix `{crName}_{crNamespace}_`. On reconcile, a rule that the CR declares with that legacy method as its per-rule `AuthMethod` SHALL be kept, and so SHALL a rule whose replacement under the current method failed in this reconcile. A legacy method equal to the current global method SHALL be ignored, and a legacy method that does not exist in Consul SHALL be skipped. Rules with another `BindType` or name (for example the `service` rules of `server-acl-init`) SHALL NOT be touched. The upgrade procedure SHALL be documented, including that client services must log in through the current global method.
 
 #### Scenario: CR reconciled after upgrade
 
@@ -450,9 +462,9 @@ Stale roles and binding rules SHALL be identified in the same way as stale polic
 
 ### Requirement: Network Error Is Propagated From Binding-Rule Processing
 
-A network error returned by `BindingRuleList`, `BindingRuleCreate` or `BindingRuleUpdate` SHALL be returned from `processBindRules`, so that the reconcile ends with `Successful=False` and is requeued after `RECONCILE_PERIOD_SECONDS`. Other errors SHALL be recorded in `status.bindRulesStatus` and SHALL NOT stop processing of the remaining rules.
+A transient error (see "Network Error Handling") returned by `BindingRuleList`, `BindingRuleCreate` or `BindingRuleUpdate` SHALL be returned from `processBindRules`, so that the reconcile ends with `Successful=False` and is requeued after `RECONCILE_PERIOD_SECONDS`. Other errors SHALL be recorded in `status.bindRulesStatus` and SHALL NOT stop processing of the remaining rules.
 
-The same SHALL hold for policies and roles. A network error of any entity SHALL be returned even if the calls for later entities of the same type succeed.
+The same SHALL hold for policies and roles. A transient error of any entity SHALL be returned even if the calls for later entities of the same type succeed.
 
 #### Scenario: Consul unavailable while creating a rule
 

@@ -66,16 +66,38 @@ func TestProcessRoles_NetworkErrorOnFirstRole_ErrorReturned(t *testing.T) {
 	}
 }
 
-func TestFirstNetError(t *testing.T) {
+func TestFirstRetryableError(t *testing.T) {
 	netErr := &net.OpError{Op: "dial", Net: "tcp", Err: fmt.Errorf("refused")}
-	if firstNetError(nil, fmt.Errorf("plain")) != nil {
-		t.Error("non-network error must not be kept")
+	if firstRetryableError(nil, fmt.Errorf("plain")) != nil {
+		t.Error("non-transient error must not be kept")
 	}
-	if firstNetError(nil, netErr) != netErr {
+	if firstRetryableError(nil, netErr) != netErr {
 		t.Error("network error must be kept")
 	}
-	if firstNetError(netErr, nil) != netErr {
+	if firstRetryableError(netErr, nil) != netErr {
 		t.Error("kept error must not be reset by a later success")
+	}
+}
+
+func TestIsRetryable(t *testing.T) {
+	cases := map[string]struct {
+		err  error
+		want bool
+	}{
+		"network":           {&net.OpError{Op: "dial", Net: "tcp", Err: fmt.Errorf("refused")}, true},
+		"no cluster leader": {consulApi.StatusError{Code: 500, Body: "No cluster leader"}, true},
+		"leadership lost":   {fmt.Errorf("wrapped: %w", consulApi.StatusError{Code: 500, Body: "leadership lost while committing log"}), true},
+		"rate limit":        {consulApi.StatusError{Code: 429, Body: "rate limit exceeded"}, true},
+		"missing method":    {retryableError{fmt.Errorf("auth method %q does not exist", "x")}, true},
+		"bad request":       {consulApi.StatusError{Code: 400, Body: "Bad request: invalid selector"}, false},
+		"permission denied": {consulApi.StatusError{Code: 403, Body: "Permission denied"}, false},
+		"plain":             {fmt.Errorf("plain"), false},
+		"nil":               {nil, false},
+	}
+	for name, c := range cases {
+		if got := isRetryable(c.err); got != c.want {
+			t.Errorf("%s: isRetryable=%v, want %v", name, got, c.want)
+		}
 	}
 }
 

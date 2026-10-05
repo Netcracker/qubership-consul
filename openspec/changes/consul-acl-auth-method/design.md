@@ -155,6 +155,7 @@ Consul `recurse` matches a string prefix, not a path hierarchy, so the declared 
 | `--accept-paths` of the JWKS proxy anchored only one alternative (`^a\|b$`), so `/openid/v1/jwks/...` and `.../.well-known/openid-configuration` passed | Medium | Fixed: `^(?:/openid/v1/jwks\|/\.well-known/openid-configuration)$` (task 20.7) |
 | Network error in `processBindRules` swallowed by a shadowed `err`: condition `Successful=True`, no requeue | High | Fixed, test added (task 21.3); `govet shadow` to be enabled in the shared linter config (task 21.3a) |
 | Network error of an earlier entity hidden by a later successful call in `processPolicies`/`processRoles`/`processBindRules` | High | Fixed: the first network error is kept (task 21.8) |
+| Consul `5xx`/`429` (no cluster leader) and a missing auth method were reported as success and never retried; a failed read was taken for an absent entity | High | Fixed: transient errors are retried, read errors other than not-found are returned (tasks 20.14, 21.10) |
 | `purgeOnDelete` deletes by raw string prefix and removes sibling keys such as `config/application/...` | High | Fixed: purge `<key>` and `<key>/` only (task 22.4) |
 | Shared role/rule deleted and role tokens revoked when one of several CRs is deleted (`explicitName: true`) | Medium | Fixed: owner tracking for roles and rules (tasks 7.2, 21.5) |
 | Two CRs of one namespace share an owner entry; one could release an entity the other still declares | Medium | Entities declared by other resources of the namespace are skipped (Decision 9) |

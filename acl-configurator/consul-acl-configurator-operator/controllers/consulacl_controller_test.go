@@ -144,7 +144,8 @@ func (m *mockACLClient) AuthMethodRead(name string, q *consulApi.QueryOptions) (
 	if m.authMethodReadFunc != nil {
 		return m.authMethodReadFunc(name, q)
 	}
-	return nil, nil, nil
+	// By default every auth method exists and is a jwt method; tests of a missing method set authMethodReadFunc.
+	return &consulApi.ACLAuthMethod{Name: name, Type: "jwt"}, nil, nil
 }
 func (m *mockACLClient) AuthMethodUpdate(am *consulApi.ACLAuthMethod, q *consulApi.WriteOptions) (*consulApi.ACLAuthMethod, *consulApi.WriteMeta, error) {
 	m.authMethodUpdated = append(m.authMethodUpdated, am)
