@@ -1,5 +1,5 @@
 kubernetes==12.0.1
-urllib3>=2.7.0
+urllib3>=2.8.0
 pyasn1==0.6.4
 cryptography==48.0.1
 Flask-HTTPAuth==4.8.1
