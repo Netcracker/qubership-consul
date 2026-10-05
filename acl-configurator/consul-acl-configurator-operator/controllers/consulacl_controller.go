@@ -1241,7 +1241,7 @@ func detectIssuer(jwksURL string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("error requesting OpenID configuration %q: %w", configURL, err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("error requesting OpenID configuration %q: unexpected status %d", configURL, resp.StatusCode)
 	}
