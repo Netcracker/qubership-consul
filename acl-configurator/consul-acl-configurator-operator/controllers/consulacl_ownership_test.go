@@ -462,14 +462,20 @@ func TestSiblingEntities_SameNamespaceOnly(t *testing.T) {
 	}
 }
 
-func TestSiblingEntities_InvalidSiblingConfig_ErrorReturned(t *testing.T) {
+// 24.7: a sibling with an invalid configuration does not fail the operation; its entities are
+// unknown, so every entity counts as declared and nothing is released.
+func TestSiblingEntities_InvalidSiblingConfig_DeclaresEverything(t *testing.T) {
 	self := newConsulACL("self", "ns1", `{}`, true)
 	broken := newConsulACL("broken", "ns1", `{not json`, true)
 	r := &ConsulACLReconciler{
 		Client:       fake.NewClientBuilder().WithScheme(kvScheme()).WithObjects(self, broken).Build(),
 		OwnNamespace: "ns1",
 	}
-	if _, err := r.siblingEntities(context.TODO(), self); err == nil {
-		t.Fatal("expected an error when a sibling configuration can not be parsed")
+	siblings, err := r.siblingEntities(context.TODO(), self)
+	if err != nil {
+		t.Fatalf("a broken sibling must not fail the operation: %v", err)
+	}
+	if !siblings.hasRole("any") || !siblings.hasPolicy("any") || !siblings.hasBindRule("any") {
+		t.Error("with a broken sibling every entity must count as declared")
 	}
 }

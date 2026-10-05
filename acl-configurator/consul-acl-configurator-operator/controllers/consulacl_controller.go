@@ -225,6 +225,10 @@ func (r *ConsulACLReconciler) isManaged(cr *consulacl.ConsulACL) bool {
 // resources of the same namespace managed by this operator. The owner list stores only
 // namespaces, so an entity declared by a sibling must not be released by the given resource.
 // Resources that are being deleted are not counted: they release their entities themselves.
+//
+// A sibling whose configuration can not be parsed does not fail the operation: its entities are
+// unknown, so the result declares every entity (see declaredEntities.all) and nothing is released.
+// The entities left this way are released by the stale clean-up of the sibling once it is fixed.
 func (r *ConsulACLReconciler) siblingEntities(ctx context.Context, cr *consulacl.ConsulACL) (*declaredEntities, error) {
 	list := &consulacl.ConsulACLList{}
 	if err := r.Client.List(ctx, list, client.InNamespace(cr.Namespace)); err != nil {
@@ -238,8 +242,10 @@ func (r *ConsulACLReconciler) siblingEntities(ctx context.Context, cr *consulacl
 		}
 		siblingConfig, err := getAclConfig(sibling)
 		if err != nil {
-			return nil, fmt.Errorf("can not parse ACL configuration of ConsulACL [%s] in namespace [%s], "+
-				"owners of shared entities can not be resolved: %w", sibling.Name, sibling.Namespace, err)
+			log.Error(err, fmt.Sprintf("Can not parse ACL configuration of ConsulACL [%s] in namespace [%s]: "+
+				"shared entities of ConsulACL [%s] are not released until it is fixed", sibling.Name, sibling.Namespace, cr.Name))
+			siblings.all = true
+			continue
 		}
 		siblings.add(siblingConfig, sibling.Name, sibling.Namespace, sibling.Spec.ACL.ExplicitName)
 	}
@@ -253,10 +259,14 @@ func (r *ConsulACLReconciler) deleteACL(ctx context.Context, instance *consulacl
 		return ctrl.Result{}, err
 	}
 
-	siblings, err := r.siblingEntities(ctx, instance)
-	if err != nil {
-		log.Error(err, "Can not resolve ConsulACL resources of the same namespace")
-		return ctrl.Result{}, err
+	// Prefixed names ({crName}_{crNamespace}_...) belong to this resource only, the siblings are
+	// needed only for explicit names.
+	var siblings *declaredEntities
+	if instance.Spec.ACL.ExplicitName {
+		if siblings, err = r.siblingEntities(ctx, instance); err != nil {
+			log.Error(err, "Can not list ConsulACL resources of the same namespace")
+			return ctrl.Result{}, err
+		}
 	}
 
 	if err = r.deleteAclEntities(aclConfig, instance.Name, instance.Namespace, instance.Spec.ACL.ExplicitName, siblings); err != nil {
@@ -524,11 +534,13 @@ func resolveEntityName(entityName string, name string, namespace string, explici
 }
 
 // declaredEntities holds the Consul names of ACL entities declared by one or more ConsulACL resources.
-// A nil *declaredEntities is a valid empty set.
+// A nil *declaredEntities is a valid empty set. With all set, every name is declared: it is used when
+// the configuration of a sibling can not be parsed and its entities are unknown.
 type declaredEntities struct {
 	policies  map[string]struct{}
 	roles     map[string]struct{}
 	bindRules map[string]struct{}
+	all       bool
 }
 
 func newDeclaredEntities() *declaredEntities {
@@ -561,6 +573,9 @@ func (d *declaredEntities) hasPolicy(name string) bool {
 	if d == nil {
 		return false
 	}
+	if d.all {
+		return true
+	}
 	_, ok := d.policies[name]
 	return ok
 }
@@ -569,6 +584,9 @@ func (d *declaredEntities) hasRole(name string) bool {
 	if d == nil {
 		return false
 	}
+	if d.all {
+		return true
+	}
 	_, ok := d.roles[name]
 	return ok
 }
@@ -576,6 +594,9 @@ func (d *declaredEntities) hasRole(name string) bool {
 func (d *declaredEntities) hasBindRule(name string) bool {
 	if d == nil {
 		return false
+	}
+	if d.all {
+		return true
 	}
 	_, ok := d.bindRules[name]
 	return ok

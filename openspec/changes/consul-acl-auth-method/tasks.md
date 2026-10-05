@@ -230,7 +230,7 @@
 - [x] 21.6 **[bugfix]** Fix `StatusHolder.GetStatus()` for `innerErrorHandlingItem` (missing `continue` duplicates the message)
 - [x] 21.7 Remove the unused `AuthMethodsStatus` field from `ConsulACLStatus` and from both CRDs
 - [x] 21.8 **[bugfix]** Keep the first network error in `processPolicies`, `processRoles` and `processBindRules`: only the error of the last entity was checked, so a network error of an earlier entity was lost when a later call succeeded; add a test "network error on the first role, second succeeds → error returned"
-- [x] 21.9 Do not release an entity declared by another ConsulACL resource of the same namespace (the owner list stores namespaces only); applies to deletion and stale clean-up of policies, roles and binding rules; an unparsable sibling configuration fails the operation so that it is retried
+- [x] 21.9 Do not release an entity declared by another ConsulACL resource of the same namespace (the owner list stores namespaces only); applies to deletion and stale clean-up of policies, roles and binding rules; an unparsable sibling configuration is handled by 24.7
 - [x] 21.10 **[bugfix]** Retry transient Consul errors, not only network errors: responses `5xx`/`429` (`No cluster leader`, `leadership lost while committing log`) were recorded in the status with `Successful=True` and never retried; `readPolicy`/`readRole` took every read error for an absent entity (create after a failed read, a role skipped on deletion during an outage); classify errors with `isRetryable`, return read errors other than not-found; unit tests
 
 > Covers: Explicit Policies, Shared Ownership of Explicit Entities, Network Error Handling
@@ -267,4 +267,4 @@
 - [x] 24.4 Pass the reconcile context to `siblingEntities` and to the `Get` of the ConsulACL reconciler instead of `context.TODO()` (review 8); the retrying status updaters (`util.CustomResourceUpdater`, `kvUpdater`) keep their own context
 - [x] 24.5 **[bugfix]** Limit the OpenID configuration response read by `detectIssuer` (review 9): wrap `resp.Body` in `io.LimitReader` (1 MiB) before decoding
 - [x] 24.6 Replace `containsFinalizer` of the ConsulKV controller with `util.Contains` (review 10)
-
+- [x] 24.7 **[bugfix]** A sibling ConsulACL with an invalid `spec.acl.json` blocked the deletion (finalizer stuck) and the reconcile of every other CR of the namespace (review): check the siblings on deletion only with `explicitName: true`; for an unparsable sibling do not fail, treat it as declaring every entity (nothing is released, the finalizer is removed, the sibling is logged); the stale clean-up of the sibling releases the leftovers once it is fixed; unit tests for prefixed and explicit deletion and for the reconcile

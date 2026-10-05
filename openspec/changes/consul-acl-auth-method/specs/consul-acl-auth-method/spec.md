@@ -410,7 +410,12 @@ With `spec.acl.explicitName: true` the operator SHALL record the namespace of ea
 
 Policies applied earlier SHALL be identified by the owner list in Consul, not by the CR status: a policy is released on update when the namespace of the CR is in its owner list and neither the CR nor another ConsulACL resource of the same namespace managed by the operator declares it. A policy without the owner marker SHALL NOT be released on update.
 
-The operator SHALL NOT remove a namespace from an owner list while another ConsulACL resource of that namespace managed by the operator, and not being deleted, still declares the entity. If the configuration of such a resource can not be parsed, the operator SHALL fail the operation and retry it.
+The operator SHALL NOT remove a namespace from an owner list while another ConsulACL resource of that namespace managed by the operator, and not being deleted, still declares the entity. The check SHALL be done only for resources with `explicitName: true`: prefixed names belong to one resource. If the configuration of such a sibling can not be parsed, its entities are unknown: the operator SHALL NOT release any entity of the namespace (the deletion of the resource completes and its shared entities stay in Consul), SHALL log the sibling, and SHALL release the entities left this way by the stale clean-up once the sibling is fixed. A broken sibling SHALL NOT block the deletion or the reconcile of another resource.
+
+#### Scenario: Broken sibling does not block the deletion
+
+- **WHEN** a CR of `ns1` is deleted and another ConsulACL of `ns1` has an invalid `spec.acl.json`
+- **THEN** the finalizer SHALL be removed; with prefixed names the entities of the CR SHALL be deleted, with explicit names its shared entities SHALL stay in Consul
 
 #### Scenario: Second CR adds itself as owner
 
