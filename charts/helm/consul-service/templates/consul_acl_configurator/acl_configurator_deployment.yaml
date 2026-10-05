@@ -150,7 +150,9 @@ spec:
             - name: CONSUL_SCHEME
               value: "{{ template "consul.scheme" . }}"
             - name: CONSUL_AUTH_METHOD_NAME
-              value: applications-k8s-m2m
+              value: {{ default "applications-k8s-m2m" .Values.consulAclConfigurator.authMethod | quote }}
+            - name: CONSUL_LEGACY_AUTH_METHODS
+              value: {{ join "," (default (list) .Values.consulAclConfigurator.legacyAuthMethods) | quote }}
             - name: RECONCILE_PERIOD_SECONDS
               value: {{ default "100" .Values.consulAclConfigurator.reconcilePeriod | quote }}
             - name: API_GROUP

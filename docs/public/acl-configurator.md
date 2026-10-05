@@ -87,8 +87,9 @@ A configuration json (`spec.acl.json` yaml field) contains a json with 3 first l
 - `ServiceAccountName` - string, name of Kubernetes service account of service which want to get token with
   binding rules. Used to build `Selector` when `Selector` is not set.
 - `Description` - string, binding rule description. Can be absent.
-- `AuthMethod` - string, Consul authentication method of the rule. Can be absent. By default the global
-  JWT auth method `applications-k8s-m2m` is used (see [Authentication method](#authentication-method)).
+- `AuthMethod` - string, Consul authentication method of the rule. Can be absent. By default the global auth method
+  is used: `consulAclConfigurator.authMethod`, which is the JWT auth method `applications-k8s-m2m` unless it is set
+  (see [Authentication method](#authentication-method)).
 - `Selector` - string, Consul selector of the rule. Can be absent. When it is set, it is passed to Consul as is and
   `ServiceAccountName` is not used for the selector.
 
@@ -177,7 +178,7 @@ The same rules apply to `spec.kv.operatorNamespace` of [ConsulKV](#consulkv) res
 ## Authentication method
 
 Binding rules are created under the global JWT auth method `applications-k8s-m2m`, unless a rule sets its own
-`AuthMethod`. The operator creates the method at start, or updates it when its configuration differs, and retries
+`AuthMethod` or another global method is set in `consulAclConfigurator.authMethod`. The operator creates the method at start, or updates it when its configuration differs, and retries
 with exponential backoff while Consul or the JWKS proxy is not available. The method is not written when the
 configuration is unchanged.
 
@@ -216,23 +217,31 @@ allows the operator pod.
 
 ### Upgrade from the Kubernetes auth method
 
-Earlier versions created binding rules under `<fullname>-k8s-auth-method`. After the upgrade the operator creates
-and updates rules only under `applications-k8s-m2m`; rules under the old method are left untouched and are not
-deleted together with the custom resources. Upgrade steps:
+Earlier versions created binding rules under `<fullname>-k8s-auth-method` (type `kubernetes`). After the upgrade the
+operator creates and updates rules under `applications-k8s-m2m`. The rules under the old method are kept as they are:
+client services that log in through the old method keep the roles they had, but changes of the custom resources made
+after the upgrade (for example new roles) are available only through `applications-k8s-m2m`.
 
-1. Upgrade the chart. The operator creates `applications-k8s-m2m` and, on the next reconcile of each custom
-   resource, the binding rules under it.
-2. Switch the client services to log in through `applications-k8s-m2m` with their service account token.
-   Until then they keep using the old rules.
-3. Remove the old rules that were created by the operator. They have `BindType` `role` and the selector built from
-   `ServiceAccountName`, for example:
+Upgrade steps:
 
-   ```bash
-   consul acl binding-rule list -method=<fullname>-k8s-auth-method
-   consul acl binding-rule delete -id=<rule ID>
-   ```
+1. Upgrade the chart. On start the operator reconciles every custom resource and creates its rules under
+   `applications-k8s-m2m`.
+2. Switch the client services to log in through `applications-k8s-m2m` with their service account token, for example
+   `consul login -method=applications-k8s-m2m -bearer-token-file=/var/run/secrets/kubernetes.io/serviceaccount/token`.
+3. Remove the old rules: set `consulAclConfigurator.legacyAuthMethods: ["<fullname>-k8s-auth-method"]` and upgrade
+   the chart. On the next reconcile of each custom resource, which happens right after the operator starts, and on its
+   deletion, the operator deletes the rules of the resource under the listed methods. Only rules created by earlier
+   versions are removed: `BindType` `role` and a name with the prefix `<crName>_<crNamespace>_`. The rules of
+   `server-acl-init` (`BindType` `service`) and the rules declared in the resource with that method as `AuthMethod`
+   are not touched.
 
-   Do not remove the rules created by `server-acl-init` (`BindType` `service`), they are used by the service mesh.
+**Note:** removing a binding rule does not revoke the tokens already issued through it. A service that still logs in
+through the old method keeps working until it logs in again (usually until its pod restarts) and then gets a token
+without the roles of the operator. Make sure all services are switched before step 3.
+
+To keep the old method for all rules instead, set `consulAclConfigurator.authMethod: <fullname>-k8s-auth-method`.
+The selector is generated for the type of the method (`serviceaccount.*` for `kubernetes`), so the rules keep matching.
+A single rule can stay under the old method with `"AuthMethod": "<fullname>-k8s-auth-method"` in the resource.
 
 The service mesh is not affected: `connect-inject` and the other Consul components keep logging in through
 `<fullname>-k8s-auth-method` and `<fullname>-k8s-component-auth-method`, which are managed by `server-acl-init`.

@@ -65,6 +65,22 @@ var bootstrapToken = util.GetSecretFromFileOrEnv(
 	bootstrapTokenEnv,
 )
 var authMethod = os.Getenv("CONSUL_AUTH_METHOD_NAME")
+
+// legacyAuthMethods are global auth methods used by earlier versions of the operator. Binding
+// rules created by the operator under them are removed on reconcile and on deletion (migration).
+var legacyAuthMethods = splitList(os.Getenv("CONSUL_LEGACY_AUTH_METHODS"))
+
+// splitList splits a comma-separated value and drops empty items.
+func splitList(value string) []string {
+	var items []string
+	for _, item := range strings.Split(value, ",") {
+		if item = strings.TrimSpace(item); item != "" {
+			items = append(items, item)
+		}
+	}
+	return items
+}
+
 var periodTime, _ = strconv.Atoi(os.Getenv("RECONCILE_PERIOD_SECONDS"))
 var aclClient consulACLClient = makeAclClient()
 
@@ -248,6 +264,9 @@ func (r *ConsulACLReconciler) deleteAclEntities(aclConfig *ACLConfig, name strin
 	if err := deleteBindingRules(aclConfig, name, namespace, explicitName, siblings); err != nil {
 		return err
 	}
+	if err := removeLegacyBindingRules(aclConfig, name, namespace, false); err != nil {
+		return err
+	}
 	if err := deleteRoles(aclConfig, name, namespace, explicitName, siblings); err != nil {
 		return err
 	}
@@ -345,6 +364,55 @@ func bindRuleAuthMethods(aclConfig *ACLConfig) map[string]struct{} {
 		}
 	}
 	return authMethods
+}
+
+// removeLegacyBindingRules deletes the binding rules of the CR left under legacy global auth
+// methods by earlier versions of the operator. Earlier versions created only prefixed names
+// ({crName}_{crNamespace}_...) with BindType "role", so only such rules are matched. When keepDeclared
+// is set, a rule that the current spec still declares with that legacy method as its per-rule
+// AuthMethod is kept. The current global method is never treated as legacy.
+func removeLegacyBindingRules(aclConfig *ACLConfig, name string, namespace string, keepDeclared bool) error {
+	prefix := fmt.Sprintf("%s_%s_", name, namespace)
+	for _, legacy := range legacyAuthMethods {
+		if legacy == authMethod {
+			continue
+		}
+		declared := map[string]struct{}{}
+		if keepDeclared {
+			for _, br := range aclConfig.BindRules {
+				if br.AuthMethod == legacy && br.BindName != "" {
+					declared[convertEntityName(br.BindName, name, namespace)] = struct{}{}
+					declared[br.BindName] = struct{}{}
+				}
+			}
+		}
+		// The legacy method may not exist (for example connect-inject is disabled).
+		method, _, err := aclClient.AuthMethodRead(legacy, &consulApi.QueryOptions{})
+		if err != nil && !isErrNotFound(err) {
+			return err
+		}
+		if method == nil {
+			continue
+		}
+		rules, _, err := aclClient.BindingRuleList(legacy, &consulApi.QueryOptions{})
+		if err != nil {
+			return err
+		}
+		for _, rule := range rules {
+			if rule.BindType != consulApi.BindingRuleBindTypeRole || !strings.HasPrefix(rule.BindName, prefix) {
+				continue
+			}
+			if _, ok := declared[rule.BindName]; ok {
+				continue
+			}
+			if _, err = aclClient.BindingRuleDelete(rule.ID, &consulApi.WriteOptions{}); err != nil {
+				log.Error(err, fmt.Sprintf("Error deleting binding rule [%s] under legacy auth method [%s]", rule.BindName, legacy))
+				return err
+			}
+			log.Info(fmt.Sprintf("Deleted binding rule [%s] under legacy auth method [%s]", rule.BindName, legacy))
+		}
+	}
+	return nil
 }
 
 func deleteBindingRules(aclConfig *ACLConfig, name string, namespace string, explicitName bool, siblings *declaredEntities) error {
@@ -508,6 +576,10 @@ func (r *ConsulACLReconciler) applyACL(cr *consulacl.ConsulACL) (string, string,
 	}
 	bindRulesStatus, err := processBindRules(aclConfig.BindRules, customResourceName, customResourceNamespace, cr.Spec.ACL.ExplicitName)
 	if err != nil {
+		return "", "", "", err
+	}
+	// Migration: the rules now live under the current global method, drop the copies under legacy ones.
+	if err = removeLegacyBindingRules(aclConfig, customResourceName, customResourceNamespace, true); err != nil {
 		return "", "", "", err
 	}
 	var siblings *declaredEntities
@@ -1084,12 +1156,7 @@ func detectIssuer(jwksURL string) (string, error) {
 // from the OpenID configuration and the audiences default to the issuer (the default --api-audiences).
 func boundIssuerAndAudiences(jwksURL string) (string, []string, error) {
 	issuer := strings.TrimSpace(os.Getenv("BOUND_ISSUER"))
-	var audiences []string
-	for _, a := range strings.Split(os.Getenv("BOUND_AUDIENCES"), ",") {
-		if a = strings.TrimSpace(a); a != "" {
-			audiences = append(audiences, a)
-		}
-	}
+	audiences := splitList(os.Getenv("BOUND_AUDIENCES"))
 	if issuer == "" {
 		detected, err := detectIssuer(jwksURL)
 		if err != nil {

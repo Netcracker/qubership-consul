@@ -341,12 +341,24 @@ An explicit `Selector` in the binding-rule entry SHALL be passed to Consul uncha
 
 ### Requirement: Upgrade From the Kubernetes Auth Method
 
-Binding rules created by earlier versions under `{fullname}-k8s-auth-method` SHALL be treated as outside the scope of the operator after the upgrade: the operator SHALL NOT update or delete them. The upgrade procedure SHALL be documented, including that client services must log in through `applications-k8s-m2m` and that the old rules must be removed manually.
+The global auth method of binding rules SHALL be configurable (`consulAclConfigurator.authMethod`, default `applications-k8s-m2m`). The global auth methods of earlier versions SHALL be configurable as legacy methods (`consulAclConfigurator.legacyAuthMethods`, empty by default, so the rules under the old method are kept until the cleanup is enabled).
 
-#### Scenario: CR changed after upgrade
+On every reconcile and on deletion of a CR the operator SHALL delete the rules of the CR left under each existing legacy method: `BindType` `role` and a `BindName` with the prefix `{crName}_{crNamespace}_`. On reconcile, a rule that the CR declares with that legacy method as its per-rule `AuthMethod` SHALL be kept. A legacy method equal to the current global method SHALL be ignored, and a legacy method that does not exist in Consul SHALL be skipped. Rules with another `BindType` or name (for example the `service` rules of `server-acl-init`) SHALL NOT be touched. The upgrade procedure SHALL be documented, including that client services must log in through the current global method.
 
-- **WHEN** a CR with an existing rule under the old auth method gets a new role after the operator is upgraded
-- **THEN** the operator SHALL create or update the rule only under `applications-k8s-m2m`, and the rule under the old method SHALL remain unchanged
+#### Scenario: CR reconciled after upgrade
+
+- **WHEN** a CR `my-service` in `ns` has the rule `my-service_ns_reader` under `consul-k8s-auth-method` from an earlier version, `legacyAuthMethods` is `[consul-k8s-auth-method]` and the operator reconciles it with the global method `applications-k8s-m2m`
+- **THEN** the operator SHALL create the rule under `applications-k8s-m2m` and delete the rule under `consul-k8s-auth-method`
+
+#### Scenario: Old rules kept by default
+
+- **WHEN** `legacyAuthMethods` is not set
+- **THEN** the operator SHALL NOT delete rules under `consul-k8s-auth-method`
+
+#### Scenario: Service mesh rules untouched
+
+- **WHEN** the legacy method has a rule with `BindType` `service` created by `server-acl-init`
+- **THEN** the operator SHALL NOT delete it
 
 ---
 

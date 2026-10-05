@@ -21,9 +21,9 @@ In addition, there is currently no declarative mechanism for provisioning and ma
 
 **BREAKING:** Yes, for the binding-rule contract of ConsulACL resources.
 
-- The global auth method used for binding rules (`CONSUL_AUTH_METHOD_NAME`) changes from `{fullname}-k8s-auth-method` (type `kubernetes`) to `applications-k8s-m2m` (type `jwt`).
-- The generated binding-rule selector changes from `serviceaccount.namespace==... and serviceaccount.name==...` to `value.namespace == ... and value.serviceaccount == ...`.
-- Consequences on upgrade: binding rules are looked up per auth method, so a new rule is created under `applications-k8s-m2m` and the existing rule under the old method is **not** removed by the operator (the old method is not part of the cleanup set). Client services must log in through `applications-k8s-m2m` with a Kubernetes service-account JWT to get permissions from changes made after the upgrade. Rules under the old method have to be cleaned up manually.
+- The default global auth method used for binding rules (`CONSUL_AUTH_METHOD_NAME`, `consulAclConfigurator.authMethod`) changes from `{fullname}-k8s-auth-method` (type `kubernetes`) to `applications-k8s-m2m` (type `jwt`).
+- The generated binding-rule selector follows the type of the auth method: `value.namespace == ... and value.serviceaccount == ...` for `jwt`, `serviceaccount.namespace == ... and serviceaccount.name == ...` for `kubernetes` (as before).
+- Consequences on upgrade: a new rule is created under `applications-k8s-m2m`; the rule of the CR under the old method `{fullname}-k8s-auth-method` is kept, so clients on the old login keep their roles but do not get changes made after the upgrade. Client services must move to `applications-k8s-m2m` with a Kubernetes service-account JWT; after that `consulAclConfigurator.legacyAuthMethods` lets the operator remove the old rules. The old method can also stay global (`authMethod: {fullname}-k8s-auth-method`).
 - A per-rule `AuthMethod` of type `kubernetes` combined with the generated `value.*` selector does not match any login and results in a token without roles.
 - Everything that is not related to the global auth method (explicit names, per-rule `AuthMethod`, ConsulKV) is additive, and existing ConsulACL resources keep the `{crName}_{crNamespace}_{name}` naming when `explicitName` is not set.
 
