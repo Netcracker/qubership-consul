@@ -256,3 +256,15 @@
 - [x] 23.1 Enable leader election for the operator (`args: ["--leader-elect"]`; the RBAC for `coordination.k8s.io/leases` is already in the ClusterRole) or set `strategy: Recreate`, so that two operator pods never reconcile in parallel during a rolling update
 - [x] 23.2 **[bugfix]** Revert the accidental change of `statusWritingEnabled` in `values.yaml` back to `true` (integration-test parameter, unrelated to this change)
 - [x] 23.3 **[bugfix]** Align the CRD version annotation: ConsulACL CRD uses `crd.netcracker.com/version: 0.0.19`, ConsulKV CRD and kustomize bases use `crd/version: 0.0.18`; use one key and bump the version of the ConsulKV CRD
+
+---
+
+## 24. Review fixes (PR #258)
+
+- [x] 24.1 **[bugfix]** Keep the status of ConsulACL on errors (review 1, 3): `applyACL` returns `("", "", "", err)`, and `Reconcile` writes the empty strings to `policiesStatus`, `rolesStatus` and `bindRulesStatus`, so every transient error of Consul erases the per-entity status (earlier versions returned before the status update). Return the status of the stages that were processed (also the partial `StatusHolder` of the failed stage), keep the previous value for the stages that were not reached, and keep setting `Successful=False` with the error; add tests "no cluster leader on roles keeps the policies status" and "partial failure lists the created and the failed entities"
+- [x] 24.2 **[bugfix]** `applyKVEntries` calls `err.Error()` for an entry that is not committed (review 5); today `writeKVBatchWithOwnership` returns `nil` only after all entries are committed, but the invariant is not enforced; check `err != nil` and give such an entry an explicit error status
+- [x] 24.3 Remove the dead `if !explicitName` in `removeStaleEntities` (review 6): the explicit branch returns earlier, so the condition is always true
+- [x] 24.4 Pass the reconcile context to `siblingEntities` and to the `Get` of the ConsulACL reconciler instead of `context.TODO()` (review 8); the retrying status updaters (`util.CustomResourceUpdater`, `kvUpdater`) keep their own context
+- [x] 24.5 **[bugfix]** Limit the OpenID configuration response read by `detectIssuer` (review 9): wrap `resp.Body` in `io.LimitReader` (1 MiB) before decoding
+- [x] 24.6 Replace `containsFinalizer` of the ConsulKV controller with `util.Contains` (review 10)
+

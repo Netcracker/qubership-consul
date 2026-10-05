@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	consulacl "github.com/Netcracker/consul-acl-configurator/consul-acl-configurator-operator/api/v1alpha1"
+	"github.com/Netcracker/consul-acl-configurator/consul-acl-configurator-operator/util"
 	consulApi "github.com/hashicorp/consul/api"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -396,7 +397,7 @@ func TestReconcile_FinalizerAddedOnFirstReconcile(t *testing.T) {
 	if err := fakeClient.Get(context.TODO(), types.NamespacedName{Name: "test-kv", Namespace: "default"}, updated); err != nil {
 		t.Fatalf("failed to get updated CR: %v", err)
 	}
-	if !containsFinalizer(updated.GetFinalizers(), consulKVFinalizer) {
+	if !util.Contains(consulKVFinalizer, updated.GetFinalizers()) {
 		t.Errorf("finalizer %q not added; finalizers: %v", consulKVFinalizer, updated.GetFinalizers())
 	}
 }
@@ -488,7 +489,7 @@ func TestReconcile_DeletionCallsDeleteAndRemovesFinalizer(t *testing.T) {
 
 	remaining := &consulacl.ConsulKV{}
 	getErr := fakeClient.Get(context.TODO(), types.NamespacedName{Name: "test-kv", Namespace: "default"}, remaining)
-	if getErr == nil && containsFinalizer(remaining.GetFinalizers(), consulKVFinalizer) {
+	if getErr == nil && util.Contains(consulKVFinalizer, remaining.GetFinalizers()) {
 		t.Errorf("finalizer should have been removed; finalizers: %v", remaining.GetFinalizers())
 	}
 }

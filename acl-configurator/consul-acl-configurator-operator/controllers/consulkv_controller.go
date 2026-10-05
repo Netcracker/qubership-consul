@@ -33,6 +33,7 @@ import (
 	"time"
 
 	consulacl "github.com/Netcracker/consul-acl-configurator/consul-acl-configurator-operator/api/v1alpha1"
+	"github.com/Netcracker/consul-acl-configurator/consul-acl-configurator-operator/util"
 	consulApi "github.com/hashicorp/consul/api"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/retry"
@@ -79,7 +80,7 @@ func (r *ConsulKVReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	crUpdater := newKVUpdater(r.Client, instance)
 
 	if instance.DeletionTimestamp.IsZero() {
-		if !containsFinalizer(instance.GetFinalizers(), consulKVFinalizer) {
+		if !util.Contains(consulKVFinalizer, instance.GetFinalizers()) {
 			err = crUpdater.updateWithRetry(func(cr *consulacl.ConsulKV) {
 				controllerutil.AddFinalizer(cr, consulKVFinalizer)
 			})
@@ -88,7 +89,7 @@ func (r *ConsulKVReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			}
 		}
 	} else {
-		if containsFinalizer(instance.GetFinalizers(), consulKVFinalizer) {
+		if util.Contains(consulKVFinalizer, instance.GetFinalizers()) {
 			var deleteErr error
 			if instance.Spec.KV.PurgeOnDelete {
 				deleteErr = deleteKVTree(instance.Status.Entries)
@@ -219,8 +220,13 @@ func applyKVEntries(entries []consulacl.ConsulKVEntry, ownedKeys map[string]bool
 		}
 		isOwned, committed := owned[e.Key]
 		if !committed {
-			// Not written in this cycle; a key owned before stays owned.
-			statuses[i] = consulacl.ConsulKVEntryStatus{Key: e.Key, Status: "error: " + err.Error(), Owned: ownedKeys[e.Key]}
+			// Not written in this cycle; a key owned before stays owned. writeKVBatchWithOwnership
+			// returns nil only when every entry is committed, the check keeps it safe if that changes.
+			reason := "not written"
+			if err != nil {
+				reason = err.Error()
+			}
+			statuses[i] = consulacl.ConsulKVEntryStatus{Key: e.Key, Status: "error: " + reason, Owned: ownedKeys[e.Key]}
 			continue
 		}
 		status := "synced"
@@ -498,15 +504,6 @@ func markReleased(statuses []consulacl.ConsulKVEntryStatus, released map[string]
 		result[i] = e
 	}
 	return result
-}
-
-func containsFinalizer(finalizers []string, finalizer string) bool {
-	for _, f := range finalizers {
-		if f == finalizer {
-			return true
-		}
-	}
-	return false
 }
 
 // kvUpdater handles retried updates for ConsulKV resources.

@@ -19,6 +19,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"reflect"
+	"strings"
 	"testing"
 
 	consulApi "github.com/hashicorp/consul/api"
@@ -179,6 +180,15 @@ func TestBoundIssuerAndAudiences_RequestFails_ErrorReturned(t *testing.T) {
 				t.Error("expected an error, a hard-coded fallback must not be used")
 			}
 		})
+	}
+}
+
+// 24.5: a response larger than maxOpenIDConfigSize is not read into memory and is rejected.
+func TestDetectIssuer_OversizedResponse_Rejected(t *testing.T) {
+	body := `{"issuer":"https://issuer.example","padding":"` + strings.Repeat("x", maxOpenIDConfigSize) + `"}`
+	srv, _ := newOpenIDServer(t, http.StatusOK, body)
+	if _, err := detectIssuer(srv.URL + "/openid/v1/jwks"); err == nil {
+		t.Fatal("expected an error for an oversized OpenID configuration")
 	}
 }
 

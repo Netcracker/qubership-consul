@@ -229,6 +229,8 @@ When a Consul API call fails with a transient error, the operator SHALL requeue 
 
 A failed read of a policy or role SHALL NOT be taken for an absent entity: the operator SHALL NOT create the entity after a failed read, and the deletion of a CR SHALL fail and be retried instead of skipping the entity. Only a not-found response means that the entity is absent.
 
+On an error the operator SHALL write the status of the stages that were processed, including the partial status of the failed stage, and SHALL keep the previous status of the stages that were not reached (task 24.1).
+
 #### Scenario: No cluster leader
 
 - **WHEN** Consul answers `500 No cluster leader` while a policy is created

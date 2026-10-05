@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	goerrors "errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"net/url"
@@ -103,7 +104,7 @@ func (r *ConsulACLReconciler) Reconcile(ctx context.Context, request ctrl.Reques
 
 	// Fetch the ConsulACL instance
 	instance := &consulacl.ConsulACL{}
-	err := r.Client.Get(context.TODO(), request.NamespacedName, instance)
+	err := r.Client.Get(ctx, request.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
@@ -127,24 +128,31 @@ func (r *ConsulACLReconciler) Reconcile(ctx context.Context, request ctrl.Reques
 		}
 	} else {
 		if util.Contains(consulAclFinalizer, instance.GetFinalizers()) {
-			return r.deleteACL(instance, crUpdater)
+			return r.deleteACL(ctx, instance, crUpdater)
 		}
 		return reconcile.Result{}, nil
 	}
 
-	policiesStatus, rolesStatus, bindRulesStatus, applyErr := r.applyACL(instance)
+	status, applyErr := r.applyACL(ctx, instance)
 	if applyErr != nil {
 		if isRetryable(applyErr) {
 			log.Error(applyErr, "Transient error of Consul, the request is requeued")
 		} else {
-			log.Error(applyErr, "Can not parse ACL configuration")
+			log.Error(applyErr, "Can not apply ACL configuration")
 		}
 	}
 
 	statusErr := crUpdater.UpdateStatusWithRetry(func(cr *consulacl.ConsulACL) {
-		cr.Status.PoliciesStatus = policiesStatus
-		cr.Status.RolesStatus = rolesStatus
-		cr.Status.BindRulesStatus = bindRulesStatus
+		// A stage that was not reached keeps the status of the previous reconcile.
+		if status.policies != nil {
+			cr.Status.PoliciesStatus = *status.policies
+		}
+		if status.roles != nil {
+			cr.Status.RolesStatus = *status.roles
+		}
+		if status.bindRules != nil {
+			cr.Status.BindRulesStatus = *status.bindRules
+		}
 		setSuccessfulCondition(&cr.Status.Conditions, applyErr, cr.Generation)
 	})
 	if statusErr != nil {
@@ -217,9 +225,9 @@ func (r *ConsulACLReconciler) isManaged(cr *consulacl.ConsulACL) bool {
 // resources of the same namespace managed by this operator. The owner list stores only
 // namespaces, so an entity declared by a sibling must not be released by the given resource.
 // Resources that are being deleted are not counted: they release their entities themselves.
-func (r *ConsulACLReconciler) siblingEntities(cr *consulacl.ConsulACL) (*declaredEntities, error) {
+func (r *ConsulACLReconciler) siblingEntities(ctx context.Context, cr *consulacl.ConsulACL) (*declaredEntities, error) {
 	list := &consulacl.ConsulACLList{}
-	if err := r.Client.List(context.TODO(), list, client.InNamespace(cr.Namespace)); err != nil {
+	if err := r.Client.List(ctx, list, client.InNamespace(cr.Namespace)); err != nil {
 		return nil, err
 	}
 	siblings := newDeclaredEntities()
@@ -238,14 +246,14 @@ func (r *ConsulACLReconciler) siblingEntities(cr *consulacl.ConsulACL) (*declare
 	return siblings, nil
 }
 
-func (r *ConsulACLReconciler) deleteACL(instance *consulacl.ConsulACL, crUpdater util.CustomResourceUpdater) (ctrl.Result, error) {
+func (r *ConsulACLReconciler) deleteACL(ctx context.Context, instance *consulacl.ConsulACL, crUpdater util.CustomResourceUpdater) (ctrl.Result, error) {
 	aclConfig, err := getAclConfig(instance)
 	if err != nil {
 		log.Error(err, "Can not parse ACL configuration during deletion; Consul entities may need manual cleanup. To force deletion, remove the finalizer manually.")
 		return ctrl.Result{}, err
 	}
 
-	siblings, err := r.siblingEntities(instance)
+	siblings, err := r.siblingEntities(ctx, instance)
 	if err != nil {
 		log.Error(err, "Can not resolve ConsulACL resources of the same namespace")
 		return ctrl.Result{}, err
@@ -573,39 +581,56 @@ func (d *declaredEntities) hasBindRule(name string) bool {
 	return ok
 }
 
-func (r *ConsulACLReconciler) applyACL(cr *consulacl.ConsulACL) (string, string, string, error) {
+// aclStatus holds the per-entity status strings of one reconcile. A nil field means that the stage
+// was not reached, and the status of the previous reconcile is kept for it.
+type aclStatus struct {
+	policies, roles, bindRules *string
+}
+
+func statusString(status *StatusHolder) *string {
+	s := status.GetStatus()
+	return &s
+}
+
+// applyACL applies the configuration of the CR. The status of every stage that was processed is
+// returned also on error, including the partial status of the stage that failed.
+func (r *ConsulACLReconciler) applyACL(ctx context.Context, cr *consulacl.ConsulACL) (aclStatus, error) {
+	var status aclStatus
 	customResourceName := cr.Name
 	customResourceNamespace := cr.Namespace
 	aclConfig, err := getAclConfig(cr)
 	if err != nil {
-		return "", "", "", err
+		return status, err
 	}
 	policiesStatus, processedPolicies, err := processPolicies(aclConfig.Policies, customResourceName, customResourceNamespace, cr.Spec.ACL.ExplicitName)
+	status.policies = statusString(policiesStatus)
 	if err != nil {
-		return "", "", "", err
+		return status, err
 	}
 	rolesStatus, err := processRoles(aclConfig.Roles, processedPolicies, customResourceName, customResourceNamespace, cr.Spec.ACL.ExplicitName)
+	status.roles = statusString(rolesStatus)
 	if err != nil {
-		return "", "", "", err
+		return status, err
 	}
 	bindRulesStatus, err := processBindRules(aclConfig.BindRules, customResourceName, customResourceNamespace, cr.Spec.ACL.ExplicitName)
+	status.bindRules = statusString(bindRulesStatus)
 	if err != nil {
-		return "", "", "", err
+		return status, err
 	}
 	// Migration: the rules now live under the current global method, drop the copies under legacy ones.
 	if err = removeLegacyBindingRules(aclConfig, customResourceName, customResourceNamespace, true, failedEntities(bindRulesStatus)); err != nil {
-		return "", "", "", err
+		return status, err
 	}
 	var siblings *declaredEntities
 	if cr.Spec.ACL.ExplicitName {
-		if siblings, err = r.siblingEntities(cr); err != nil {
-			return "", "", "", err
+		if siblings, err = r.siblingEntities(ctx, cr); err != nil {
+			return status, err
 		}
 	}
-	if err := removeStaleEntities(aclConfig, customResourceName, customResourceNamespace, cr.Spec.ACL.ExplicitName, siblings); err != nil {
-		return "", "", "", err
+	if err = removeStaleEntities(aclConfig, customResourceName, customResourceNamespace, cr.Spec.ACL.ExplicitName, siblings); err != nil {
+		return status, err
 	}
-	return policiesStatus.GetStatus(), rolesStatus.GetStatus(), bindRulesStatus.GetStatus(), nil
+	return status, nil
 }
 
 // removeStaleEntities deletes Consul entities that were present under this CR's naming
@@ -664,7 +689,7 @@ func removeStaleEntities(aclConfig *ACLConfig, name string, namespace string, ex
 			continue
 		}
 		if _, declared := declaredRoleNames[er.Name]; !declared {
-			if _, err := aclClient.RoleDelete(er.ID, &consulApi.WriteOptions{}); err != nil {
+			if _, err = aclClient.RoleDelete(er.ID, &consulApi.WriteOptions{}); err != nil {
 				log.Error(err, fmt.Sprintf("Error deleting stale role [%s]", er.ID))
 				return err
 			}
@@ -672,24 +697,22 @@ func removeStaleEntities(aclConfig *ACLConfig, name string, namespace string, ex
 	}
 
 	// --- policies ---
-	if !explicitName {
-		declaredPolicyNames := map[string]struct{}{}
-		for _, p := range aclConfig.Policies {
-			declaredPolicyNames[convertEntityName(p.Name, name, namespace)] = struct{}{}
+	declaredPolicyNames := map[string]struct{}{}
+	for _, p := range aclConfig.Policies {
+		declaredPolicyNames[convertEntityName(p.Name, name, namespace)] = struct{}{}
+	}
+	existingPolicies, _, err := aclClient.PolicyList(&consulApi.QueryOptions{})
+	if err != nil {
+		return err
+	}
+	for _, ep := range existingPolicies {
+		if !strings.HasPrefix(ep.Name, namePrefix) {
+			continue
 		}
-		existingPolicies, _, err := aclClient.PolicyList(&consulApi.QueryOptions{})
-		if err != nil {
-			return err
-		}
-		for _, ep := range existingPolicies {
-			if !strings.HasPrefix(ep.Name, namePrefix) {
-				continue
-			}
-			if _, declared := declaredPolicyNames[ep.Name]; !declared {
-				if _, err := aclClient.PolicyDelete(ep.ID, &consulApi.WriteOptions{}); err != nil {
-					log.Error(err, fmt.Sprintf("Error deleting stale policy [%s]", ep.ID))
-					return err
-				}
+		if _, declared := declaredPolicyNames[ep.Name]; !declared {
+			if _, err = aclClient.PolicyDelete(ep.ID, &consulApi.WriteOptions{}); err != nil {
+				log.Error(err, fmt.Sprintf("Error deleting stale policy [%s]", ep.ID))
+				return err
 			}
 		}
 	}
@@ -1165,6 +1188,9 @@ const defaultJWKSURL = "http://localhost:8080/openid/v1/jwks"
 
 const openIDConfigPath = "/.well-known/openid-configuration"
 
+// maxOpenIDConfigSize limits the OpenID configuration read from the JWKS proxy.
+const maxOpenIDConfigSize = 1 << 20
+
 var openIDConfigHTTPClient = &http.Client{Timeout: 10 * time.Second}
 
 // openIDConfigURL returns the URL of the OpenID configuration served by the same host as jwksURL.
@@ -1201,7 +1227,8 @@ func detectIssuer(jwksURL string) (string, error) {
 	var openIDConfig struct {
 		Issuer string `json:"issuer"`
 	}
-	if err = json.NewDecoder(resp.Body).Decode(&openIDConfig); err != nil {
+	// The configuration is a small document, a larger body is not read into memory.
+	if err = json.NewDecoder(io.LimitReader(resp.Body, maxOpenIDConfigSize)).Decode(&openIDConfig); err != nil {
 		return "", fmt.Errorf("error parsing OpenID configuration %q: %w", configURL, err)
 	}
 	if openIDConfig.Issuer == "" {

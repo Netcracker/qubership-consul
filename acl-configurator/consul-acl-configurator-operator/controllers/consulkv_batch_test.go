@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	consulacl "github.com/Netcracker/consul-acl-configurator/consul-acl-configurator-operator/api/v1alpha1"
+	"github.com/Netcracker/consul-acl-configurator/consul-acl-configurator-operator/util"
 	consulApi "github.com/hashicorp/consul/api"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -154,7 +155,7 @@ func TestReconcile_PurgeOnDelete_RemovesTreeAndFinalizer(t *testing.T) {
 	}
 	remaining := &consulacl.ConsulKV{}
 	if err := fakeClient.Get(context.TODO(), types.NamespacedName{Name: "test-kv", Namespace: "default"}, remaining); err == nil &&
-		containsFinalizer(remaining.GetFinalizers(), consulKVFinalizer) {
+		util.Contains(consulKVFinalizer, remaining.GetFinalizers()) {
 		t.Errorf("finalizer should have been removed")
 	}
 }
@@ -321,7 +322,7 @@ func TestReconcile_Deletion_PartialRelease_NotDecrementedTwice(t *testing.T) {
 	}
 	remaining := &consulacl.ConsulKV{}
 	if err := fakeClient.Get(context.TODO(), req.NamespacedName, remaining); err == nil &&
-		containsFinalizer(remaining.GetFinalizers(), consulKVFinalizer) {
+		util.Contains(consulKVFinalizer, remaining.GetFinalizers()) {
 		t.Errorf("finalizer should have been removed after the retry")
 	}
 }

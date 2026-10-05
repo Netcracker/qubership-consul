@@ -15,6 +15,7 @@
 package controllers
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"testing"
@@ -447,7 +448,7 @@ func TestSiblingEntities_SameNamespaceOnly(t *testing.T) {
 		Client:       fake.NewClientBuilder().WithScheme(kvScheme()).WithObjects(self, explicit, prefixed, otherNs, deleting, foreignOperator).Build(),
 		OwnNamespace: "ns1",
 	}
-	siblings, err := r.siblingEntities(self)
+	siblings, err := r.siblingEntities(context.TODO(), self)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -468,7 +469,7 @@ func TestSiblingEntities_InvalidSiblingConfig_ErrorReturned(t *testing.T) {
 		Client:       fake.NewClientBuilder().WithScheme(kvScheme()).WithObjects(self, broken).Build(),
 		OwnNamespace: "ns1",
 	}
-	if _, err := r.siblingEntities(self); err == nil {
+	if _, err := r.siblingEntities(context.TODO(), self); err == nil {
 		t.Fatal("expected an error when a sibling configuration can not be parsed")
 	}
 }
