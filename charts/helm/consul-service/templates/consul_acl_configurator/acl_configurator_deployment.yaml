@@ -112,6 +112,9 @@ spec:
         - name: consul-acl-configurator-operator
           image: {{ template "consul-acl-configurator-operator.image" . }}
           imagePullPolicy: Always
+          args:
+            # Only one operator pod reconciles at a time, also while two pods run during a rolling update.
+            - --leader-elect
           volumeMounts:
             {{- if .Values.global.tls.enabled }}
             - name: consul-ca-cert
@@ -122,6 +125,12 @@ spec:
               mountPath: {{ $aclConfiguratorPodSecretsMount }}
               readOnly: true
           env:
+            - name: JWKS_URL
+              value: "http://{{ template "consul-acl-configurator.name" . }}-jwks-proxy:8080/openid/v1/jwks"
+            - name: BOUND_ISSUER
+              value: {{ default "" .Values.consulAclConfigurator.boundIssuer | quote }}
+            - name: BOUND_AUDIENCES
+              value: {{ join "," (default (list) .Values.consulAclConfigurator.boundAudiences) | quote }}
             - name: WATCH_NAMESPACE
               value: {{ default "" .Values.consulAclConfigurator.namespaces | quote }}
             - name: NAMESPACE
@@ -141,7 +150,9 @@ spec:
             - name: CONSUL_SCHEME
               value: "{{ template "consul.scheme" . }}"
             - name: CONSUL_AUTH_METHOD_NAME
-              value: {{ template "consul.fullname" . }}-k8s-auth-method
+              value: {{ default "applications-k8s-m2m" .Values.consulAclConfigurator.authMethod | quote }}
+            - name: CONSUL_LEGACY_AUTH_METHODS
+              value: {{ join "," (default (list) .Values.consulAclConfigurator.legacyAuthMethods) | quote }}
             - name: RECONCILE_PERIOD_SECONDS
               value: {{ default "100" .Values.consulAclConfigurator.reconcilePeriod | quote }}
             - name: API_GROUP
@@ -175,8 +186,4 @@ spec:
             periodSeconds: 15
             successThreshold: 1
             failureThreshold: 5
-      {{- if .Values.consulAclConfigurator.tolerations }}
-      tolerations:
-        {{ .Values.consulAclConfigurator.tolerations | toJson }}
-      {{- end }}
 {{- end }}
