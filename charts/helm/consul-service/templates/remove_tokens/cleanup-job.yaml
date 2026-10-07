@@ -41,10 +41,15 @@ spec:
             - "/bin/bash"
             - "-c"
             - |
-              kubectl delete pods -n {{ .Release.Namespace }} \
+              kubectl get jobs -n {{ .Release.Namespace }} \
                 -l app.kubernetes.io/name={{ template "consul.fullname" . }}-remove-tokens \
-                --field-selector=status.phase=Failed \
-                --ignore-not-found=true
+                -o jsonpath='{range .items[*]}{.metadata.name}{" "}{range .status.conditions[*]}{.type}={.status} {end}{"\n"}{end}' \
+                | grep 'Failed=True' | cut -d' ' -f1 \
+                | while read -r job; do
+                    [ -n "${job}" ] || continue
+                    echo "Deleting failed job ${job}"
+                    kubectl delete job -n {{ .Release.Namespace }} "${job}" --ignore-not-found=true
+                  done
               exit 0
           resources:
             requests:
