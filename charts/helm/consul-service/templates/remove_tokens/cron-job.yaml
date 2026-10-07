@@ -24,6 +24,7 @@ spec:
     spec:
       backoffLimit: 2
       activeDeadlineSeconds: 600
+      ttlSecondsAfterFinished: 300
       template:
         metadata:
           labels:

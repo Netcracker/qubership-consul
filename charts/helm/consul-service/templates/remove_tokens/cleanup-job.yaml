@@ -46,8 +46,9 @@ spec:
                 -o jsonpath='{range .items[*]}{.metadata.name}{" "}{range .status.conditions[*]}{.type}={.status},{end}{"\n"}{end}' \
                 | grep 'Failed=True' | cut -d' ' -f1 \
                 | while read -r job; do
-                    echo "Deleting failed job ${job}"
-                    kubectl delete job "${job}" -n {{ .Release.Namespace }} --ignore-not-found=true
+                    echo "Deleting pods of failed job ${job}"
+                    kubectl delete pods -n {{ .Release.Namespace }} \
+                      -l job-name="${job}" --ignore-not-found=true
                   done
               exit 0
           resources:
