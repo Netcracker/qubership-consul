@@ -2,5 +2,5 @@ python-consul2==0.1.5
 robotframework-requests==0.9.7
 urllib3==2.8.0
 PyJWT==2.15.0
-cryptography==48.0.1
+cryptography==50.0.0
 requests==2.34.2
