@@ -1122,6 +1122,16 @@ Coerce all annotation values to quoted strings (handles booleans/numbers).
 Global annotations applied to all Consul PVCs (server volumeClaimTemplates, server PVCs and backup-daemon PVC).
 */}}
 {{- define "consul.pvc.metadata.annotations" -}}
-{{- include "consul.stringifyAnnotations" (.Values.pvc.metadata.annotations | default (dict)) | trim -}}
+{{- $annotations := .Values.pvc.metadata.annotations | default (dict) -}}
+{{- range $key, $_ := $annotations -}}
+  {{- $namePart := $key -}}
+  {{- if contains "/" $key -}}
+    {{- $namePart = last (splitList "/" $key) -}}
+  {{- end -}}
+  {{- if not (regexMatch "^[A-Za-z0-9]([-A-Za-z0-9_.]*[A-Za-z0-9])?$" $namePart) -}}
+    {{- fail (printf "pvc.metadata.annotations: invalid annotation key %q: name part must consist of alphanumeric characters, '-', '_' or '.', and must start and end with an alphanumeric character" $key) -}}
+  {{- end -}}
+{{- end -}}
+{{- include "consul.stringifyAnnotations" $annotations | trim -}}
 {{- end -}}
 

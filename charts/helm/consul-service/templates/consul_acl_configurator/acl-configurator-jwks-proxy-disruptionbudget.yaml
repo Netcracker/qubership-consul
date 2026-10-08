@@ -1,0 +1,22 @@
+{{- if .Values.consulAclConfigurator.enabled }}
+{{- $proxy := .Values.consulAclConfigurator.jwksProxy | default dict }}
+{{- if and (dig "disruptionBudget" "enabled" true $proxy) (gt (int ($proxy.replicas | default 2)) 1) }}
+# PodDisruptionBudget keeps the JWKS proxy available for Consul logins during voluntary disruptions.
+{{- if .Capabilities.APIVersions.Has "policy/v1/PodDisruptionBudget" }}
+apiVersion: policy/v1
+{{- else }}
+apiVersion: policy/v1beta1
+{{- end }}
+kind: PodDisruptionBudget
+metadata:
+  name: {{ template "consul-acl-configurator.name" . }}-jwks-proxy
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "consul-service.defaultLabels" . | nindent 4 }}
+spec:
+  maxUnavailable: {{ dig "disruptionBudget" "maxUnavailable" 1 $proxy }}
+  selector:
+    matchLabels:
+      name: {{ template "consul-acl-configurator.name" . }}-jwks-proxy
+{{- end }}
+{{- end }}

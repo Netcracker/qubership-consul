@@ -2352,6 +2352,48 @@ consulAclConfigurator:
 
   allowedNamespaces: ""
 
+  # The global Consul auth method of the binding rules created from ConsulACL resources (CONSUL_AUTH_METHOD_NAME).
+  # When empty, the JWT auth method applications-k8s-m2m created by the operator is used.
+  authMethod: ""
+  # Global auth methods used by earlier versions. Binding rules of a ConsulACL resource left under them
+  # ({crName}_{crNamespace}_... with BindType role) are deleted on the next reconcile and on deletion of the resource,
+  # unless the resource declares the rule with that method as its per-rule AuthMethod.
+  # Empty by default: the old rules are kept. Set ["<fullname>-k8s-auth-method"] after the client services
+  # log in through the current auth method, to remove the rules created by earlier versions.
+  legacyAuthMethods: []
+
+  # BoundIssuer of the applications-k8s-m2m JWT auth method. When empty, the operator reads the issuer
+  # from /.well-known/openid-configuration served by the JWKS proxy (the --service-account-issuer of the cluster).
+  boundIssuer: ""
+  # BoundAudiences of the applications-k8s-m2m JWT auth method, a list of strings. When empty, the issuer is used
+  # (the default --api-audiences of the cluster).
+  boundAudiences: []
+
+  # The proxy that exposes /openid/v1/jwks and /.well-known/openid-configuration of the Kubernetes API server
+  # to Consul servers and to the operator.
+  jwksProxy:
+    replicas: 2
+    resources:
+      requests:
+        cpu: 20m
+        memory: 32Mi
+      limits:
+        cpu: 50m
+        memory: 64Mi
+    # When empty, a preferred anti-affinity spreads the replicas across nodes.
+    affinity: {}
+    tolerations: []
+    nodeSelector: {}
+    priorityClassName: ""
+    extraLabels: {}
+    disruptionBudget:
+      # The PodDisruptionBudget is created only when replicas > 1.
+      enabled: true
+      maxUnavailable: 1
+    networkPolicy:
+      # Allow ingress to the proxy only from Consul server pods and from the Consul ACL Configurator operator.
+      enabled: false
+
   removeTokens:
     enabled: true
     dockerImage: ghcr.io/netcracker/qubership-consul-remove-tokens:main
