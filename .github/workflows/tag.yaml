@@ -35,7 +35,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
       - name: Set up QEMU
         uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3
       - name: Set up Docker Buildx
@@ -56,9 +58,3 @@ jobs:
           push: true
           tags: ghcr.io/netcracker/${{ matrix.component.name }}:${{ inputs.tag_name }}
           provenance: false
-      - uses: actions/delete-package-versions@v5
-        with:
-          package-name: ${{ matrix.component.name }}
-          package-type: 'container'
-          package-version-ids: ${{ steps.get-ids-for-delete.outputs.ids-for-delete }}
-        if: ${{ steps.get-ids-for-delete.outputs.ids-for-delete != '' }}

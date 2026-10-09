@@ -95,7 +95,7 @@ jobs:
           echo platforms=$platforms
 
       - name: Create Meta info (tags)
-        uses: netcracker/qubership-workflow-hub/actions/metadata-action@8d542a426ce561c7dce745f6b9cee068d1d7e101 #2.0.10
+        uses: netcracker/qubership-workflow-hub/actions/metadata-action@8d542a426ce561c7dce745f6b9cee068d1d7e101 # v2.0.10
         id: meta
         with:
           ref: ${{ env.TECH_BRANCH }}
@@ -124,7 +124,7 @@ jobs:
           COMPONENT: ${{ toJson(matrix.component) }}
 
       - name: Docker
-        uses: netcracker/qubership-workflow-hub/actions/docker-action@8d542a426ce561c7dce745f6b9cee068d1d7e101 #2.0.10
+        uses: netcracker/qubership-workflow-hub/actions/docker-action@8d542a426ce561c7dce745f6b9cee068d1d7e101 # v2.0.10
         with:
           ref: ${{ env.TECH_BRANCH }}
           component: ${{ toJson(matrix.component) }}
