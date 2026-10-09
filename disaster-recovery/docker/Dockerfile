@@ -1,5 +1,5 @@
 # Build the manager binary
-FROM --platform=$BUILDPLATFORM golang:1.27-alpine3.24@sha256:8a5910f31396cd4d89662f56c68b3ae31d374308270a1c3bd96672ee5ed43414 as builder
+FROM --platform=$BUILDPLATFORM golang:1.27-alpine3.24 as builder
 ARG BUILDPLATFORM
 ARG TARGETOS
 ARG TARGETARCH
