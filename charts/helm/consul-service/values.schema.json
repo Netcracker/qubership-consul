@@ -1,0 +1,3831 @@
+{
+  "$schema": "http://json-schema.org/schema#",
+  "type": "object",
+  "nc_schema_gen_version": "1.0.0",
+  "properties": {
+    "global": {
+      "type": "object",
+      "properties": {
+        "cloudIntegrationEnabled": {
+          "type": "boolean",
+          "default": false,
+          "title": "The global.cloudIntegrationEnabled schema",
+          "description": "This parameter specifies whether to apply [Cloud Integration Parameters](#cloud-integration-parameters) instead of parameters described in Consul"
+        },
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "title": "The global.enabled schema",
+          "description": "Whether all the components within this chart are to be enabled by default"
+        },
+        "extraLabels": {
+          "type": "object",
+          "default": {},
+          "title": "The global.extraLabels schema",
+          "description": "The custom labels for all pods which are related to the Consul service"
+        },
+        "name": {
+          "type": "string",
+          "default": "consul",
+          "title": "The global.name schema",
+          "description": "The prefix used for all resources in the Helm chart"
+        },
+        "domain": {
+          "type": "string",
+          "default": "consul",
+          "title": "The global.domain schema",
+          "description": "The domain to register the Consul DNS server to listen for"
+        },
+        "ipv6": {
+          "type": "boolean",
+          "default": false,
+          "title": "The global.ipv6 schema",
+          "description": "Whether the Consul services REST API is to be started on `IPv6` interface"
+        },
+        "restrictedEnvironment": {
+          "type": "boolean",
+          "default": false,
+          "title": "The global.restrictedEnvironment schema",
+          "description": "Whether the Consul service is to be deployed in restricted environment"
+        },
+        "image": {
+          "type": "string",
+          "default": "hashicorp/consul:1.22.7",
+          "title": "The global.image schema",
+          "description": "The image of the Consul docker image for clients and servers"
+        },
+        "imagePullSecrets": {
+          "type": "array",
+          "default": [],
+          "title": "The global.imagePullSecrets schema",
+          "description": "The list of references to secrets in the same namespace to use for pulling any of the images used by any container"
+        },
+        "imageK8S": {
+          "type": "string",
+          "default": "hashicorp/consul-k8s-control-plane:1.9.9",
+          "title": "The global.imageK8S schema",
+          "description": "The image of the `consul-k8s` docker image that is used for functionality such as the catalog sync"
+        },
+        "imageConsulDataplane": {
+          "type": "string",
+          "default": "hashicorp/consul-dataplane:1.9.9",
+          "title": "The global.imageConsulDataplane schema",
+          "description": "The image of the Consul DataPlane docker image that is used for ingress and terminating gateways"
+        },
+        "datacenter": {
+          "type": "string",
+          "default": "dc1",
+          "title": "The global.datacenter schema",
+          "description": "The name of the datacenter that the agents should register"
+        },
+        "enablePodSecurityPolicies": {
+          "type": "boolean",
+          "default": false,
+          "title": "The global.enablePodSecurityPolicies schema",
+          "description": "Whether pod security policies are to be created for the Consul components created by the chart"
+        },
+        "gossipEncryption": {
+          "type": "object",
+          "properties": {
+            "secretName": {
+              "type": "string",
+              "default": "",
+              "title": "The global.gossipEncryption.secretName schema",
+              "description": "The name of the Kubernetes secret that holds the gossip encryption key"
+            },
+            "secretKey": {
+              "type": "string",
+              "default": "",
+              "title": "The global.gossipEncryption.secretKey schema",
+              "description": "The key within the Kubernetes secret that holds the gossip encryption key"
+            }
+          },
+          "title": "The global.gossipEncryption schema",
+          "description": "global.gossipEncryption parameters"
+        },
+        "recursors": {
+          "type": "array",
+          "default": [],
+          "title": "The global.recursors schema",
+          "description": "The list of addresses of upstream DNS servers that are used to recursively resolve DNS queries"
+        },
+        "tls": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false,
+              "title": "The global.tls.enabled schema",
+              "description": "Whether TLS is to be enabled for all Consul components"
+            },
+            "enableAutoEncrypt": {
+              "type": "boolean",
+              "default": false,
+              "title": "The global.tls.enableAutoEncrypt schema",
+              "description": "Whether the `auto-encrypt` feature is to enabled on clients and servers"
+            },
+            "cipherSuites": {
+              "type": "array",
+              "default": [],
+              "title": "The global.tls.cipherSuites schema",
+              "description": "The list of cipher suites that are used to negotiate the security settings for a network connection using TLS or SSL network protocol"
+            },
+            "certManager": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": false,
+                  "title": "The global.tls.certManager.enabled schema",
+                  "description": "Whether TLS certificates are to be generated and managed by Cert Manager"
+                },
+                "clusterIssuerName": {
+                  "type": "string",
+                  "default": "",
+                  "title": "The global.tls.certManager.clusterIssuerName schema",
+                  "description": "The name of the `ClusterIssuer` resource"
+                },
+                "durationDays": {
+                  "type": "integer",
+                  "default": 730,
+                  "title": "The global.tls.certManager.durationDays schema",
+                  "description": "The TLS certificates validity period in days"
+                }
+              },
+              "title": "The global.tls.certManager schema",
+              "description": "global.tls.certManager parameters"
+            },
+            "serverAdditionalDNSSANs": {
+              "type": "array",
+              "default": [],
+              "title": "The global.tls.serverAdditionalDNSSANs schema",
+              "description": "The list of additional DNS names to set as Subject Alternative Names (SANs) in the server certificate"
+            },
+            "serverAdditionalIPSANs": {
+              "type": "array",
+              "default": [],
+              "title": "The global.tls.serverAdditionalIPSANs schema",
+              "description": "The list of additional IP addresses names to set as Subject Alternative Names (SANs) in the server certificate"
+            },
+            "verify": {
+              "type": "boolean",
+              "default": true,
+              "title": "The global.tls.verify schema",
+              "description": "Whether servers and client configuration is to be verified"
+            },
+            "httpsOnly": {
+              "type": "boolean",
+              "default": false,
+              "title": "The global.tls.httpsOnly schema",
+              "description": "Whether the HTTP port on both clients and servers is to be disabled and only HTTPS connections are to be accepted"
+            },
+            "caCert": {
+              "type": "object",
+              "properties": {
+                "secretName": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "default": null,
+                  "title": "The global.tls.caCert.secretName schema",
+                  "description": "The name of the Kubernetes secret containing the certificate of the CA to use for TLS communication within the Consul cluster"
+                },
+                "secretKey": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "default": null,
+                  "title": "The global.tls.caCert.secretKey schema",
+                  "description": "The key of the Kubernetes secret containing the certificate of the CA to use for TLS communication within the Consul cluster"
+                }
+              },
+              "title": "The global.tls.caCert schema",
+              "description": "global.tls.caCert parameters"
+            },
+            "caKey": {
+              "type": "object",
+              "properties": {
+                "secretName": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "default": null,
+                  "title": "The global.tls.caKey.secretName schema",
+                  "description": "The name of the Kubernetes secret containing the private key of the CA to use for TLS communication within the Consul cluster"
+                },
+                "secretKey": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "default": null,
+                  "title": "The global.tls.caKey.secretKey schema",
+                  "description": "The key of the Kubernetes secret containing the private key of the CA to use for TLS communication within the Consul cluster"
+                }
+              },
+              "title": "The global.tls.caKey schema",
+              "description": "global.tls.caKey parameters"
+            },
+            "init": {
+              "type": "object",
+              "properties": {
+                "resources": {
+                  "type": "object",
+                  "properties": {
+                    "requests": {
+                      "type": "object",
+                      "properties": {
+                        "memory": {
+                          "type": "string",
+                          "default": "50Mi",
+                          "title": "The global.tls.init.resources.requests.memory schema",
+                          "description": "The minimum amount of memory the TLS init job container should use"
+                        },
+                        "cpu": {
+                          "default": "50m",
+                          "title": "The global.tls.init.resources.requests.cpu schema",
+                          "description": "The minimum number of CPUs the TLS init job container should use",
+                          "comment": "don't use type field, because it breaks backward compatibility"
+                        }
+                      },
+                      "title": "The global.tls.init.resources.requests schema",
+                      "description": "global.tls.init.resources.requests parameters"
+                    },
+                    "limits": {
+                      "type": "object",
+                      "properties": {
+                        "memory": {
+                          "type": "string",
+                          "default": "50Mi",
+                          "title": "The global.tls.init.resources.limits.memory schema",
+                          "description": "The maximum amount of memory the TLS init job container should use"
+                        },
+                        "cpu": {
+                          "default": "50m",
+                          "title": "The global.tls.init.resources.limits.cpu schema",
+                          "description": "The maximum number of CPUs the TLS init job container should use",
+                          "comment": "don't use type field, because it breaks backward compatibility"
+                        }
+                      },
+                      "title": "The global.tls.init.resources.limits schema",
+                      "description": "global.tls.init.resources.limits parameters"
+                    }
+                  },
+                  "title": "The global.tls.init.resources schema",
+                  "description": "global.tls.init.resources parameters"
+                }
+              },
+              "title": "The global.tls.init schema",
+              "description": "global.tls.init parameters"
+            }
+          },
+          "title": "The global.tls schema",
+          "description": "global.tls parameters"
+        },
+        "ports": {
+          "type": "object",
+          "properties": {
+            "https": {
+              "type": [
+                "string",
+                "integer"
+              ],
+              "default": "",
+              "title": "The global.ports.https schema",
+              "description": "This parameter specifies custom global https port providing the ability to deploy two Consul instances with enabled Clients to one cluster"
+            },
+            "http": {
+              "type": [
+                "string",
+                "integer"
+              ],
+              "default": "",
+              "title": "The global.ports.http schema",
+              "description": "This parameter specifies custom global http port providing the ability to deploy two Consul instances with enabled Clients to one cluster"
+            },
+            "grpc": {
+              "type": [
+                "string",
+                "integer"
+              ],
+              "default": "",
+              "title": "The global.ports.grpc schema",
+              "description": "This parameter specifies custom global grpc port providing the ability to deploy two Consul instances with enabled Clients to one cluster"
+            }
+          },
+          "title": "The global.ports schema",
+          "description": "global.ports parameters"
+        },
+        "acls": {
+          "type": "object",
+          "properties": {
+            "manageSystemACLs": {
+              "type": "boolean",
+              "default": true,
+              "title": "The global.acls.manageSystemACLs schema",
+              "description": "Whether ACL tokens and policies for all Consul and `consul-k8s` components are to be managed"
+            },
+            "createAuthMethod": {
+              "type": "boolean",
+              "default": true,
+              "title": "The global.acls.createAuthMethod schema",
+              "description": "Whether Consul authentication method is to be created"
+            },
+            "bootstrapToken": {
+              "type": "object",
+              "properties": {
+                "secretName": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "default": null,
+                  "title": "The global.acls.bootstrapToken.secretName schema",
+                  "description": "The name of the Kubernetes secret containing the bootstrap token to use for creating policies and tokens for all Consul and `consul-k8s` components"
+                },
+                "secretKey": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "default": null,
+                  "title": "The global.acls.bootstrapToken.secretKey schema",
+                  "description": "The key of the Kubernetes secret containing the bootstrap token to use for creating policies and tokens for all Consul and `consul-k8s` components"
+                }
+              },
+              "title": "The global.acls.bootstrapToken schema",
+              "description": "global.acls.bootstrapToken parameters"
+            },
+            "createReplicationToken": {
+              "type": "boolean",
+              "default": false,
+              "title": "The global.acls.createReplicationToken schema",
+              "description": "Whether ACL token that can be used in secondary datacenters for replication is to be created"
+            },
+            "replicationToken": {
+              "type": "object",
+              "properties": {
+                "secretName": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "default": null,
+                  "title": "The global.acls.replicationToken.secretName schema",
+                  "description": "The name of the Kubernetes secret containing the replication ACL token"
+                },
+                "secretKey": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "default": null,
+                  "title": "The global.acls.replicationToken.secretKey schema",
+                  "description": "The key of the Kubernetes secret containing the replication ACL token"
+                }
+              },
+              "title": "The global.acls.replicationToken schema",
+              "description": "global.acls.replicationToken parameters"
+            },
+            "init": {
+              "type": "object",
+              "properties": {
+                "resources": {
+                  "type": "object",
+                  "properties": {
+                    "requests": {
+                      "type": "object",
+                      "properties": {
+                        "memory": {
+                          "type": "string",
+                          "default": "50Mi",
+                          "title": "The global.acls.init.resources.requests.memory schema",
+                          "description": "The minimum amount of memory the ACLs init job container should use"
+                        },
+                        "cpu": {
+                          "default": "50m",
+                          "title": "The global.acls.init.resources.requests.cpu schema",
+                          "description": "The minimum number of CPUs the ACLs init job container should use",
+                          "comment": "don't use type field, because it breaks backward compatibility"
+                        }
+                      },
+                      "title": "The global.acls.init.resources.requests schema",
+                      "description": "global.acls.init.resources.requests parameters"
+                    },
+                    "limits": {
+                      "type": "object",
+                      "properties": {
+                        "memory": {
+                          "type": "string",
+                          "default": "50Mi",
+                          "title": "The global.acls.init.resources.limits.memory schema",
+                          "description": "The maximum amount of memory the ACLs init job container should use"
+                        },
+                        "cpu": {
+                          "default": "50m",
+                          "title": "The global.acls.init.resources.limits.cpu schema",
+                          "description": "The maximum number of CPUs the ACLs init job container should use",
+                          "comment": "don't use type field, because it breaks backward compatibility"
+                        }
+                      },
+                      "title": "The global.acls.init.resources.limits schema",
+                      "description": "global.acls.init.resources.limits parameters"
+                    }
+                  },
+                  "title": "The global.acls.init.resources schema",
+                  "description": "global.acls.init.resources parameters"
+                }
+              },
+              "title": "The global.acls.init schema",
+              "description": "global.acls.init parameters"
+            }
+          },
+          "title": "The global.acls schema",
+          "description": "global.acls parameters"
+        },
+        "federation": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false,
+              "title": "The global.federation.enabled schema",
+              "description": "Whether the datacenter is to be federation-capable"
+            },
+            "createFederationSecret": {
+              "type": "boolean",
+              "default": false,
+              "title": "The global.federation.createFederationSecret schema",
+              "description": "Whether the Kubernetes secret that can be imported into secondary datacenters, so they can federate with this datacenter, is to be created"
+            },
+            "primaryDatacenter": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "default": null,
+              "title": "The global.federation.primaryDatacenter schema",
+              "description": "The name of the primary datacenter"
+            },
+            "primaryGateways": {
+              "type": "array",
+              "default": [],
+              "title": "The global.federation.primaryGateways schema",
+              "description": "The list of addresses of the primary mesh gateways in the form `<ip>:<port>`"
+            },
+            "k8sAuthMethodHost": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "default": null,
+              "title": "The global.federation.k8sAuthMethodHost schema",
+              "description": "The address of the Kubernetes API server"
+            },
+            "securityContext": {
+              "type": "object",
+              "default": {},
+              "title": "The global.federation.securityContext schema",
+              "description": "The pod-level security attributes and common container settings for Federation job pod"
+            }
+          },
+          "title": "The global.federation schema",
+          "description": "global.federation parameters"
+        },
+        "metrics": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true,
+              "title": "The global.metrics.enabled schema",
+              "description": "Whether the components to expose Prometheus metrics for the Consul service mesh are to be configured"
+            },
+            "enableAgentMetrics": {
+              "type": "boolean",
+              "default": true,
+              "title": "The global.metrics.enableAgentMetrics schema",
+              "description": "Whether the metrics for Consul agent are to be configured"
+            },
+            "agentMetricsRetentionTime": {
+              "type": "string",
+              "default": "24h",
+              "title": "The global.metrics.agentMetricsRetentionTime schema",
+              "description": "The retention time for metrics in Consul clients and servers"
+            },
+            "enableGatewayMetrics": {
+              "type": "boolean",
+              "default": true,
+              "title": "The global.metrics.enableGatewayMetrics schema",
+              "description": "Whether the `mesh`, `terminating`, and `ingress` gateways are to expose their Consul DataPlane metrics on port `20200` at the `/metrics` path and all gateway pods are to have Prometheus scrape annotations"
+            },
+            "disableHostname": {
+              "type": "boolean",
+              "default": true,
+              "title": "The global.metrics.disableHostname schema",
+              "description": "Whether the runtime telemetry with the machine hostname is to be prepended"
+            }
+          },
+          "title": "The global.metrics schema",
+          "description": "global.metrics parameters"
+        },
+        "logLevel": {
+          "type": "string",
+          "default": "info",
+          "title": "The global.logLevel schema",
+          "description": "The default log level to apply to all components which do not override this setting"
+        },
+        "logJSON": {
+          "type": "boolean",
+          "default": false,
+          "title": "The global.logJSON schema",
+          "description": "Whether the output in JSON format for all component logs is to be enabled"
+        },
+        "disasterRecovery": {
+          "type": "object",
+          "properties": {
+            "image": {
+              "type": "string",
+              "default": "ghcr.io/netcracker/qubership-consul-disaster-recovery:main",
+              "title": "The global.disasterRecovery.image schema",
+              "description": "The image of Consul Disaster Recovery container"
+            },
+            "tls": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": true,
+                  "title": "The global.disasterRecovery.tls.enabled schema",
+                  "description": "Whether TLS is to be enabled for Disaster Recovery Daemon"
+                },
+                "certificates": {
+                  "type": "object",
+                  "properties": {
+                    "crt": {
+                      "type": "string",
+                      "default": "",
+                      "title": "The global.disasterRecovery.tls.certificates.crt schema",
+                      "description": "The certificate in base64 format"
+                    },
+                    "key": {
+                      "type": "string",
+                      "default": "",
+                      "title": "The global.disasterRecovery.tls.certificates.key schema",
+                      "description": "The private key in base64 format"
+                    },
+                    "ca": {
+                      "type": "string",
+                      "default": "",
+                      "title": "The global.disasterRecovery.tls.certificates.ca schema",
+                      "description": "The root CA certificate in base64 format"
+                    }
+                  },
+                  "title": "The global.disasterRecovery.tls.certificates schema",
+                  "description": "global.disasterRecovery.tls.certificates parameters"
+                },
+                "secretName": {
+                  "type": "string",
+                  "default": "",
+                  "title": "The global.disasterRecovery.tls.secretName schema",
+                  "description": "The secret that contains TLS certificates"
+                },
+                "cipherSuites": {
+                  "type": "array",
+                  "default": [],
+                  "title": "The global.disasterRecovery.tls.cipherSuites schema",
+                  "description": "The list of cipher suites that are used to negotiate the security settings for a network connection using TLS or SSL network protocol"
+                },
+                "subjectAlternativeName": {
+                  "type": "object",
+                  "properties": {
+                    "additionalDnsNames": {
+                      "type": "array",
+                      "default": [],
+                      "title": "The global.disasterRecovery.tls.subjectAlternativeName.additionalDnsNames schema",
+                      "description": "The list of additional DNS names to be added to the `Subject Alternative Name` field of TLS certificate"
+                    },
+                    "additionalIpAddresses": {
+                      "type": "array",
+                      "default": [],
+                      "title": "The global.disasterRecovery.tls.subjectAlternativeName.additionalIpAddresses schema",
+                      "description": "The list of additional IP addresses to be added to the `Subject Alternative Name` field of TLS certificate"
+                    }
+                  },
+                  "title": "The global.disasterRecovery.tls.subjectAlternativeName schema",
+                  "description": "global.disasterRecovery.tls.subjectAlternativeName parameters"
+                }
+              },
+              "title": "The global.disasterRecovery.tls schema",
+              "description": "global.disasterRecovery.tls parameters"
+            },
+            "httpAuth": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": false,
+                  "title": "The global.disasterRecovery.httpAuth.enabled schema",
+                  "description": "Whether site manager authentication is to be enabled"
+                },
+                "smSecureAuth": {
+                  "type": "boolean",
+                  "default": false,
+                  "title": "The global.disasterRecovery.httpAuth.smSecureAuth schema",
+                  "description": "Whether the `smSecureAuth` mode is enabled for Site Manager or not"
+                },
+                "smNamespace": {
+                  "type": "string",
+                  "default": "site-manager",
+                  "title": "The global.disasterRecovery.httpAuth.smNamespace schema",
+                  "description": "The name of Kubernetes namespace where site manager is located"
+                },
+                "smServiceAccountName": {
+                  "type": "string",
+                  "default": "",
+                  "title": "The global.disasterRecovery.httpAuth.smServiceAccountName schema",
+                  "description": "The name of Kubernetes service account that site manager is used"
+                },
+                "customAudience": {
+                  "type": "string",
+                  "default": "sm-services",
+                  "title": "The global.disasterRecovery.httpAuth.customAudience schema",
+                  "description": "The name of custom audience for rest API token, that is used to connect with services"
+                }
+              },
+              "title": "The global.disasterRecovery.httpAuth schema",
+              "description": "global.disasterRecovery.httpAuth parameters"
+            },
+            "mode": {
+              "type": "string",
+              "default": "",
+              "title": "The global.disasterRecovery.mode schema",
+              "description": "The mode of Consul disaster recovery installation"
+            },
+            "region": {
+              "type": "string",
+              "default": "",
+              "title": "The global.disasterRecovery.region schema",
+              "description": "The region of cloud where current instance of Consul service is installed"
+            },
+            "siteManagerEnabled": {
+              "type": "boolean",
+              "default": true,
+              "title": "The global.disasterRecovery.siteManagerEnabled schema",
+              "description": "Whether creation of a Kubernetes Custom Resource for `SiteManager` is to be enabled"
+            },
+            "timeout": {
+              "type": "integer",
+              "default": 600,
+              "title": "The global.disasterRecovery.timeout schema",
+              "description": "The timeout for switchover process"
+            },
+            "backupTimeout": {
+              "type": "string",
+              "default": "180s",
+              "title": "The global.disasterRecovery.backupTimeout schema",
+              "description": "The timeout for backup procedure"
+            },
+            "restoreTimeout": {
+              "type": "string",
+              "default": "240s",
+              "title": "The global.disasterRecovery.restoreTimeout schema",
+              "description": "The timeout for restore procedure"
+            },
+            "afterServices": {
+              "type": "array",
+              "default": [],
+              "title": "The global.disasterRecovery.afterServices schema",
+              "description": "The list of `SiteManager` names for services after which the Consul service switchover is to be run"
+            },
+            "resources": {
+              "type": "object",
+              "properties": {
+                "requests": {
+                  "type": "object",
+                  "properties": {
+                    "cpu": {
+                      "default": "25m",
+                      "title": "The global.disasterRecovery.resources.requests.cpu schema",
+                      "description": "The minimum number of CPUs the disaster recovery daemon container should use",
+                      "comment": "don't use type field, because it breaks backward compatibility"
+                    },
+                    "memory": {
+                      "type": "string",
+                      "default": "32Mi",
+                      "title": "The global.disasterRecovery.resources.requests.memory schema",
+                      "description": "The minimum amount of memory the disaster recovery daemon container should use"
+                    }
+                  },
+                  "title": "The global.disasterRecovery.resources.requests schema",
+                  "description": "global.disasterRecovery.resources.requests parameters"
+                },
+                "limits": {
+                  "type": "object",
+                  "properties": {
+                    "cpu": {
+                      "default": "100m",
+                      "title": "The global.disasterRecovery.resources.limits.cpu schema",
+                      "description": "The maximum number of CPUs the disaster recovery daemon container should use",
+                      "comment": "don't use type field, because it breaks backward compatibility"
+                    },
+                    "memory": {
+                      "type": "string",
+                      "default": "128Mi",
+                      "title": "The global.disasterRecovery.resources.limits.memory schema",
+                      "description": "The maximum amount of memory the disaster recovery daemon container should use"
+                    }
+                  },
+                  "title": "The global.disasterRecovery.resources.limits schema",
+                  "description": "global.disasterRecovery.resources.limits parameters"
+                }
+              },
+              "title": "The global.disasterRecovery.resources schema",
+              "description": "global.disasterRecovery.resources parameters"
+            },
+            "extraLabels": {
+              "type": "object",
+              "default": {},
+              "title": "The global.disasterRecovery.extraLabels schema",
+              "description": "The custom labels for Consul Disaster Recovery pod"
+            },
+            "securityContext": {
+              "type": "object",
+              "default": {},
+              "title": "The global.disasterRecovery.securityContext schema",
+              "description": "The pod-level security attributes and common container settings for Disaster Recovery pod"
+            }
+          },
+          "title": "The global.disasterRecovery schema",
+          "description": "global.disasterRecovery parameters"
+        },
+        "openshift": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false,
+              "title": "The global.openshift.enabled schema",
+              "description": "Whether the necessary configuration for running Consul components on OpenShift is to be created"
+            }
+          },
+          "title": "The global.openshift schema",
+          "description": "global.openshift parameters"
+        },
+        "consulAPITimeout": {
+          "type": "string",
+          "default": "30s",
+          "title": "The global.consulAPITimeout schema",
+          "description": "The time in seconds that the Consul API client waits for a response from the API before cancelling the request"
+        },
+        "securityContext": {
+          "type": "object",
+          "default": {},
+          "title": "The global.securityContext schema",
+          "description": "The pod-level security attributes and common container settings for all pods that are related to the Consul service"
+        },
+        "velero": {
+          "type": "object",
+          "properties": {
+            "postHookRestoreEnabled": {
+              "type": "boolean",
+              "default": true,
+              "title": "The global.velero.postHookRestoreEnabled schema",
+              "description": "Whether Velero restore post-hook with Auth Method restore command is to be enabled"
+            }
+          },
+          "title": "The global.velero schema",
+          "description": "global.velero parameters"
+        }
+      },
+      "title": "The global schema",
+      "description": "global parameters"
+    },
+    "server": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": [
+            "boolean",
+            "string"
+          ],
+          "default": "-",
+          "title": "The server.enabled schema",
+          "description": "Whether the servers are to be configured to run"
+        },
+        "logLevel": {
+          "type": "string",
+          "default": "",
+          "title": "The server.logLevel schema",
+          "description": "Enables The log verbosity level"
+        },
+        "enableAgentDebug": {
+          "type": "boolean",
+          "default": false,
+          "title": "The server.enableAgentDebug schema",
+          "description": "Enables Consul to report additional debugging information, including runtime profiling (pprof) data"
+        },
+        "tls": {
+          "type": "object",
+          "properties": {
+            "certificates": {
+              "type": "object",
+              "properties": {
+                "crt": {
+                  "type": "string",
+                  "default": "",
+                  "title": "The server.tls.certificates.crt schema",
+                  "description": "The certificate in base64 format"
+                },
+                "key": {
+                  "type": "string",
+                  "default": "",
+                  "title": "The server.tls.certificates.key schema",
+                  "description": "The private key in base64 format"
+                },
+                "ca": {
+                  "type": "string",
+                  "default": "",
+                  "title": "The server.tls.certificates.ca schema",
+                  "description": "The root CA certificate in base64 format"
+                }
+              },
+              "title": "The server.tls.certificates schema",
+              "description": "server.tls.certificates parameters"
+            }
+          },
+          "title": "The server.tls schema",
+          "description": "server.tls parameters"
+        },
+        "replicas": {
+          "type": "integer",
+          "default": 3,
+          "title": "The server.replicas schema",
+          "description": "The number of Consul server nodes"
+        },
+        "bootstrapExpect": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "default": null,
+          "title": "The server.bootstrapExpect schema",
+          "description": "The number of servers that are expected to be running"
+        },
+        "exposeGossipAndRPCPorts": {
+          "type": "boolean",
+          "default": false,
+          "title": "The server.exposeGossipAndRPCPorts schema",
+          "description": "Whether the servers' gossip and RPC ports as hostPorts are to be exposed"
+        },
+        "ports": {
+          "type": "object",
+          "properties": {
+            "serflan": {
+              "type": "object",
+              "properties": {
+                "port": {
+                  "type": [
+                    "string",
+                    "integer"
+                  ],
+                  "default": 8301,
+                  "title": "The server.ports.serflan.port schema",
+                  "description": "The LAN gossip port for the Consul servers"
+                }
+              },
+              "title": "The server.ports.serflan schema",
+              "description": "server.ports.serflan parameters"
+            },
+            "https": {
+              "type": [
+                "string",
+                "integer"
+              ],
+              "default": "",
+              "title": "The server.ports.https schema",
+              "description": "Customize the server's https consul port providing the ability to deploy two Consul instances with enabled Clients to one cluster"
+            },
+            "http": {
+              "type": [
+                "string",
+                "integer"
+              ],
+              "default": "",
+              "title": "The server.ports.http schema",
+              "description": "Customize the server's http consul port providing the ability to deploy two Consul instances with enabled Clients to one cluster"
+            },
+            "grpc": {
+              "type": [
+                "string",
+                "integer"
+              ],
+              "default": "",
+              "title": "The server.ports.grpc schema",
+              "description": "Customize the server's grpc consul port providing the ability to deploy two Consul instances with enabled Clients to one cluster"
+            }
+          },
+          "title": "The server.ports schema",
+          "description": "server.ports parameters"
+        },
+        "storage": {
+          "type": "string",
+          "default": "10Gi",
+          "title": "The server.storage schema",
+          "description": "The disk size for configuring the servers' StatefulSet storage"
+        },
+        "storageClass": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null,
+          "title": "The server.storageClass schema",
+          "description": "The class of storage to use for the servers' StatefulSet storage"
+        },
+        "persistentVolumes": {
+          "type": "array",
+          "default": [],
+          "title": "The server.persistentVolumes schema",
+          "description": "The list of predefined Persistent Volumes for the Consul servers"
+        },
+        "nodes": {
+          "type": "array",
+          "default": [],
+          "title": "The server.nodes schema",
+          "description": "The list of Kubernetes node names to assign Consul server nodes"
+        },
+        "connect": {
+          "type": "boolean",
+          "default": true,
+          "title": "The server.connect schema",
+          "description": "Whether `connect` on all the servers is to be enabled, initializing a CA for Connect-related connections"
+        },
+        "serviceAccount": {
+          "type": "object",
+          "properties": {
+            "annotations": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "default": null,
+              "title": "The server.serviceAccount.annotations schema",
+              "description": "The additional annotations for the server service account"
+            }
+          },
+          "title": "The server.serviceAccount schema",
+          "description": "server.serviceAccount parameters"
+        },
+        "resources": {
+          "type": "object",
+          "properties": {
+            "requests": {
+              "type": "object",
+              "properties": {
+                "memory": {
+                  "type": "string",
+                  "default": "128Mi",
+                  "title": "The server.resources.requests.memory schema",
+                  "description": "The minimum amount of memory the Consul server container should use"
+                },
+                "cpu": {
+                  "default": "50m",
+                  "title": "The server.resources.requests.cpu schema",
+                  "description": "The minimum number of CPUs the Consul server container should use",
+                  "comment": "don't use type field, because it breaks backward compatibility"
+                }
+              },
+              "title": "The server.resources.requests schema",
+              "description": "server.resources.requests parameters"
+            },
+            "limits": {
+              "type": "object",
+              "properties": {
+                "memory": {
+                  "type": "string",
+                  "default": "1024Mi",
+                  "title": "The server.resources.limits.memory schema",
+                  "description": "The maximum amount of memory the Consul server container should use"
+                },
+                "cpu": {
+                  "default": "400m",
+                  "title": "The server.resources.limits.cpu schema",
+                  "description": "The maximum number of CPUs the Consul server container should use",
+                  "comment": "don't use type field, because it breaks backward compatibility"
+                }
+              },
+              "title": "The server.resources.limits schema",
+              "description": "server.resources.limits parameters"
+            }
+          },
+          "title": "The server.resources schema",
+          "description": "server.resources parameters"
+        },
+        "livenessProbe": {
+          "type": "object",
+          "properties": {
+            "initialDelaySeconds": {
+              "type": "integer",
+              "default": 0,
+              "title": "The server.livenessProbe.initialDelaySeconds schema",
+              "description": "The number of seconds after the container has started before the liveness probe is initiated"
+            },
+            "periodSeconds": {
+              "type": "integer",
+              "default": 10,
+              "title": "The server.livenessProbe.periodSeconds schema",
+              "description": "How often (in seconds) the liveness probe is to be performed"
+            },
+            "timeoutSeconds": {
+              "type": "integer",
+              "default": 1,
+              "title": "The server.livenessProbe.timeoutSeconds schema",
+              "description": "The number of seconds after which the liveness probe times out"
+            },
+            "successThreshold": {
+              "type": "integer",
+              "default": 1,
+              "title": "The server.livenessProbe.successThreshold schema",
+              "description": "The minimum number of consecutive successes for the liveness probe to be considered successful after having failed"
+            },
+            "failureThreshold": {
+              "type": "integer",
+              "default": 3,
+              "title": "The server.livenessProbe.failureThreshold schema",
+              "description": "The number of consecutive failures for the liveness probe to be considered failed, after which the container is restarted"
+            }
+          },
+          "title": "The server.livenessProbe schema",
+          "description": "server.livenessProbe parameters"
+        },
+        "readinessProbe": {
+          "type": "object",
+          "properties": {
+            "initialDelaySeconds": {
+              "type": "integer",
+              "default": 5,
+              "title": "The server.readinessProbe.initialDelaySeconds schema",
+              "description": "The number of seconds after the container has started before the readiness probe is initiated"
+            },
+            "periodSeconds": {
+              "type": "integer",
+              "default": 3,
+              "title": "The server.readinessProbe.periodSeconds schema",
+              "description": "How often (in seconds) the readiness probe is to be performed"
+            },
+            "timeoutSeconds": {
+              "type": "integer",
+              "default": 5,
+              "title": "The server.readinessProbe.timeoutSeconds schema",
+              "description": "The number of seconds after which the readiness probe times out"
+            },
+            "successThreshold": {
+              "type": "integer",
+              "default": 1,
+              "title": "The server.readinessProbe.successThreshold schema",
+              "description": "The minimum number of consecutive successes for the readiness probe to be considered successful after having failed"
+            },
+            "failureThreshold": {
+              "type": "integer",
+              "default": 2,
+              "title": "The server.readinessProbe.failureThreshold schema",
+              "description": "The number of consecutive failures for the readiness probe to be considered failed, after which the pod is marked as not ready"
+            }
+          },
+          "title": "The server.readinessProbe schema",
+          "description": "server.readinessProbe parameters"
+        },
+        "securityContext": {
+          "type": "object",
+          "properties": {},
+          "default": {
+            "runAsGroup": 1000,
+            "runAsUser": 100,
+            "fsGroup": 1000
+          },
+          "title": "The server.securityContext schema",
+          "description": "The pod-level security attributes and common container settings for Consul server pod"
+        },
+        "updatePartition": {
+          "type": "integer",
+          "default": 0,
+          "title": "The server.updatePartition schema",
+          "description": "The partition to perform a rolling update"
+        },
+        "disruptionBudget": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true,
+              "title": "The server.disruptionBudget.enabled schema",
+              "description": "Whether the creation of a `PodDisruptionBudget` to prevent voluntary degrading of the Consul server cluster is to be created"
+            },
+            "maxUnavailable": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "default": null,
+              "title": "The server.disruptionBudget.maxUnavailable schema",
+              "description": "The maximum number of unavailable pods"
+            }
+          },
+          "title": "The server.disruptionBudget schema",
+          "description": "server.disruptionBudget parameters"
+        },
+        "extraConfig": {
+          "type": "object",
+          "properties": {},
+          "default": {
+            "disable_update_check": true,
+            "limits": {
+              "http_max_conns_per_client": 1000
+            }
+          },
+          "title": "The server.extraConfig schema",
+          "description": "The extra configuration to set with the server"
+        },
+        "extraVolumes": {
+          "type": "array",
+          "default": [],
+          "title": "The server.extraVolumes schema",
+          "description": "The list of extra volumes to mount"
+        },
+        "affinity": {
+          "type": "object",
+          "properties": {},
+          "default": {
+            "podAntiAffinity": {
+              "requiredDuringSchedulingIgnoredDuringExecution": [
+                {
+                  "labelSelector": {
+                    "matchLabels": {
+                      "app": "{{ template \"consul.name\" . }}",
+                      "release": "{{ .Release.Name }}",
+                      "component": "server"
+                    }
+                  },
+                  "topologyKey": "kubernetes.io/hostname"
+                }
+              ]
+            }
+          },
+          "title": "The server.affinity schema",
+          "description": "The affinity scheduling rules in JSON format"
+        },
+        "tolerations": {
+          "type": "object",
+          "default": {},
+          "title": "The server.tolerations schema",
+          "description": "The list of toleration policies for Consul servers in JSON format"
+        },
+        "topologySpreadConstraints": {
+          "type": "string",
+          "default": "",
+          "title": "The server.topologySpreadConstraints schema",
+          "description": "The Pod topology spread constraints for server pods"
+        },
+        "nodeSelector": {
+          "type": "object",
+          "default": {},
+          "title": "The server.nodeSelector schema",
+          "description": "The labels for server pod assignment, formatted as a JSON string"
+        },
+        "priorityClassName": {
+          "type": "string",
+          "default": "",
+          "title": "The server.priorityClassName schema",
+          "description": "The priority class to be used to assign priority to Consul server pods"
+        },
+        "extraLabels": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "default": null,
+          "title": "The server.extraLabels schema",
+          "description": "The extra labels to attach to the server pods"
+        },
+        "annotations": {
+          "type": "object",
+          "default": {},
+          "title": "The server.annotations schema",
+          "description": "The list of extra annotations to set to the Consul stateful set"
+        },
+        "service": {
+          "type": "object",
+          "properties": {
+            "annotations": {
+              "type": "object",
+              "default": {},
+              "title": "The server.service.annotations schema",
+              "description": "The list of extra annotations to set to the Consul server service"
+            }
+          },
+          "title": "The server.service schema",
+          "description": "server.service parameters"
+        },
+        "extraEnvironmentVars": {
+          "type": "object",
+          "default": {},
+          "title": "The server.extraEnvironmentVars schema",
+          "description": "The list of extra environment variables to set to the Consul stateful set"
+        },
+        "limits": {
+          "type": "object",
+          "properties": {
+            "requestLimits": {
+              "type": "object",
+              "properties": {
+                "mode": {
+                  "type": "string",
+                  "default": "disabled",
+                  "title": "The server.limits.requestLimits.mode schema",
+                  "description": "Enables or disables rate limiting"
+                },
+                "readRate": {
+                  "type": "integer",
+                  "default": -1,
+                  "title": "The server.limits.requestLimits.readRate schema",
+                  "description": "Sets how frequently RPC, gRPC, and HTTP queries are allowed to happen"
+                },
+                "writeRate": {
+                  "type": "integer",
+                  "default": -1,
+                  "title": "The server.limits.requestLimits.writeRate schema",
+                  "description": "Sets how frequently RPC, gRPC, and HTTP writes are allowed to happen"
+                }
+              },
+              "title": "The server.limits.requestLimits schema",
+              "description": "server.limits.requestLimits parameters"
+            }
+          },
+          "title": "The server.limits schema",
+          "description": "server.limits parameters"
+        },
+        "aclInit": {
+          "type": "object",
+          "properties": {
+            "resources": {
+              "type": "object",
+              "properties": {
+                "requests": {
+                  "type": "object",
+                  "properties": {
+                    "memory": {
+                      "type": "string",
+                      "default": "100Mi",
+                      "title": "The server.aclInit.resources.requests.memory schema",
+                      "description": "The minimum amount of memory the ACL init job container should use"
+                    },
+                    "cpu": {
+                      "default": "50m",
+                      "title": "The server.aclInit.resources.requests.cpu schema",
+                      "description": "The minimum number of CPUs the ACL init job container should use",
+                      "comment": "don't use type field, because it breaks backward compatibility"
+                    }
+                  },
+                  "title": "The server.aclInit.resources.requests schema",
+                  "description": "server.aclInit.resources.requests parameters"
+                },
+                "limits": {
+                  "type": "object",
+                  "properties": {
+                    "memory": {
+                      "type": "string",
+                      "default": "500Mi",
+                      "title": "The server.aclInit.resources.limits.memory schema",
+                      "description": "The maximum amount of memory the ACL init job container should use"
+                    },
+                    "cpu": {
+                      "default": "100m",
+                      "title": "The server.aclInit.resources.limits.cpu schema",
+                      "description": "The maximum number of CPUs the ACL init job container should use",
+                      "comment": "don't use type field, because it breaks backward compatibility"
+                    }
+                  },
+                  "title": "The server.aclInit.resources.limits schema",
+                  "description": "server.aclInit.resources.limits parameters"
+                }
+              },
+              "title": "The server.aclInit.resources schema",
+              "description": "server.aclInit.resources parameters"
+            }
+          },
+          "title": "The server.aclInit schema",
+          "description": "server.aclInit parameters"
+        },
+        "serverLocalityEnabled": {
+          "type": "boolean",
+          "default": false,
+          "title": "The server.serverLocalityEnabled schema",
+          "description": "Enables Consul server to set locality From its topology region label"
+        },
+        "raftSnapshotThreshold": {
+          "type": "integer",
+          "default": 500,
+          "title": "The server.raftSnapshotThreshold schema",
+          "description": "Sets the minimum number of raft commit entries between snapshots that are saved to disk"
+        }
+      },
+      "title": "The server schema",
+      "description": "server parameters"
+    },
+    "externalServers": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "title": "The externalServers.enabled schema",
+          "description": "Whether the Helm chart is to be configured to talk to the external servers"
+        },
+        "hosts": {
+          "type": "array",
+          "default": [],
+          "title": "The externalServers.hosts schema",
+          "description": "The list of external Consul server hosts that are used to make HTTPS connections from the components in this Helm chart"
+        },
+        "httpsPort": {
+          "type": [
+            "string",
+            "integer"
+          ],
+          "default": 8501,
+          "title": "The externalServers.httpsPort schema",
+          "description": "The HTTPS port of the Consul servers"
+        },
+        "tlsServerName": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null,
+          "title": "The externalServers.tlsServerName schema",
+          "description": "The server name to use as the SNI host header when connecting with HTTPS"
+        },
+        "useSystemRoots": {
+          "type": "boolean",
+          "default": false,
+          "title": "The externalServers.useSystemRoots schema",
+          "description": "Whether `consul-k8s` components are to ignore the CA set in `global"
+        },
+        "k8sAuthMethodHost": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null,
+          "title": "The externalServers.k8sAuthMethodHost schema",
+          "description": "The address of the Kubernetes API server"
+        },
+        "skipServerWatch": {
+          "type": "boolean",
+          "default": false,
+          "title": "The externalServers.skipServerWatch schema",
+          "description": "Whether the `consul-dataplane` and `consul-k8s` components are to watch the Consul servers for changes"
+        }
+      },
+      "title": "The externalServers schema",
+      "description": "externalServers parameters"
+    },
+    "client": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "title": "The client.enabled schema",
+          "description": "Whether Consul clients are to be run on every node within the Kubernetes cluster"
+        },
+        "ports": {
+          "type": "object",
+          "properties": {
+            "https": {
+              "type": [
+                "string",
+                "integer"
+              ],
+              "default": "",
+              "title": "The client.ports.https schema",
+              "description": "Customize the client's https consul port providing the ability to deploy two Consul instances to one cluster"
+            },
+            "http": {
+              "type": [
+                "string",
+                "integer"
+              ],
+              "default": "",
+              "title": "The client.ports.http schema",
+              "description": "Customize the client's http consul port providing the ability to deploy two Consul instances to one cluster"
+            },
+            "grpc": {
+              "type": [
+                "string",
+                "integer"
+              ],
+              "default": "",
+              "title": "The client.ports.grpc schema",
+              "description": "Customize the client's grpc consul port providing the ability to deploy two Consul instances to one cluster"
+            }
+          },
+          "title": "The client.ports schema",
+          "description": "client.ports parameters"
+        },
+        "logLevel": {
+          "type": "string",
+          "default": "",
+          "title": "The client.logLevel schema",
+          "description": "Enables The log verbosity level"
+        },
+        "join": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "default": null,
+          "title": "The client.join schema",
+          "description": "The list of valid `-retry-join` values"
+        },
+        "podSecurityPolicy": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null,
+          "title": "The client.podSecurityPolicy schema",
+          "description": "The predefined pod security policy for Consul clients"
+        },
+        "securityContextConstraint": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null,
+          "title": "The client.securityContextConstraint schema",
+          "description": "The predefined security context constraint for Consul client"
+        },
+        "dataDirectoryHostPath": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null,
+          "title": "The client.dataDirectoryHostPath schema",
+          "description": "The absolute path to a directory on the host machine to use as the Consul client data directory"
+        },
+        "grpc": {
+          "type": "boolean",
+          "default": true,
+          "title": "The client.grpc schema",
+          "description": "Whether the gRPC listener is to be enabled"
+        },
+        "nodeMeta": {
+          "type": "object",
+          "properties": {},
+          "default": {
+            "pod-name": "${HOSTNAME}",
+            "host-ip": "${HOST_IP}"
+          },
+          "title": "The client.nodeMeta schema",
+          "description": "The arbitrary metadata key-value pair to associate with the node"
+        },
+        "exposeGossipPorts": {
+          "type": "boolean",
+          "default": false,
+          "title": "The client.exposeGossipPorts schema",
+          "description": "Whether the clients' gossip ports as `hostPorts` are to be exposed"
+        },
+        "serviceAccount": {
+          "type": "object",
+          "properties": {
+            "annotations": {
+              "type": "object",
+              "default": {},
+              "title": "The client.serviceAccount.annotations schema",
+              "description": "The additional annotations for the client service account"
+            }
+          },
+          "title": "The client.serviceAccount schema",
+          "description": "client.serviceAccount parameters"
+        },
+        "resources": {
+          "type": "object",
+          "properties": {
+            "requests": {
+              "type": "object",
+              "properties": {
+                "memory": {
+                  "type": "string",
+                  "default": "64Mi",
+                  "title": "The client.resources.requests.memory schema",
+                  "description": "The minimum amount of memory the Consul client container should use"
+                },
+                "cpu": {
+                  "default": "25m",
+                  "title": "The client.resources.requests.cpu schema",
+                  "description": "The minimum number of CPUs the Consul client container should use",
+                  "comment": "don't use type field, because it breaks backward compatibility"
+                }
+              },
+              "title": "The client.resources.requests schema",
+              "description": "client.resources.requests parameters"
+            },
+            "limits": {
+              "type": "object",
+              "properties": {
+                "memory": {
+                  "type": "string",
+                  "default": "256Mi",
+                  "title": "The client.resources.limits.memory schema",
+                  "description": "The maximum amount of memory the Consul client container should use"
+                },
+                "cpu": {
+                  "default": "200m",
+                  "title": "The client.resources.limits.cpu schema",
+                  "description": "The maximum number of CPUs the Consul client container should use",
+                  "comment": "don't use type field, because it breaks backward compatibility"
+                }
+              },
+              "title": "The client.resources.limits schema",
+              "description": "client.resources.limits parameters"
+            }
+          },
+          "title": "The client.resources schema",
+          "description": "client.resources parameters"
+        },
+        "securityContext": {
+          "type": "object",
+          "properties": {},
+          "default": {
+            "runAsGroup": 1000,
+            "runAsUser": 100,
+            "fsGroup": 1000
+          },
+          "title": "The client.securityContext schema",
+          "description": "The pod-level security attributes and common container settings for Consul client pod"
+        },
+        "extraConfig": {
+          "type": "object",
+          "properties": {},
+          "default": {
+            "disable_update_check": true
+          },
+          "title": "The client.extraConfig schema",
+          "description": "The extra configuration to set to the client"
+        },
+        "tls": {
+          "type": "object",
+          "properties": {
+            "certificates": {
+              "type": "object",
+              "properties": {
+                "crt": {
+                  "type": "string",
+                  "default": "",
+                  "title": "The client.tls.certificates.crt schema",
+                  "description": "The certificate in base64 format"
+                },
+                "key": {
+                  "type": "string",
+                  "default": "",
+                  "title": "The client.tls.certificates.key schema",
+                  "description": "The private key in base64 format"
+                },
+                "ca": {
+                  "type": "string",
+                  "default": "",
+                  "title": "The client.tls.certificates.ca schema",
+                  "description": "The root CA certificate in base64 format"
+                }
+              },
+              "title": "The client.tls.certificates schema",
+              "description": "client.tls.certificates parameters"
+            }
+          },
+          "title": "The client.tls schema",
+          "description": "client.tls parameters"
+        },
+        "extraVolumes": {
+          "type": "array",
+          "default": [],
+          "title": "The client.extraVolumes schema",
+          "description": "The list of extra volumes to mount"
+        },
+        "tolerations": {
+          "type": "object",
+          "default": {},
+          "title": "The client.tolerations schema",
+          "description": "The list of toleration policies for Consul clients in JSON format"
+        },
+        "nodeSelector": {
+          "type": "object",
+          "default": {},
+          "title": "The client.nodeSelector schema",
+          "description": "The labels for client pod assignment, formatted as a JSON string"
+        },
+        "affinity": {
+          "type": "object",
+          "default": {},
+          "title": "The client.affinity schema",
+          "description": "The affinity scheduling rules in JSON format"
+        },
+        "priorityClassName": {
+          "type": "string",
+          "default": "",
+          "title": "The client.priorityClassName schema",
+          "description": "The priority class to be used to assign priority to Consul client pods"
+        },
+        "annotations": {
+          "type": "object",
+          "default": {},
+          "title": "The client.annotations schema",
+          "description": "The list of extra annotations to set to the Consul daemon set"
+        },
+        "extraLabels": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "default": null,
+          "title": "The client.extraLabels schema",
+          "description": "The extra labels to attach to the client pods"
+        },
+        "extraEnvironmentVars": {
+          "type": "object",
+          "default": {},
+          "title": "The client.extraEnvironmentVars schema",
+          "description": "The list of extra environment variables to set to the Consul daemon set"
+        },
+        "dnsPolicy": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null,
+          "title": "The client.dnsPolicy schema",
+          "description": "The [Pod DNS policy](https://kubernetes"
+        },
+        "hostNetwork": {
+          "type": "boolean",
+          "default": false,
+          "title": "The client.hostNetwork schema",
+          "description": "Whether host networking is to be used instead of hostPort in the event that a CNI plugin doesn't support hostPort"
+        },
+        "updateStrategy": {
+          "type": "object",
+          "default": {},
+          "title": "The client.updateStrategy schema",
+          "description": "The [Update Strategy](https://kubernetes"
+        }
+      },
+      "title": "The client schema",
+      "description": "client parameters"
+    },
+    "dns": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": [
+            "boolean",
+            "string"
+          ],
+          "default": "-",
+          "title": "The dns.enabled schema",
+          "description": "Whether the service that routes to all agents is to be created"
+        },
+        "type": {
+          "type": "string",
+          "default": "ClusterIP",
+          "title": "The dns.type schema",
+          "description": "The type of service created"
+        },
+        "clusterIP": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null,
+          "title": "The dns.clusterIP schema",
+          "description": "The predefined cluster IP for the DNS service"
+        },
+        "annotations": {
+          "type": "object",
+          "default": {},
+          "title": "The dns.annotations schema",
+          "description": "The extra annotations to attach to the DNS service"
+        },
+        "additionalSpec": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null,
+          "title": "The dns.additionalSpec schema",
+          "description": "The additional `ServiceSpec` values"
+        }
+      },
+      "title": "The dns schema",
+      "description": "dns parameters"
+    },
+    "ui": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "title": "The ui.enabled schema",
+          "description": "Whether Consul UI is to be enabled"
+        },
+        "service": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true,
+              "title": "The ui.service.enabled schema",
+              "description": "Whether the service entry for the Consul UI is to be created"
+            },
+            "type": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "default": null,
+              "title": "The ui.service.type schema",
+              "description": "The type of service created for the Consul UI"
+            },
+            "nodePort": {
+              "type": "object",
+              "properties": {
+                "http": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "default": null,
+                  "title": "The ui.service.nodePort.http schema",
+                  "description": "The HTTP node port of the UI service if a `NodePort` service is used"
+                },
+                "https": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "default": null,
+                  "title": "The ui.service.nodePort.https schema",
+                  "description": "The HTTPS node port of the UI service if a `NodePort` service is used"
+                }
+              },
+              "title": "The ui.service.nodePort schema",
+              "description": "ui.service.nodePort parameters"
+            },
+            "annotations": {
+              "type": "object",
+              "default": {},
+              "title": "The ui.service.annotations schema",
+              "description": "The annotations to apply to the UI service"
+            },
+            "additionalSpec": {
+              "type": "object",
+              "default": {},
+              "title": "The ui.service.additionalSpec schema",
+              "description": "The additional `ServiceSpec` values"
+            }
+          },
+          "title": "The ui.service schema",
+          "description": "ui.service parameters"
+        },
+        "ingress": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false,
+              "title": "The ui.ingress.enabled schema",
+              "description": "Whether `Ingress` resource to access Consul UI outside the cloud is to be created"
+            },
+            "hosts": {
+              "type": "array",
+              "default": [],
+              "title": "The ui.ingress.hosts schema",
+              "description": "The list of external hostname, which the Consul UI should be available on, and paths to create Ingress rules"
+            },
+            "tls": {
+              "type": "array",
+              "default": [],
+              "title": "The ui.ingress.tls schema",
+              "description": "The list of hosts and secret name in an Ingress which tells the Ingress controller to secure the channel"
+            },
+            "annotations": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "default": null,
+              "title": "The ui.ingress.annotations schema",
+              "description": "The annotations to apply to the UI ingress"
+            }
+          },
+          "title": "The ui.ingress schema",
+          "description": "ui.ingress parameters"
+        },
+        "envoyGateway": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true,
+              "title": "The ui.envoyGateway.enabled schema",
+              "description": "Enables creation of a Gateway API HTTPRoute resource to expose the Consul UI via Envoy Gateway"
+            },
+            "host": {
+              "type": "string",
+              "default": "",
+              "title": "The ui.envoyGateway.host schema",
+              "description": "Specifies the hostname used in the generated HTTPRoute for accessing the Consul UI"
+            },
+            "parentRefs": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "group": {
+                    "type": "string"
+                  },
+                  "kind": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "namespace": {
+                    "type": "string"
+                  }
+                }
+              },
+              "default": [
+                {
+                  "group": "gateway.networking.k8s.io",
+                  "kind": "Gateway",
+                  "name": "default-external-gateway",
+                  "namespace": "gateway-system"
+                }
+              ],
+              "title": "The ui.envoyGateway.parentRefs schema",
+              "description": "List of Gateway resources for the HTTPRoute"
+            }
+          },
+          "title": "The ui.envoyGateway schema",
+          "description": "ui.envoyGateway parameters"
+        },
+        "metrics": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": [
+                "boolean",
+                "string"
+              ],
+              "default": "-",
+              "title": "The ui.metrics.enabled schema",
+              "description": "Whether metrics are to be displayed in the UI"
+            },
+            "provider": {
+              "type": "string",
+              "default": "prometheus",
+              "title": "The ui.metrics.provider schema",
+              "description": "The provider for metrics"
+            },
+            "annotations": {
+              "type": "string",
+              "title": "The ui.metrics.annotations schema",
+              "description": "The URL of the prometheus server, usually the service URL"
+            }
+          },
+          "title": "The ui.metrics schema",
+          "description": "ui.metrics parameters"
+        }
+      },
+      "title": "The ui schema",
+      "description": "ui parameters"
+    },
+    "syncCatalog": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "title": "The syncCatalog.enabled schema",
+          "description": "Whether the catalog sync process to sync K8S with Consul services is to be enabled"
+        },
+        "default": {
+          "type": "boolean",
+          "default": true,
+          "title": "The syncCatalog.default schema",
+          "description": "Whether the sync is enabled by default, otherwise it requires annotation"
+        },
+        "priorityClassName": {
+          "type": "string",
+          "default": "",
+          "title": "The syncCatalog.priorityClassName schema",
+          "description": "The priority class to be used to assign priority to Sync Catalog pods"
+        },
+        "toConsul": {
+          "type": "boolean",
+          "default": true,
+          "title": "The syncCatalog.toConsul schema",
+          "description": "Whether syncing is to be enabled to Consul as a destination"
+        },
+        "toK8S": {
+          "type": "boolean",
+          "default": true,
+          "title": "The syncCatalog.toK8S schema",
+          "description": "Whether syncing is to be enabled to K8S as a destination"
+        },
+        "k8sPrefix": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null,
+          "title": "The syncCatalog.k8sPrefix schema",
+          "description": "The service prefix to prepend it to services before registering with Kubernetes"
+        },
+        "k8sAllowNamespaces": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "*"
+          ],
+          "title": "The syncCatalog.k8sAllowNamespaces schema",
+          "description": "The list of Kubernetes namespaces to sync the Kubernetes services from"
+        },
+        "k8sDenyNamespaces": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "kube-system",
+            "kube-public"
+          ],
+          "title": "The syncCatalog.k8sDenyNamespaces schema",
+          "description": "The list of Kubernetes namespaces that should not have their services synced"
+        },
+        "k8sSourceNamespace": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null,
+          "title": "The syncCatalog.k8sSourceNamespace schema",
+          "description": "The Kubernetes namespace to watch for service changes and sync to Consul"
+        },
+        "addK8SNamespaceSuffix": {
+          "type": "boolean",
+          "default": true,
+          "title": "The syncCatalog.addK8SNamespaceSuffix schema",
+          "description": "Whether sync catalog is to append Kubernetes namespace suffix to each service name synced to Consul, separated by a dash"
+        },
+        "consulPrefix": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null,
+          "title": "The syncCatalog.consulPrefix schema",
+          "description": "The service prefix which prepends itself to Kubernetes services registered within Consul"
+        },
+        "k8sTag": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null,
+          "title": "The syncCatalog.k8sTag schema",
+          "description": "The optional tag that is applied to all the Kubernetes services that are synced into Consul"
+        },
+        "consulNodeName": {
+          "type": "string",
+          "default": "k8s-sync",
+          "title": "The syncCatalog.consulNodeName schema",
+          "description": "The Consul synthetic node that all services will be registered to"
+        },
+        "syncClusterIPServices": {
+          "type": "boolean",
+          "default": true,
+          "title": "The syncCatalog.syncClusterIPServices schema",
+          "description": "Whether services of the ClusterIP type are to be synced"
+        },
+        "nodePortSyncType": {
+          "type": "string",
+          "default": "ExternalFirst",
+          "title": "The syncCatalog.nodePortSyncType schema",
+          "description": "The type of syncing that happens for NodePort services"
+        },
+        "aclSyncToken": {
+          "type": "object",
+          "properties": {
+            "secretName": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "default": null,
+              "title": "The syncCatalog.aclSyncToken.secretName schema",
+              "description": "The name of Kubernetes secret that contains an ACL token for your Consul cluster which allows the sync to process the correct permissions"
+            },
+            "secretKey": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "default": null,
+              "title": "The syncCatalog.aclSyncToken.secretKey schema",
+              "description": "The key of Kubernetes secret that contains an ACL token for your Consul cluster which allows the sync to process the correct permissions"
+            }
+          },
+          "title": "The syncCatalog.aclSyncToken schema",
+          "description": "syncCatalog.aclSyncToken parameters"
+        },
+        "nodeSelector": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "default": null,
+          "title": "The syncCatalog.nodeSelector schema",
+          "description": "The labels for Sync Catalog pod assignment, formatted as a JSON string"
+        },
+        "affinity": {
+          "type": "object",
+          "default": {},
+          "title": "The syncCatalog.affinity schema",
+          "description": "The affinity scheduling rules in JSON format"
+        },
+        "tolerations": {
+          "type": "object",
+          "default": {},
+          "title": "The syncCatalog.tolerations schema",
+          "description": "The list of toleration policies for Sync Catalog pods in JSON format"
+        },
+        "securityContext": {
+          "type": "object",
+          "default": {},
+          "title": "The syncCatalog.securityContext schema",
+          "description": "The pod-level security attributes and common container settings for Sync Catalog pods"
+        },
+        "serviceAccount": {
+          "type": "object",
+          "properties": {
+            "annotations": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "default": null,
+              "title": "The syncCatalog.serviceAccount.annotations schema",
+              "description": "The additional annotations for the Sync Catalog service account"
+            }
+          },
+          "title": "The syncCatalog.serviceAccount schema",
+          "description": "syncCatalog.serviceAccount parameters"
+        },
+        "resources": {
+          "type": "object",
+          "properties": {
+            "requests": {
+              "type": "object",
+              "properties": {
+                "memory": {
+                  "type": "string",
+                  "default": "50Mi",
+                  "title": "The syncCatalog.resources.requests.memory schema",
+                  "description": "The minimum amount of memory the Sync Catalog container should use"
+                },
+                "cpu": {
+                  "default": "50m",
+                  "title": "The syncCatalog.resources.requests.cpu schema",
+                  "description": "The minimum number of CPUs the Sync Catalog container should use",
+                  "comment": "don't use type field, because it breaks backward compatibility"
+                }
+              },
+              "title": "The syncCatalog.resources.requests schema",
+              "description": "syncCatalog.resources.requests parameters"
+            },
+            "limits": {
+              "type": "object",
+              "properties": {
+                "memory": {
+                  "type": "string",
+                  "default": "50Mi",
+                  "title": "The syncCatalog.resources.limits.memory schema",
+                  "description": "The maximum amount of memory the Sync Catalog container should use"
+                },
+                "cpu": {
+                  "default": "50m",
+                  "title": "The syncCatalog.resources.limits.cpu schema",
+                  "description": "The maximum number of CPUs the Sync Catalog container should use",
+                  "comment": "don't use type field, because it breaks backward compatibility"
+                }
+              },
+              "title": "The syncCatalog.resources.limits schema",
+              "description": "syncCatalog.resources.limits parameters"
+            }
+          },
+          "title": "The syncCatalog.resources schema",
+          "description": "syncCatalog.resources parameters"
+        },
+        "logLevel": {
+          "type": "string",
+          "default": "info",
+          "title": "The syncCatalog.logLevel schema",
+          "description": "The log verbosity level"
+        },
+        "consulWriteInterval": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null,
+          "title": "The syncCatalog.consulWriteInterval schema",
+          "description": "The interval to perform syncing operations creating Consul services"
+        },
+        "extraLabels": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "default": null,
+          "title": "The syncCatalog.extraLabels schema",
+          "description": "The extra labels to attach to the Sync Catalog pods"
+        }
+      },
+      "title": "The syncCatalog schema",
+      "description": "syncCatalog parameters"
+    },
+    "connectInject": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "title": "The connectInject.enabled schema",
+          "description": "Whether the automatic Connect sidecar injector is to be enabled"
+        },
+        "replicas": {
+          "type": "integer",
+          "default": 1,
+          "title": "The connectInject.replicas schema",
+          "description": "The number of Connect Inject deployment replicas"
+        },
+        "extraLabels": {
+          "type": "object",
+          "default": {},
+          "title": "The connectInject.extraLabels schema",
+          "description": "The extra labels to attach to the Connect Injector pods"
+        },
+        "default": {
+          "type": "boolean",
+          "default": false,
+          "title": "The connectInject.default schema",
+          "description": "Whether the inject is enabled by default, otherwise it requires annotation"
+        },
+        "transparentProxy": {
+          "type": "object",
+          "properties": {
+            "defaultEnabled": {
+              "type": "boolean",
+              "default": true,
+              "title": "The connectInject.transparentProxy.defaultEnabled schema",
+              "description": "Whether all Consul Service mesh are to run with transparent proxy enabled by default, i"
+            },
+            "defaultOverwriteProbes": {
+              "type": "boolean",
+              "default": true,
+              "title": "The connectInject.transparentProxy.defaultOverwriteProbes schema",
+              "description": "Whether Kubernetes HTTP probes of the pod are to be overridden to point to the Consul DataPlane proxy instead"
+            }
+          },
+          "title": "The connectInject.transparentProxy schema",
+          "description": "connectInject.transparentProxy parameters"
+        },
+        "disruptionBudget": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true,
+              "title": "The connectInject.disruptionBudget.enabled schema",
+              "description": "Whether the creation of a `PodDisruptionBudget` to prevent voluntary degrading of the Connect inject pods is to be created"
+            },
+            "maxUnavailable": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "default": null,
+              "title": "The connectInject.disruptionBudget.maxUnavailable schema",
+              "description": "The maximum number of unavailable pods"
+            },
+            "minAvailable": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "default": null,
+              "title": "The connectInject.disruptionBudget.minAvailable schema",
+              "description": "The minimum number of available pods"
+            }
+          },
+          "title": "The connectInject.disruptionBudget schema",
+          "description": "connectInject.disruptionBudget parameters"
+        },
+        "metrics": {
+          "type": "object",
+          "properties": {
+            "defaultEnabled": {
+              "type": [
+                "boolean",
+                "string"
+              ],
+              "default": "-",
+              "title": "The connectInject.metrics.defaultEnabled schema",
+              "description": "Whether connect-injector is to add prometheus annotations to connect-injected pods automatically"
+            },
+            "defaultEnableMerging": {
+              "type": "boolean",
+              "default": false,
+              "title": "The connectInject.metrics.defaultEnableMerging schema",
+              "description": "Whether the Consul sidecar is to run a merged metrics server to combine and serve both Consul DataPlane and Connect service metrics"
+            },
+            "defaultMergedMetricsPort": {
+              "type": [
+                "string",
+                "integer"
+              ],
+              "default": 20100,
+              "title": "The connectInject.metrics.defaultMergedMetricsPort schema",
+              "description": "The port at which the Consul sidecar listens on to return combined metrics"
+            },
+            "defaultPrometheusScrapePort": {
+              "type": [
+                "string",
+                "integer"
+              ],
+              "default": 20200,
+              "title": "The connectInject.metrics.defaultPrometheusScrapePort schema",
+              "description": "The port Prometheus scrapes metrics from, by configuring the pod annotation `prometheus"
+            },
+            "defaultPrometheusScrapePath": {
+              "type": "string",
+              "default": "/metrics",
+              "title": "The connectInject.metrics.defaultPrometheusScrapePath schema",
+              "description": "The path Prometheus scrapes metrics from, by configuring the pod annotation `prometheus"
+            }
+          },
+          "title": "The connectInject.metrics schema",
+          "description": "connectInject.metrics parameters"
+        },
+        "priorityClassName": {
+          "type": "string",
+          "default": "",
+          "title": "The connectInject.priorityClassName schema",
+          "description": "The priority class to be used to assign priority to Connect Injector pods"
+        },
+        "logLevel": {
+          "type": "string",
+          "default": "info",
+          "title": "The connectInject.logLevel schema",
+          "description": "The log verbosity level"
+        },
+        "serviceAccount": {
+          "type": "object",
+          "properties": {
+            "annotations": {
+              "type": "object",
+              "default": {},
+              "title": "The connectInject.serviceAccount.annotations schema",
+              "description": "The additional annotations for the Connect Injector service account"
+            }
+          },
+          "title": "The connectInject.serviceAccount schema",
+          "description": "connectInject.serviceAccount parameters"
+        },
+        "resources": {
+          "type": "object",
+          "properties": {
+            "requests": {
+              "type": "object",
+              "properties": {
+                "memory": {
+                  "type": "string",
+                  "default": "50Mi",
+                  "title": "The connectInject.resources.requests.memory schema",
+                  "description": "The minimum amount of memory the Connect Injector container should use"
+                },
+                "cpu": {
+                  "default": "50m",
+                  "title": "The connectInject.resources.requests.cpu schema",
+                  "description": "The minimum number of CPUs the Connect Injector container should use",
+                  "comment": "don't use type field, because it breaks backward compatibility"
+                }
+              },
+              "title": "The connectInject.resources.requests schema",
+              "description": "connectInject.resources.requests parameters"
+            },
+            "limits": {
+              "type": "object",
+              "properties": {
+                "memory": {
+                  "type": "string",
+                  "default": "50Mi",
+                  "title": "The connectInject.resources.limits.memory schema",
+                  "description": "The maximum amount of memory the Connect Injector container should use"
+                },
+                "cpu": {
+                  "default": "50m",
+                  "title": "The connectInject.resources.limits.cpu schema",
+                  "description": "The maximum number of CPUs the Connect Injector container should use",
+                  "comment": "don't use type field, because it breaks backward compatibility"
+                }
+              },
+              "title": "The connectInject.resources.limits schema",
+              "description": "connectInject.resources.limits parameters"
+            }
+          },
+          "title": "The connectInject.resources schema",
+          "description": "connectInject.resources parameters"
+        },
+        "namespaceSelector": {
+          "type": "object",
+          "default": {},
+          "title": "The connectInject.namespaceSelector schema",
+          "description": "The selector for restricting the webhook to only specific namespaces"
+        },
+        "k8sAllowNamespaces": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "*"
+          ],
+          "title": "The connectInject.k8sAllowNamespaces schema",
+          "description": "The list of Kubernetes namespaces to allow `Connect` sidecar injection in"
+        },
+        "k8sDenyNamespaces": {
+          "type": "array",
+          "default": [],
+          "title": "The connectInject.k8sDenyNamespaces schema",
+          "description": "The list of Kubernetes namespaces that should not allow `Connect` sidecar injection"
+        },
+        "certs": {
+          "type": "object",
+          "properties": {
+            "secretName": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "default": null,
+              "title": "The connectInject.certs.secretName schema",
+              "description": "The name of the secret that has the TLS certificate and private key to serve the injector webhook"
+            },
+            "caBundle": {
+              "type": "string",
+              "default": "",
+              "title": "The connectInject.certs.caBundle schema",
+              "description": "The base64-encoded PEM-encoded certificate bundle for the CA that signed the TLS certificate that the webhook serves"
+            },
+            "certName": {
+              "type": "string",
+              "default": "tls.crt",
+              "title": "The connectInject.certs.certName schema",
+              "description": "The name of the files within the secret for the TLS certificate"
+            },
+            "keyName": {
+              "type": "string",
+              "default": "tls.key",
+              "title": "The connectInject.certs.keyName schema",
+              "description": "The name of the files within the secret for the TLS private key"
+            }
+          },
+          "title": "The connectInject.certs schema",
+          "description": "connectInject.certs parameters"
+        },
+        "nodeSelector": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "default": null,
+          "title": "The connectInject.nodeSelector schema",
+          "description": "The labels for Connect Injector pod assignment, formatted as a JSON string"
+        },
+        "affinity": {
+          "type": "object",
+          "default": {},
+          "title": "The connectInject.affinity schema",
+          "description": "The affinity scheduling rules in JSON format"
+        },
+        "tolerations": {
+          "type": "object",
+          "default": {},
+          "title": "The connectInject.tolerations schema",
+          "description": "The list of toleration policies for Connect Injector pods in JSON format"
+        },
+        "securityContext": {
+          "type": "object",
+          "default": {},
+          "title": "The connectInject.securityContext schema",
+          "description": "The pod-level security attributes and common container settings for Connect Injector pods"
+        },
+        "aclBindingRuleSelector": {
+          "type": "string",
+          "default": "serviceaccount.name!=default",
+          "title": "The connectInject.aclBindingRuleSelector schema",
+          "description": "The query that defines which service accounts can authenticate to Consul and receive an ACL token during Connect injection"
+        },
+        "overrideAuthMethodName": {
+          "type": "string",
+          "default": "",
+          "title": "The connectInject.overrideAuthMethodName schema",
+          "description": "The auth method for Connect inject"
+        },
+        "aclInjectToken": {
+          "type": "object",
+          "properties": {
+            "secretName": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "default": null,
+              "title": "The connectInject.aclInjectToken.secretName schema",
+              "description": "The name of the Kubernetes secret that contains an ACL token for your Consul cluster which allows the Connect injector the correct permissions"
+            },
+            "secretKey": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "default": null,
+              "title": "The connectInject.aclInjectToken.secretKey schema",
+              "description": "The key of the Kubernetes secret that contains an ACL token for your Consul cluster which allows the Connect injector the correct permissions"
+            }
+          },
+          "title": "The connectInject.aclInjectToken schema",
+          "description": "connectInject.aclInjectToken parameters"
+        },
+        "sidecarProxy": {
+          "type": "object",
+          "properties": {
+            "resources": {
+              "type": "object",
+              "properties": {
+                "requests": {
+                  "type": "object",
+                  "properties": {
+                    "memory": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "default": null,
+                      "title": "The connectInject.sidecarProxy.resources.requests.memory schema",
+                      "description": "The minimum amount of memory the Consul DataPlane sidecar proxy container injected into each Connect pod should use"
+                    },
+                    "cpu": {
+                      "default": null,
+                      "title": "The connectInject.sidecarProxy.resources.requests.cpu schema",
+                      "description": "The minimum number of CPUs the Consul DataPlane sidecar proxy container injected into each Connect pod should use",
+                      "comment": "don't use type field, because it breaks backward compatibility"
+                    }
+                  },
+                  "title": "The connectInject.sidecarProxy.resources.requests schema",
+                  "description": "connectInject.sidecarProxy.resources.requests parameters"
+                },
+                "limits": {
+                  "type": "object",
+                  "properties": {
+                    "memory": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "default": null,
+                      "title": "The connectInject.sidecarProxy.resources.limits.memory schema",
+                      "description": "The maximum amount of memory the Consul DataPlane sidecar proxy container injected into each Connect pod should use"
+                    },
+                    "cpu": {
+                      "default": null,
+                      "title": "The connectInject.sidecarProxy.resources.limits.cpu schema",
+                      "description": "The maximum number of CPUs the Consul DataPlane sidecar proxy container injected into each Connect pod should use",
+                      "comment": "don't use type field, because it breaks backward compatibility"
+                    }
+                  },
+                  "title": "The connectInject.sidecarProxy.resources.limits schema",
+                  "description": "connectInject.sidecarProxy.resources.limits parameters"
+                }
+              },
+              "title": "The connectInject.sidecarProxy.resources schema",
+              "description": "connectInject.sidecarProxy.resources parameters"
+            }
+          },
+          "title": "The connectInject.sidecarProxy schema",
+          "description": "connectInject.sidecarProxy parameters"
+        },
+        "initContainer": {
+          "type": "object",
+          "properties": {
+            "resources": {
+              "type": "object",
+              "properties": {
+                "requests": {
+                  "type": "object",
+                  "properties": {
+                    "memory": {
+                      "type": "string",
+                      "default": "25Mi",
+                      "title": "The connectInject.initContainer.resources.requests.memory schema",
+                      "description": "The minimum amount of memory the Connect injected init container should use"
+                    },
+                    "cpu": {
+                      "default": "50m",
+                      "title": "The connectInject.initContainer.resources.requests.cpu schema",
+                      "description": "The minimum number of CPUs the Connect injected init container should use",
+                      "comment": "don't use type field, because it breaks backward compatibility"
+                    }
+                  },
+                  "title": "The connectInject.initContainer.resources.requests schema",
+                  "description": "connectInject.initContainer.resources.requests parameters"
+                },
+                "limits": {
+                  "type": "object",
+                  "properties": {
+                    "memory": {
+                      "type": "string",
+                      "default": "150Mi",
+                      "title": "The connectInject.initContainer.resources.limits.memory schema",
+                      "description": "The maximum amount of memory the Connect injected init container should use"
+                    },
+                    "cpu": {
+                      "default": "50m",
+                      "title": "The connectInject.initContainer.resources.limits.cpu schema",
+                      "description": "The maximum number of CPUs the Connect injected init container should use",
+                      "comment": "don't use type field, because it breaks backward compatibility"
+                    }
+                  },
+                  "title": "The connectInject.initContainer.resources.limits schema",
+                  "description": "connectInject.initContainer.resources.limits parameters"
+                }
+              },
+              "title": "The connectInject.initContainer.resources schema",
+              "description": "connectInject.initContainer.resources parameters"
+            }
+          },
+          "title": "The connectInject.initContainer schema",
+          "description": "connectInject.initContainer parameters"
+        }
+      },
+      "title": "The connectInject schema",
+      "description": "connectInject parameters"
+    },
+    "meshGateway": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "title": "The meshGateway.enabled schema",
+          "description": "Whether Consul service mesh is to be configured to use gateways"
+        },
+        "replicas": {
+          "type": "integer",
+          "default": 1,
+          "title": "The meshGateway.replicas schema",
+          "description": "The number of Mesh Gateway deployment replicas"
+        },
+        "extraLabels": {
+          "type": "object",
+          "default": {},
+          "title": "The meshGateway.extraLabels schema",
+          "description": "The extra labels to attach to the Mesh Gateway pods"
+        },
+        "wanAddress": {
+          "type": "object",
+          "properties": {
+            "source": {
+              "type": "string",
+              "default": "Service",
+              "title": "The meshGateway.wanAddress.source schema",
+              "description": "The source where the WAN address (and possibly port) for the mesh gateway is retrieved from"
+            },
+            "port": {
+              "type": [
+                "string",
+                "integer"
+              ],
+              "default": 443,
+              "title": "The meshGateway.wanAddress.port schema",
+              "description": "The port that gets registered for WAN traffic"
+            },
+            "static": {
+              "type": "string",
+              "default": "",
+              "title": "The meshGateway.wanAddress.static schema",
+              "description": "The WAN address of the mesh gateways if `meshGateway"
+            }
+          },
+          "title": "The meshGateway.wanAddress schema",
+          "description": "meshGateway.wanAddress parameters"
+        },
+        "service": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "default": "ClusterIP",
+              "title": "The meshGateway.service.type schema",
+              "description": "The type of Mesh Gateway service"
+            },
+            "port": {
+              "type": [
+                "string",
+                "integer"
+              ],
+              "default": 443,
+              "title": "The meshGateway.service.port schema",
+              "description": "The port that the service is exposed on"
+            },
+            "nodePort": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "default": null,
+              "title": "The meshGateway.service.nodePort schema",
+              "description": "The port of the node that the service is exposed on"
+            },
+            "annotations": {
+              "type": "object",
+              "default": {},
+              "title": "The meshGateway.service.annotations schema",
+              "description": "The annotations to apply to the Mesh Gateway service"
+            },
+            "additionalSpec": {
+              "type": "object",
+              "default": {},
+              "title": "The meshGateway.service.additionalSpec schema",
+              "description": "The additional `ServiceSpec` values"
+            }
+          },
+          "title": "The meshGateway.service schema",
+          "description": "meshGateway.service parameters"
+        },
+        "hostNetwork": {
+          "type": "boolean",
+          "default": false,
+          "title": "The meshGateway.hostNetwork schema",
+          "description": "Whether gateway Pods is to run on the host network"
+        },
+        "dnsPolicy": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null,
+          "title": "The meshGateway.dnsPolicy schema",
+          "description": "The DNS policy to use"
+        },
+        "consulServiceName": {
+          "type": "string",
+          "default": "mesh-gateway",
+          "title": "The meshGateway.consulServiceName schema",
+          "description": "The Consul service name for the mesh gateways"
+        },
+        "containerPort": {
+          "type": [
+            "string",
+            "integer"
+          ],
+          "default": 8443,
+          "title": "The meshGateway.containerPort schema",
+          "description": "The port that the gateway runs on inside the container"
+        },
+        "hostPort": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null,
+          "title": "The meshGateway.hostPort schema",
+          "description": "The optional `hostPort` for the gateway to be exposed on"
+        },
+        "serviceAccount": {
+          "type": "object",
+          "properties": {
+            "annotations": {
+              "type": "object",
+              "default": {},
+              "title": "The meshGateway.serviceAccount.annotations schema",
+              "description": "The additional annotations for the Mesh Gateway service account"
+            }
+          },
+          "title": "The meshGateway.serviceAccount schema",
+          "description": "meshGateway.serviceAccount parameters"
+        },
+        "resources": {
+          "type": "object",
+          "properties": {
+            "requests": {
+              "type": "object",
+              "properties": {
+                "memory": {
+                  "type": "string",
+                  "default": "128Mi",
+                  "title": "The meshGateway.resources.requests.memory schema",
+                  "description": "The minimum amount of memory the Mesh Gateway container should use"
+                },
+                "cpu": {
+                  "default": "50m",
+                  "title": "The meshGateway.resources.requests.cpu schema",
+                  "description": "The minimum number of CPUs the Mesh Gateway container should use",
+                  "comment": "don't use type field, because it breaks backward compatibility"
+                }
+              },
+              "title": "The meshGateway.resources.requests schema",
+              "description": "meshGateway.resources.requests parameters"
+            },
+            "limits": {
+              "type": "object",
+              "properties": {
+                "memory": {
+                  "type": "string",
+                  "default": "256Mi",
+                  "title": "The meshGateway.resources.limits.memory schema",
+                  "description": "The maximum amount of memory the Mesh Gateway container should use"
+                },
+                "cpu": {
+                  "default": "400m",
+                  "title": "The meshGateway.resources.limits.cpu schema",
+                  "description": "The maximum number of CPUs the Mesh Gateway container should use",
+                  "comment": "don't use type field, because it breaks backward compatibility"
+                }
+              },
+              "title": "The meshGateway.resources.limits schema",
+              "description": "meshGateway.resources.limits parameters"
+            }
+          },
+          "title": "The meshGateway.resources schema",
+          "description": "meshGateway.resources parameters"
+        },
+        "initServiceInitContainer": {
+          "type": "object",
+          "properties": {
+            "resources": {
+              "type": "object",
+              "properties": {
+                "requests": {
+                  "type": "object",
+                  "properties": {
+                    "memory": {
+                      "type": "string",
+                      "default": "50Mi",
+                      "title": "The meshGateway.initServiceInitContainer.resources.requests.memory schema",
+                      "description": "The minimum amount of memory the Mesh Gateway `copy-consul-bin` init container should use"
+                    },
+                    "cpu": {
+                      "default": "50m",
+                      "title": "The meshGateway.initServiceInitContainer.resources.requests.cpu schema",
+                      "description": "The minimum number of CPUs the Mesh Gateway `copy-consul-bin` init container should use",
+                      "comment": "don't use type field, because it breaks backward compatibility"
+                    }
+                  },
+                  "title": "The meshGateway.initServiceInitContainer.resources.requests schema",
+                  "description": "meshGateway.initServiceInitContainer.resources.requests parameters"
+                },
+                "limits": {
+                  "type": "object",
+                  "properties": {
+                    "memory": {
+                      "type": "string",
+                      "default": "150Mi",
+                      "title": "The meshGateway.initServiceInitContainer.resources.limits.memory schema",
+                      "description": "The maximum amount of memory the Mesh Gateway `copy-consul-bin` init container should use"
+                    },
+                    "cpu": {
+                      "default": "50m",
+                      "title": "The meshGateway.initServiceInitContainer.resources.limits.cpu schema",
+                      "description": "The maximum number of CPUs the Mesh Gateway `copy-consul-bin` init container should use",
+                      "comment": "don't use type field, because it breaks backward compatibility"
+                    }
+                  },
+                  "title": "The meshGateway.initServiceInitContainer.resources.limits schema",
+                  "description": "meshGateway.initServiceInitContainer.resources.limits parameters"
+                }
+              },
+              "title": "The meshGateway.initServiceInitContainer.resources schema",
+              "description": "meshGateway.initServiceInitContainer.resources parameters"
+            }
+          },
+          "title": "The meshGateway.initServiceInitContainer schema",
+          "description": "meshGateway.initServiceInitContainer parameters"
+        },
+        "affinity": {
+          "type": "object",
+          "properties": {},
+          "default": {
+            "podAntiAffinity": {
+              "requiredDuringSchedulingIgnoredDuringExecution": [
+                {
+                  "labelSelector": {
+                    "matchLabels": {
+                      "app": "{{ template \"consul.name\" . }}",
+                      "release": "{{ .Release.Name }}",
+                      "component": "mesh-gateway"
+                    }
+                  },
+                  "topologyKey": "kubernetes.io/hostname"
+                }
+              ]
+            }
+          },
+          "title": "The meshGateway.affinity schema",
+          "description": "The affinity scheduling rules in JSON format"
+        },
+        "tolerations": {
+          "type": "object",
+          "default": {},
+          "title": "The meshGateway.tolerations schema",
+          "description": "The list of toleration policies for Mesh Gateway pods in JSON format"
+        },
+        "nodeSelector": {
+          "type": "object",
+          "default": {},
+          "title": "The meshGateway.nodeSelector schema",
+          "description": "The labels for Mesh Gateway pod assignment, formatted as a JSON string"
+        },
+        "priorityClassName": {
+          "type": "string",
+          "default": "",
+          "title": "The meshGateway.priorityClassName schema",
+          "description": "The priority class to be used to assign priority to Mesh Gateway pods"
+        },
+        "annotations": {
+          "type": "object",
+          "default": {},
+          "title": "The meshGateway.annotations schema",
+          "description": "The additional annotations for Mesh Gateway deployment"
+        },
+        "securityContext": {
+          "type": "object",
+          "default": {},
+          "title": "The meshGateway.securityContext schema",
+          "description": "The pod-level security attributes and common container settings for Mesh Gateway pods"
+        }
+      },
+      "title": "The meshGateway schema",
+      "description": "meshGateway parameters"
+    },
+    "podScheduler": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "title": "The podScheduler.enabled schema",
+          "description": "Whether custom Kubernetes pod scheduler pod is to be deployed to assign Consul pods to nodes with `hostPath` persistent volumes"
+        },
+        "dockerImage": {
+          "type": "string",
+          "default": "ghcr.io/netcracker/qubership-docker-kubectl:main",
+          "title": "The podScheduler.dockerImage schema",
+          "description": "The docker image for Pod Scheduler"
+        },
+        "affinity": {
+          "type": "object",
+          "default": {},
+          "title": "The podScheduler.affinity schema",
+          "description": "The affinity scheduling rules in `JSON` format"
+        },
+        "nodeSelector": {
+          "type": "object",
+          "default": {},
+          "title": "The podScheduler.nodeSelector schema",
+          "description": "The selector that defines the nodes where the Pod Scheduler pods are to be scheduled on"
+        },
+        "resources": {
+          "type": "object",
+          "properties": {
+            "requests": {
+              "type": "object",
+              "properties": {
+                "cpu": {
+                  "default": "15m",
+                  "title": "The podScheduler.resources.requests.cpu schema",
+                  "description": "The minimum number of CPUs the Pod Scheduler container should use",
+                  "comment": "don't use type field, because it breaks backward compatibility"
+                },
+                "memory": {
+                  "type": "string",
+                  "default": "128Mi",
+                  "title": "The podScheduler.resources.requests.memory schema",
+                  "description": "The minimum number of memory the Pod Scheduler container should use"
+                }
+              },
+              "title": "The podScheduler.resources.requests schema",
+              "description": "podScheduler.resources.requests parameters"
+            },
+            "limits": {
+              "type": "object",
+              "properties": {
+                "cpu": {
+                  "default": "50m",
+                  "title": "The podScheduler.resources.limits.cpu schema",
+                  "description": "The maximum number of CPUs the Pod Scheduler container should use",
+                  "comment": "don't use type field, because it breaks backward compatibility"
+                },
+                "memory": {
+                  "type": "string",
+                  "default": "128Mi",
+                  "title": "The podScheduler.resources.limits.memory schema",
+                  "description": "The maximum number of memory the Pod Scheduler container should use"
+                }
+              },
+              "title": "The podScheduler.resources.limits schema",
+              "description": "podScheduler.resources.limits parameters"
+            }
+          },
+          "title": "The podScheduler.resources schema",
+          "description": "podScheduler.resources parameters"
+        },
+        "securityContext": {
+          "type": "object",
+          "default": {},
+          "title": "The podScheduler.securityContext schema",
+          "description": "The pod-level security attributes and common container settings for the Pod Scheduler pods"
+        },
+        "customLabels": {
+          "type": "object",
+          "default": {},
+          "title": "The podScheduler.customLabels schema",
+          "description": "The custom labels for the Consul scheduler pod"
+        }
+      },
+      "title": "The podScheduler schema",
+      "description": "podScheduler parameters"
+    },
+    "monitoring": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "title": "The monitoring.enabled schema",
+          "description": "Whether the installation of Consul monitoring is to be enabled"
+        },
+        "installDashboard": {
+          "type": "boolean",
+          "default": true,
+          "title": "The monitoring.installDashboard schema",
+          "description": "Whether the installation of Consul Grafana dashboard is to be enabled"
+        }
+      },
+      "title": "The monitoring schema",
+      "description": "monitoring parameters"
+    },
+    "backupDaemon": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "title": "The backupDaemon.enabled schema",
+          "description": "Whether the installation of Consul backup daemon is to be enabled"
+        },
+        "image": {
+          "type": "string",
+          "default": "ghcr.io/netcracker/qubership-consul-backup-daemon:main",
+          "title": "The backupDaemon.image schema",
+          "description": "The docker image of Consul backup daemon"
+        },
+        "tls": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true,
+              "title": "The backupDaemon.tls.enabled schema",
+              "description": "Whether TLS is to be enabled for Consul backup daemon"
+            },
+            "certificates": {
+              "type": "object",
+              "properties": {
+                "crt": {
+                  "type": "string",
+                  "default": "",
+                  "title": "The backupDaemon.tls.certificates.crt schema",
+                  "description": "The certificate in base64 format"
+                },
+                "key": {
+                  "type": "string",
+                  "default": "",
+                  "title": "The backupDaemon.tls.certificates.key schema",
+                  "description": "The private key in base64 format"
+                },
+                "ca": {
+                  "type": "string",
+                  "default": "",
+                  "title": "The backupDaemon.tls.certificates.ca schema",
+                  "description": "The root CA certificate in base64 format"
+                }
+              },
+              "title": "The backupDaemon.tls.certificates schema",
+              "description": "backupDaemon.tls.certificates parameters"
+            },
+            "secretName": {
+              "type": "string",
+              "default": "",
+              "title": "The backupDaemon.tls.secretName schema",
+              "description": "The name of the secret that contains TLS certificates of Consul backup daemon"
+            },
+            "subjectAlternativeName": {
+              "type": "object",
+              "properties": {
+                "additionalDnsNames": {
+                  "type": "array",
+                  "default": [],
+                  "title": "The backupDaemon.tls.subjectAlternativeName.additionalDnsNames schema",
+                  "description": "The list of additional DNS names to be added to the `Subject Alternative Name` field of Consul backup daemon TLS certificate"
+                },
+                "additionalIpAddresses": {
+                  "type": "array",
+                  "default": [],
+                  "title": "The backupDaemon.tls.subjectAlternativeName.additionalIpAddresses schema",
+                  "description": "The list of additional IP addresses to be added to the `Subject Alternative Name` field of Consul backup daemon TLS certificate"
+                }
+              },
+              "title": "The backupDaemon.tls.subjectAlternativeName schema",
+              "description": "backupDaemon.tls.subjectAlternativeName parameters"
+            }
+          },
+          "title": "The backupDaemon.tls schema",
+          "description": "backupDaemon.tls parameters"
+        },
+        "storage": {
+          "type": "string",
+          "default": "1Gi",
+          "title": "The backupDaemon.storage schema",
+          "description": "The disk size of the attached volume for the Consul backup daemon"
+        },
+        "storageClass": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null,
+          "title": "The backupDaemon.storageClass schema",
+          "description": "The name of storage class for the Consul backup daemon"
+        },
+        "persistentVolume": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null,
+          "title": "The backupDaemon.persistentVolume schema",
+          "description": "The predefined persistent volume for the Consul backup daemon"
+        },
+        "s3": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false,
+              "title": "The backupDaemon.s3.enabled schema",
+              "description": "Whether Consul backups are to be stored in S3 storage"
+            },
+            "sslVerify": {
+              "type": "boolean",
+              "default": true,
+              "title": "The backupDaemon.s3.sslVerify schema",
+              "description": "This parameter specifies whether or not to verify SSL certificates for S3 connections"
+            },
+            "sslSecretName": {
+              "type": "string",
+              "default": "",
+              "title": "The backupDaemon.s3.sslSecretName schema",
+              "description": "This parameter specifies name of the secret with CA certificate for S3 connections"
+            },
+            "sslCert": {
+              "type": "string",
+              "default": "",
+              "title": "The backupDaemon.s3.sslCert schema",
+              "description": "The root CA certificate in base64 format"
+            },
+            "url": {
+              "type": "string",
+              "default": "",
+              "title": "The backupDaemon.s3.url schema",
+              "description": "The URL to the S3 storage"
+            },
+            "bucket": {
+              "type": "string",
+              "default": "",
+              "title": "The backupDaemon.s3.bucket schema",
+              "description": "The existing bucket in the S3 storage that is used to store backups"
+            },
+            "keyId": {
+              "type": "string",
+              "default": "",
+              "title": "The backupDaemon.s3.keyId schema",
+              "description": "The key ID for the S3 storage"
+            },
+            "keySecret": {
+              "type": "string",
+              "default": "",
+              "title": "The backupDaemon.s3.keySecret schema",
+              "description": "The key secret for the S3 storage"
+            }
+          },
+          "title": "The backupDaemon.s3 schema",
+          "description": "backupDaemon.s3 parameters"
+        },
+        "s3Aliases": {
+          "type": "array",
+          "default": [],
+          "title": "The backupDaemon.s3Aliases schema",
+          "description": "The list of S3 backup alias definitions"
+        },
+        "extraLabels": {
+          "type": "object",
+          "default": {},
+          "title": "The backupDaemon.extraLabels schema",
+          "description": "The extra labels to attach to the Consul backup daemon pods"
+        },
+        "username": {
+          "type": "string",
+          "default": "",
+          "title": "The backupDaemon.username schema",
+          "description": "The name of the Consul backup daemon API user"
+        },
+        "password": {
+          "type": "string",
+          "default": "",
+          "title": "The backupDaemon.password schema",
+          "description": "The password of the Consul backup daemon API user"
+        },
+        "backupSchedule": {
+          "type": "string",
+          "default": "0 0 * * *",
+          "title": "The backupDaemon.backupSchedule schema",
+          "description": "The schedule time in cron format (value must be within quotes)"
+        },
+        "evictionPolicy": {
+          "type": "string",
+          "default": "1h/1d,7d/delete",
+          "title": "The backupDaemon.evictionPolicy schema",
+          "description": "The eviction policy for snapshots"
+        },
+        "resources": {
+          "type": "object",
+          "properties": {
+            "requests": {
+              "type": "object",
+              "properties": {
+                "memory": {
+                  "type": "string",
+                  "default": "64Mi",
+                  "title": "The backupDaemon.resources.requests.memory schema",
+                  "description": "The minimum amount of memory the Consul backup daemon container should use"
+                },
+                "cpu": {
+                  "default": "25m",
+                  "title": "The backupDaemon.resources.requests.cpu schema",
+                  "description": "The minimum number of CPUs the Consul backup daemon container should use",
+                  "comment": "don't use type field, because it breaks backward compatibility"
+                }
+              },
+              "title": "The backupDaemon.resources.requests schema",
+              "description": "backupDaemon.resources.requests parameters"
+            },
+            "limits": {
+              "type": "object",
+              "properties": {
+                "memory": {
+                  "type": "string",
+                  "default": "512Mi",
+                  "title": "The backupDaemon.resources.limits.memory schema",
+                  "description": "The maximum amount of memory the Consul backup daemon container should use"
+                },
+                "cpu": {
+                  "default": "200m",
+                  "title": "The backupDaemon.resources.limits.cpu schema",
+                  "description": "The maximum number of CPUs the Consul backup daemon container should use",
+                  "comment": "don't use type field, because it breaks backward compatibility"
+                }
+              },
+              "title": "The backupDaemon.resources.limits schema",
+              "description": "backupDaemon.resources.limits parameters"
+            }
+          },
+          "title": "The backupDaemon.resources schema",
+          "description": "backupDaemon.resources parameters"
+        },
+        "affinity": {
+          "type": "object",
+          "default": {},
+          "title": "The backupDaemon.affinity schema",
+          "description": "The affinity scheduling rules in JSON format"
+        },
+        "tolerations": {
+          "type": "object",
+          "default": {},
+          "title": "The backupDaemon.tolerations schema",
+          "description": "The list of toleration policies for Consul backup daemon pods in JSON format"
+        },
+        "nodeSelector": {
+          "type": "object",
+          "default": {},
+          "title": "The backupDaemon.nodeSelector schema",
+          "description": "The labels for Consul backup daemon pod assignment, formatted as a JSON string"
+        },
+        "priorityClassName": {
+          "type": "string",
+          "default": "",
+          "title": "The backupDaemon.priorityClassName schema",
+          "description": "The priority class to be used to assign priority to Consul backup daemon pods"
+        },
+        "securityContext": {
+          "type": "object",
+          "properties": {},
+          "default": {
+            "fsGroup": 1000
+          },
+          "title": "The backupDaemon.securityContext schema",
+          "description": "The pod-level security attributes and common container settings for Consul backup daemon pod"
+        }
+      },
+      "title": "The backupDaemon schema",
+      "description": "backupDaemon parameters"
+    },
+    "consulAclConfigurator": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "title": "The consulAclConfigurator.enabled schema",
+          "description": "Whether Consul ACL Configurator is to be installed"
+        },
+        "operatorImage": {
+          "type": "string",
+          "default": "ghcr.io/netcracker/qubership-consul-acl-configurator:main",
+          "title": "The consulAclConfigurator.operatorImage schema",
+          "description": "The image of Consul ACL Configurator Kubernetes operator which implements collecting processing Consul ACL configuration custom resources"
+        },
+        "restServerImage": {
+          "type": "string",
+          "default": "ghcr.io/netcracker/qubership-consul-rest-acl-configurator:main",
+          "title": "The consulAclConfigurator.restServerImage schema",
+          "description": "The the image of Consul ACL Configurator HTTP server which allows executing common reconciliation for Consul ACL configuration custom resources by HTTP request from any Kubernetes service account"
+        },
+        "resources": {
+          "type": "object",
+          "properties": {
+            "requests": {
+              "type": "object",
+              "properties": {
+                "memory": {
+                  "type": "string",
+                  "default": "128Mi",
+                  "title": "The consulAclConfigurator.resources.requests.memory schema",
+                  "description": "The minimum amount of memory the Consul ACL Configurator containers should use"
+                },
+                "cpu": {
+                  "default": "25m",
+                  "title": "The consulAclConfigurator.resources.requests.cpu schema",
+                  "description": "The minimum number of CPUs the Consul ACL Configurator containers should use",
+                  "comment": "don't use type field, because it breaks backward compatibility"
+                }
+              },
+              "title": "The consulAclConfigurator.resources.requests schema",
+              "description": "consulAclConfigurator.resources.requests parameters"
+            },
+            "limits": {
+              "type": "object",
+              "properties": {
+                "memory": {
+                  "type": "string",
+                  "default": "128Mi",
+                  "title": "The consulAclConfigurator.resources.limits.memory schema",
+                  "description": "The maximum amount of memory the Consul ACL Configurator containers should use"
+                },
+                "cpu": {
+                  "default": "100m",
+                  "title": "The consulAclConfigurator.resources.limits.cpu schema",
+                  "description": "The maximum number of CPUs the Consul ACL Configurator containers should use",
+                  "comment": "don't use type field, because it breaks backward compatibility"
+                }
+              },
+              "title": "The consulAclConfigurator.resources.limits schema",
+              "description": "consulAclConfigurator.resources.limits parameters"
+            }
+          },
+          "title": "The consulAclConfigurator.resources schema",
+          "description": "consulAclConfigurator.resources parameters"
+        },
+        "reconcilePeriod": {
+          "type": "integer",
+          "default": 100,
+          "title": "The consulAclConfigurator.reconcilePeriod schema",
+          "description": "The delay period for repeated a Custom Resource reconciliation in seconds"
+        },
+        "namespaces": {
+          "type": "string",
+          "default": "",
+          "title": "The consulAclConfigurator.namespaces schema",
+          "description": "The list of Kubernetes namespaces which watched by Consul ACL Configurator operator"
+        },
+        "serviceName": {
+          "type": "string",
+          "default": "consul-acl-configurator-reconcile",
+          "title": "The consulAclConfigurator.serviceName schema",
+          "description": "The name of Kubernetes service for Consul ACL Configurator HTTP server"
+        },
+        "tolerations": {
+          "type": "object",
+          "default": {},
+          "title": "The consulAclConfigurator.tolerations schema",
+          "description": "The list of toleration policies for Consul ACL Configurator pods in JSON format"
+        },
+        "extraLabels": {
+          "type": "object",
+          "default": {},
+          "title": "The consulAclConfigurator.extraLabels schema",
+          "description": "The extra labels to attach to the Consul ACL Configurator pods"
+        },
+        "securityContext": {
+          "type": "object",
+          "default": {},
+          "title": "The consulAclConfigurator.securityContext schema",
+          "description": "The pod-level security attributes and common container settings for Consul ACL Configurator pod"
+        },
+        "priorityClassName": {
+          "type": "string",
+          "default": "",
+          "title": "The consulAclConfigurator.priorityClassName schema",
+          "description": "The priority class to be used to assign priority to Consul ACL Configurator pods"
+        },
+        "consul": {
+          "type": "object",
+          "properties": {
+            "port": {
+              "type": [
+                "string",
+                "integer"
+              ],
+              "default": "",
+              "title": "The consulAclConfigurator.consul.port schema",
+              "description": "The Consul server port"
+            }
+          },
+          "title": "The consulAclConfigurator.consul schema",
+          "description": "consulAclConfigurator.consul parameters"
+        },
+        "allowedNamespaces": {
+          "type": "string",
+          "default": "",
+          "title": "The consulAclConfigurator.allowedNamespaces schema",
+          "description": "The list of Kubernetes namespaces"
+        }
+      },
+      "title": "The consulAclConfigurator schema",
+      "description": "consulAclConfigurator parameters"
+    },
+    "statusProvisioner": {
+      "type": "object",
+      "properties": {
+        "dockerImage": {
+          "type": "string",
+          "default": "ghcr.io/netcracker/qubership-deployment-status-provisioner:main",
+          "title": "The statusProvisioner.dockerImage schema",
+          "description": "The image for Deployment Status Provisioner pod"
+        },
+        "lifetimeAfterCompletion": {
+          "type": "integer",
+          "default": 600,
+          "title": "The statusProvisioner.lifetimeAfterCompletion schema",
+          "description": "The number of seconds that the job remains alive after its completion"
+        },
+        "podReadinessTimeout": {
+          "type": "integer",
+          "default": 300,
+          "title": "The statusProvisioner.podReadinessTimeout schema",
+          "description": "The timeout in seconds that the job waits for the monitored resources to be ready or completed"
+        },
+        "integrationTestsTimeout": {
+          "type": "integer",
+          "default": 300,
+          "title": "The statusProvisioner.integrationTestsTimeout schema",
+          "description": "The timeout in seconds that the job waits for the integration tests to complete"
+        },
+        "resources": {
+          "type": "object",
+          "properties": {
+            "requests": {
+              "type": "object",
+              "properties": {
+                "memory": {
+                  "type": "string",
+                  "default": "50Mi",
+                  "title": "The statusProvisioner.resources.requests.memory schema",
+                  "description": "The minimum amount of memory the container should use"
+                },
+                "cpu": {
+                  "default": "50m",
+                  "title": "The statusProvisioner.resources.requests.cpu schema",
+                  "description": "The minimum number of CPUs the container should use",
+                  "comment": "don't use type field, because it breaks backward compatibility"
+                }
+              },
+              "title": "The statusProvisioner.resources.requests schema",
+              "description": "statusProvisioner.resources.requests parameters"
+            },
+            "limits": {
+              "type": "object",
+              "properties": {
+                "memory": {
+                  "type": "string",
+                  "default": "100Mi",
+                  "title": "The statusProvisioner.resources.limits.memory schema",
+                  "description": "The maximum amount of memory the container should use"
+                },
+                "cpu": {
+                  "default": "100m",
+                  "title": "The statusProvisioner.resources.limits.cpu schema",
+                  "description": "The maximum number of CPUs the container should use",
+                  "comment": "don't use type field, because it breaks backward compatibility"
+                }
+              },
+              "title": "The statusProvisioner.resources.limits schema",
+              "description": "statusProvisioner.resources.limits parameters"
+            }
+          },
+          "title": "The statusProvisioner.resources schema",
+          "description": "statusProvisioner.resources parameters"
+        },
+        "securityContext": {
+          "type": "object",
+          "default": {},
+          "title": "The statusProvisioner.securityContext schema",
+          "description": "The pod-level security attributes and common container settings for the Status Provisioner pod"
+        },
+        "cleanupEnabled": {
+          "type": "boolean",
+          "title": "The statusProvisioner.cleanupEnabled schema",
+          "description": "Whether forced cleanup of previous Status Provisioner job is enabled"
+        }
+      },
+      "title": "The statusProvisioner schema",
+      "description": "statusProvisioner parameters"
+    },
+    "updateResourcesJob": {
+      "type": "object",
+      "properties": {
+        "resources": {
+          "type": "object",
+          "properties": {
+            "requests": {
+              "type": "object",
+              "properties": {
+                "memory": {
+                  "type": "string",
+                  "default": "75Mi",
+                  "title": "The updateResourcesJob.resources.requests.memory schema",
+                  "description": "The minimum amount of memory the container should use"
+                },
+                "cpu": {
+                  "default": "75m",
+                  "title": "The updateResourcesJob.resources.requests.cpu schema",
+                  "description": "The minimum number of CPUs the container should use",
+                  "comment": "don't use type field, because it breaks backward compatibility"
+                }
+              },
+              "title": "The updateResourcesJob.resources.requests schema",
+              "description": "updateResourcesJob.resources.requests parameters"
+            },
+            "limits": {
+              "type": "object",
+              "properties": {
+                "memory": {
+                  "type": "string",
+                  "default": "150Mi",
+                  "title": "The updateResourcesJob.resources.limits.memory schema",
+                  "description": "The maximum amount of memory the container should use"
+                },
+                "cpu": {
+                  "default": "150m",
+                  "title": "The updateResourcesJob.resources.limits.cpu schema",
+                  "description": "The maximum number of CPUs the container should use",
+                  "comment": "don't use type field, because it breaks backward compatibility"
+                }
+              },
+              "title": "The updateResourcesJob.resources.limits schema",
+              "description": "updateResourcesJob.resources.limits parameters"
+            }
+          },
+          "title": "The updateResourcesJob.resources schema",
+          "description": "updateResourcesJob.resources parameters"
+        },
+        "securityContext": {
+          "type": "object",
+          "default": {},
+          "title": "The updateResourcesJob.securityContext schema",
+          "description": "The pod-level security attributes and common container settings for the Update Resources pod"
+        }
+      },
+      "title": "The updateResourcesJob schema",
+      "description": "updateResourcesJob parameters"
+    },
+    "integrationTests": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "title": "The integrationTests.enabled schema",
+          "description": "Whether the installation of Consul integration tests is to be enabled"
+        },
+        "secret": {
+          "type": "object",
+          "properties": {
+            "aclToken": {
+              "type": "string",
+              "default": "",
+              "title": "The integrationTests.secret.aclToken schema",
+              "description": "The ACL token for authentication in Consul"
+            },
+            "prometheus": {
+              "type": "object",
+              "properties": {
+                "user": {
+                  "type": "string",
+                  "default": "",
+                  "title": "The integrationTests.secret.prometheus.user schema",
+                  "description": "The username for authentication on Prometheus/VictoriaMetrics secured endpoints"
+                },
+                "password": {
+                  "type": "string",
+                  "default": "",
+                  "title": "The integrationTests.secret.prometheus.password schema",
+                  "description": "The password for authentication on Prometheus/VictoriaMetrics secured endpoints"
+                }
+              },
+              "title": "The integrationTests.secret.prometheus schema",
+              "description": "integrationTests.secret.prometheus parameters"
+            }
+          },
+          "title": "The integrationTests.secret schema",
+          "description": "integrationTests.secret parameters"
+        },
+        "affinity": {
+          "type": "object",
+          "properties": {},
+          "default": {
+            "podAffinity": {
+              "preferredDuringSchedulingIgnoredDuringExecution": [
+                {
+                  "podAffinityTerm": {
+                    "labelSelector": {
+                      "matchExpressions": [
+                        {
+                          "key": "component",
+                          "operator": "In",
+                          "values": [
+                            "consul-server"
+                          ]
+                        }
+                      ]
+                    },
+                    "topologyKey": "kubernetes.io/hostname"
+                  },
+                  "weight": 100
+                }
+              ]
+            }
+          },
+          "title": "The integrationTests.affinity schema",
+          "description": "The affinity scheduling rules in JSON format"
+        },
+        "tags": {
+          "type": "string",
+          "default": "crud",
+          "title": "The integrationTests.tags schema",
+          "description": "The tags combined with `AND`, `OR` and `NOT` operators that select test cases to run"
+        },
+        "statusWritingEnabled": {
+          "type": "boolean",
+          "default": true,
+          "title": "The integrationTests.statusWritingEnabled schema",
+          "description": "Whether the status of Consul integration tests execution is to be written to deployment"
+        },
+        "isShortStatusMessage": {
+          "type": "boolean",
+          "default": true,
+          "title": "The integrationTests.isShortStatusMessage schema",
+          "description": "Whether the status message is to contain only first line of `result"
+        },
+        "consulPort": {
+          "type": [
+            "string",
+            "integer"
+          ],
+          "default": "",
+          "title": "The integrationTests.consulPort schema",
+          "description": "The port of the Consul server"
+        },
+        "prometheusUrl": {
+          "type": "string",
+          "default": "",
+          "title": "The integrationTests.prometheusUrl schema",
+          "description": "The URL (with schema and port) to Prometheus"
+        },
+        "resources": {
+          "type": "object",
+          "properties": {
+            "requests": {
+              "type": "object",
+              "properties": {
+                "memory": {
+                  "type": "string",
+                  "default": "256Mi",
+                  "title": "The integrationTests.resources.requests.memory schema",
+                  "description": "The minimum amount of memory the container should use"
+                },
+                "cpu": {
+                  "default": "50m",
+                  "title": "The integrationTests.resources.requests.cpu schema",
+                  "description": "The minimum number of CPUs the container should use",
+                  "comment": "don't use type field, because it breaks backward compatibility"
+                }
+              },
+              "title": "The integrationTests.resources.requests schema",
+              "description": "integrationTests.resources.requests parameters"
+            },
+            "limits": {
+              "type": "object",
+              "properties": {
+                "memory": {
+                  "type": "string",
+                  "default": "256Mi",
+                  "title": "The integrationTests.resources.limits.memory schema",
+                  "description": "The maximum amount of memory the container should use"
+                },
+                "cpu": {
+                  "default": "400m",
+                  "title": "The integrationTests.resources.limits.cpu schema",
+                  "description": "The maximum number of CPUs the container should use",
+                  "comment": "don't use type field, because it breaks backward compatibility"
+                }
+              },
+              "title": "The integrationTests.resources.limits schema",
+              "description": "integrationTests.resources.limits parameters"
+            }
+          },
+          "title": "The integrationTests.resources schema",
+          "description": "integrationTests.resources parameters"
+        },
+        "extraLabels": {
+          "type": "object",
+          "default": {},
+          "title": "The integrationTests.extraLabels schema",
+          "description": "The custom labels for the Consul integration tests pod"
+        },
+        "securityContext": {
+          "type": "object",
+          "default": {},
+          "title": "The integrationTests.securityContext schema",
+          "description": "The pod-level security attributes and common container settings for the Consul integration tests pod"
+        },
+        "atpReport": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false,
+              "title": "The integrationTests.atpReport.enabled schema",
+              "description": "Opt-in for ATP report upload"
+            },
+            "atpStorage": {
+              "type": "object",
+              "properties": {
+                "provider": {
+                  "type": "string",
+                  "default": "aws",
+                  "title": "The integrationTests.atpReport.atpStorage.provider schema",
+                  "description": "S3 provider type for ATP Storage (for example `aws`, `minio`, `s3`)"
+                },
+                "serverUrl": {
+                  "type": "string",
+                  "default": "https://s3.amazonaws.com",
+                  "title": "The integrationTests.atpReport.atpStorage.serverUrl schema",
+                  "description": "S3 API endpoint URL"
+                },
+                "serverUiUrl": {
+                  "type": "string",
+                  "default": "https://console.test.com",
+                  "title": "The integrationTests.atpReport.atpStorage.serverUiUrl schema",
+                  "description": "Optional S3 storage UI URL"
+                },
+                "bucket": {
+                  "type": "string",
+                  "default": "",
+                  "title": "The integrationTests.atpReport.atpStorage.bucket schema",
+                  "description": "S3 bucket name"
+                },
+                "region": {
+                  "type": "string",
+                  "default": "us-east-1",
+                  "title": "The integrationTests.atpReport.atpStorage.region schema",
+                  "description": "S3 region (for example for AWS)"
+                },
+                "username": {
+                  "type": "string",
+                  "default": "",
+                  "title": "The integrationTests.atpReport.atpStorage.username schema",
+                  "description": "S3 access key"
+                },
+                "password": {
+                  "type": "string",
+                  "default": "",
+                  "title": "The integrationTests.atpReport.atpStorage.password schema",
+                  "description": "S3 secret key"
+                }
+              },
+              "title": "The integrationTests.atpReport.atpStorage schema",
+              "description": "integrationTests.atpReport.atpStorage parameters"
+            }
+          },
+          "title": "The integrationTests.atpReport schema",
+          "description": "integrationTests.atpReport parameters"
+        },
+        "atpReportViewUiUrl": {
+          "type": "string",
+          "default": "https://test.com",
+          "title": "The integrationTests.atpReportViewUiUrl schema",
+          "description": "Optional base URL for viewing Allure reports"
+        },
+        "environmentName": {
+          "type": "string",
+          "default": "consul",
+          "title": "The integrationTests.environmentName schema",
+          "description": "Logical environment name for paths or labels in ATP Storage workflows"
+        },
+        "dockerImage": {
+          "type": "string",
+          "title": "The integrationTests.dockerImage schema",
+          "description": "The docker image of Consul integration tests"
+        }
+      },
+      "title": "The integrationTests schema",
+      "description": "integrationTests parameters"
+    },
+    "MONITORING_ENABLED": {
+      "type": "boolean",
+      "title": "The MONITORING_ENABLED schema",
+      "description": "Specifies whether Consul Monitoring component is to be deployed or not"
+    },
+    "STORAGE_RWO_CLASS": {
+      "type": "string",
+      "title": "The STORAGE_RWO_CLASS schema",
+      "description": "Storage class name used to dynamically provide volumes"
+    },
+    "INFRA_CONSUL_FS_GROUP": {
+      "type": "integer",
+      "title": "The INFRA_CONSUL_FS_GROUP schema",
+      "description": "Specifies group ID used inside Consul pods"
+    },
+    "INFRA_CONSUL_REPLICAS": {
+      "type": "integer",
+      "title": "The INFRA_CONSUL_REPLICAS schema",
+      "description": "Specifies Consul replicas count"
+    },
+    "INFRA_CONSUL_RESTRICTED_ENVIRONMENT": {
+      "type": "boolean",
+      "title": "The INFRA_CONSUL_RESTRICTED_ENVIRONMENT schema",
+      "description": "Specifies whether the Consul service is to be deployed in restricted environment"
+    }
+  },
+  "title": "The opensearch-service schema"
+}
