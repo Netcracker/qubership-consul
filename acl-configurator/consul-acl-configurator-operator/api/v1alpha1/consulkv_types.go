@@ -69,7 +69,3 @@ type ConsulKVList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []ConsulKV `json:"items"`
 }
-
-func init() {
-	SchemeBuilder.Register(&ConsulKV{}, &ConsulKVList{})
-}

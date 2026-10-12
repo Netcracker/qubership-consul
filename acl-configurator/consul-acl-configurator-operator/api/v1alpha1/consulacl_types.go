@@ -62,7 +62,3 @@ type ConsulACLList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []ConsulACL `json:"items"`
 }
-
-func init() {
-	SchemeBuilder.Register(&ConsulACL{}, &ConsulACLList{})
-}
