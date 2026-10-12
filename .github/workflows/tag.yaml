@@ -61,3 +61,9 @@ jobs:
           push: true
           tags: ghcr.io/netcracker/${{ matrix.component.name }}:${{ inputs.tag_name }}
           provenance: false
+      - uses: actions/delete-package-versions@v5
+        with:
+          package-name: ${{ matrix.component.name }}
+          package-type: 'container'
+          package-version-ids: ${{ steps.get-ids-for-delete.outputs.ids-for-delete }}
+        if: ${{ steps.get-ids-for-delete.outputs.ids-for-delete != '' }}
