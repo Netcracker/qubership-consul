@@ -1,6 +1,6 @@
 module github.com/Netcracker/consul-acl-configurator/consul-acl-configurator-operator
 
-go 1.27.1
+go 1.27.2
 
 require (
 	github.com/hashicorp/consul/api v1.33.0
