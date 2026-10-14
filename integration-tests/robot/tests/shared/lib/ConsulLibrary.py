@@ -7,7 +7,6 @@ from robot.libraries.BuiltIn import BuiltIn
 
 CA_CERT_PATH = '/consul/tls/ca/tls.crt'
 BACKUP_CA_CERT_PATH = '/consul/tls/backup/ca.crt'
-DEFAULT_JWKS_URL = "http://localhost:8080/openid/v1/jwks"
 
 
 class ConsulLibrary(object):
@@ -59,8 +58,8 @@ class ConsulLibrary(object):
         url = f'{self.consul_scheme}://{self.consul_host}:{self.consul_port}/v1/kv/{key}'
         headers = {'Authorization': 'Bearer ' + self.consul_token}
         response = requests.Response()
-        # Handle OSError as large PUT request with enabled TLS produces SSLEOFError 
-        try: 
+        # Handle OSError as large PUT request with enabled TLS produces SSLEOFError
+        try:
             response = requests.put(url, data=value, headers=headers, verify=self.consul_cafile)
         except OSError:
             response.status_code = 413
@@ -130,7 +129,7 @@ class ConsulLibrary(object):
         url = f'{self.consul_scheme}://{self.consul_host}:{self.consul_port}/v1/acl/auth-method'
         headers = {'X-Consul-Token': self.consul_token} if self.consul_token else {}
         if auth_type == "jwt":
-            resolved_jwks_url = next(u for u in (jwks_url, os.getenv("JWKS_URL"), DEFAULT_JWKS_URL) if u)
+            resolved_jwks_url = jwks_url or os.getenv("JWKS_URL", "")
             config = {
                 "JWKSURL": resolved_jwks_url,
                 "BoundIssuer": "https://kubernetes.default.svc.cluster.local",
