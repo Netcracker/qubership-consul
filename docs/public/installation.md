@@ -65,7 +65,7 @@ The following topics are covered in this chapter:
     * [DR Scheme](#dr-scheme-3)
 * [Upgrade](#upgrade)
   * [Common](#common-1)
-  * [Consul upgrade recommendations](#consul-upgrade-recommendations)
+  * [Rolling Upgrade](#rolling-upgrade)
   * [Upgrade to Consul 2.0.x](#upgrade-to-consul-20x)
   * [CRD Upgrade](#crd-upgrade)
     * [Automatic CRD Upgrade](#automatic-crd-upgrade)
@@ -1908,7 +1908,9 @@ In the common way, the upgrade procedure is the same as the initial deployment. 
 If you upgrade to a version which has several major diff changes from the installed version (e.g. `0.3.1` over `0.1.4`),
 you need to check `Release Notes` and `Breaking Changes` sections for `0.2.0` and `0.3.0` versions.
 
-## Consul upgrade recommendations
+## Rolling Upgrade
+
+Consul supports rolling upgrade feature with near-zero downtime.
 
 According to the [Consul upgrade instructions](https://developer.hashicorp.com/consul/docs/upgrade/instructions),
 each upgrade should jump at most 2 major versions, except where dedicated instructions are provided for a larger jump
