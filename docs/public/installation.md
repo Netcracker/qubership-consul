@@ -1922,7 +1922,6 @@ upgrade details of every version on the way. For example, to upgrade from Consul
 
 The upgrade from Consul 1.22.x to 2.0.x is a single major version step.
 
-
 ## Upgrade to Consul 2.0.x
 
 The information below is based on the official Consul
