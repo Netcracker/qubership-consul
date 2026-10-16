@@ -166,6 +166,10 @@ spec:
               cpu: {{ default "100m" .Values.consulAclConfigurator.resources.limits.cpu }}
           securityContext:
             {{- include "consul.globalContainerSecurityContext" . | nindent 12 }}
+      {{- if .Values.consulAclConfigurator.tolerations }}
+      tolerations:
+        {{ .Values.consulAclConfigurator.tolerations | toJson }}
+      {{- end }}
           livenessProbe:
             httpGet:
               path: /healthz
