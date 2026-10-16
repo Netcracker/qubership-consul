@@ -15,13 +15,17 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
-	"github.com/Netcracker/consul-acl-configurator/consul-acl-configurator-operator/util"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"os"
-	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"strings"
+
+	"github.com/Netcracker/consul-acl-configurator/consul-acl-configurator-operator/util"
+	"k8s.io/apimachinery/pkg/fields"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -33,6 +37,8 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	qubershiporgv1 "github.com/Netcracker/consul-acl-configurator/consul-acl-configurator-operator/api/v1alpha1"
 	"github.com/Netcracker/consul-acl-configurator/consul-acl-configurator-operator/controllers"
@@ -80,13 +86,20 @@ func main() {
 	}
 
 	mgrOptions := ctrl.Options{
-		Scheme:                  scheme,
-		MetricsBindAddress:      metricsAddr,
-		Port:                    9443,
+		Scheme: scheme,
+		Metrics: metricsserver.Options{
+			BindAddress: metricsAddr,
+		},
+		WebhookServer: webhook.NewServer(webhook.Options{
+			Port: 9443,
+		}),
 		HealthProbeBindAddress:  probeAddr,
 		LeaderElection:          enableLeaderElection,
-		LeaderElectionID:        fmt.Sprintf("consulacls.%s.qubership.org", ownNamespace),
+		LeaderElectionID:        fmt.Sprintf("consulacls.%s.netcracker.com", ownNamespace),
 		LeaderElectionNamespace: ownNamespace,
+		// Release the lease on shutdown so that the new pod of a rolling update takes over
+		// without waiting for the lease to expire. The process exits right after the manager stops.
+		LeaderElectionReleaseOnCancel: true,
 	}
 
 	configureMgrNamespaces(&mgrOptions, watchNamespaces, ownNamespace)
@@ -101,38 +114,20 @@ func main() {
 		Client:           mgr.GetClient(),
 		Scheme:           mgr.GetScheme(),
 		ResourceVersions: map[string]string{},
+		OwnNamespace:     ownNamespace,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ConsulACL")
 		os.Exit(1)
 	}
 
-	customScheme := runtime.NewScheme()
-
-	utilruntime.Must(clientgoscheme.AddToScheme(customScheme))
-
-	GroupVersion := schema.GroupVersion{
-		Group:   "qubership.org",
-		Version: "v1alpha1",
-	}
-	SchemeBuilder := runtime.NewSchemeBuilder(func(scheme *runtime.Scheme) error {
-		scheme.AddKnownTypes(GroupVersion, &qubershiporgv1.ConsulACL{})
-		return nil
-	})
-
-	AddToScheme := SchemeBuilder.AddToScheme
-	err = AddToScheme(customScheme)
-	if err != nil {
-		panic(err)
-	}
-	if err = (&controllers.ConsulACLReconciler{
-		Client:           mgr.GetClient(),
-		Scheme:           customScheme,
-		ResourceVersions: map[string]string{},
+	if err = (&controllers.ConsulKVReconciler{
+		Client:       mgr.GetClient(),
+		Scheme:       mgr.GetScheme(),
+		OwnNamespace: ownNamespace,
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "ConsulACL")
+		setupLog.Error(err, "unable to create controller", "controller", "ConsulKV")
 		os.Exit(1)
 	}
-	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
 		setupLog.Error(err, "unable to set up health check")
@@ -143,8 +138,19 @@ func main() {
 		os.Exit(1)
 	}
 
+	// The auth method is written only by the leader, like the reconcilers: a runnable that does not
+	// implement LeaderElectionRunnable is started after the lease is acquired.
+	if err := mgr.Add(manager.RunnableFunc(func(ctx context.Context) error {
+		controllers.EnsureApplicationsAuthMethodWithRetry(ctx)
+		return nil
+	})); err != nil {
+		setupLog.Error(err, "unable to add the auth method runnable")
+		os.Exit(1)
+	}
+
+	ctx := ctrl.SetupSignalHandler()
 	setupLog.Info("starting ConsulACL manager")
-	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
+	if err := mgr.Start(ctx); err != nil {
 		setupLog.Error(err, "problem running ConsulACL manager")
 		os.Exit(1)
 	}
@@ -154,7 +160,7 @@ func main() {
 func getWatchNamespace() (string, error) {
 	// WatchNamespaceEnvVar is the constant for env variable WATCH_NAMESPACE
 	// which specifies the Namespace to watch.
-	// An empty value means the operator is running with cluster scope.
+	// If the value is "*", the operator runs with cluster-wide scope.
 	var watchNamespaceEnvVar = "WATCH_NAMESPACE"
 
 	ns, found := os.LookupEnv(watchNamespaceEnvVar)
@@ -165,13 +171,57 @@ func getWatchNamespace() (string, error) {
 }
 
 func configureMgrNamespaces(mgrOptions *ctrl.Options, namespace string, ownNamespace string) {
-	if namespace == "" || namespace == ownNamespace {
-		mgrOptions.Namespace = namespace
-	} else {
-		namespaces := strings.Split(namespace, ",")
-		if !util.Contains(ownNamespace, namespaces) {
-			namespaces = append(namespaces, ownNamespace)
+	if strings.TrimSpace(namespace) == "*" {
+		// Cluster-wide watch: configure per-namespace cache filters for ConsulACL and
+		// ConsulKV so each operator only caches its own CRs. Requires the
+		// spec.acl.operatorNamespace / spec.kv.operatorNamespace fields to be declared as
+		// CRD selectableFields (k8s >= 1.30).
+		//
+		// - ownNamespace: no field selector — the operator processes CRs here by default
+		//   (operatorNamespace typically absent for same-namespace deployments).
+		// - AllNamespaces: field selector so CRs from other namespaces are only cached when
+		//   operatorNamespace explicitly targets this operator.
+		//
+		// Without this, every operator would hold the full cluster's CR set in memory.
+		mgrOptions.Cache.ByObject = map[client.Object]cache.ByObject{
+			&qubershiporgv1.ConsulACL{}: {
+				Namespaces: map[string]cache.Config{
+					ownNamespace: {},
+					cache.AllNamespaces: {
+						FieldSelector: fields.SelectorFromSet(fields.Set{
+							"spec.acl.operatorNamespace": ownNamespace,
+						}),
+					},
+				},
+			},
+			&qubershiporgv1.ConsulKV{}: {
+				Namespaces: map[string]cache.Config{
+					ownNamespace: {},
+					cache.AllNamespaces: {
+						FieldSelector: fields.SelectorFromSet(fields.Set{
+							"spec.kv.operatorNamespace": ownNamespace,
+						}),
+					},
+				},
+			},
 		}
-		mgrOptions.NewCache = cache.MultiNamespacedCacheBuilder(namespaces)
+		return
 	}
+
+	namespaces := strings.Split(namespace, ",")
+	if !util.Contains(ownNamespace, namespaces) {
+		namespaces = append(namespaces, ownNamespace)
+	}
+	nsMap := make(map[string]cache.Config, len(namespaces))
+	for _, ns := range namespaces {
+		ns = strings.TrimSpace(ns)
+		if ns == "" {
+			continue
+		}
+		nsMap[ns] = cache.Config{}
+	}
+	if len(nsMap) == 0 {
+		return
+	}
+	mgrOptions.Cache.DefaultNamespaces = nsMap
 }

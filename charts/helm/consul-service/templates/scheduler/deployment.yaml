@@ -47,6 +47,16 @@ spec:
             - "/bin/bash"
             - "-c"
             - |
+              SA=/var/run/secrets/kubernetes.io/serviceaccount
+              kubectl config set-cluster in-cluster \
+                --server="https://${KUBERNETES_SERVICE_HOST}:${KUBERNETES_SERVICE_PORT}" \
+                --certificate-authority=${SA}/ca.crt --kubeconfig=/tmp/kubeconfig
+              kubectl config set-credentials pod-scheduler \
+                --token=$(cat ${SA}/token) --kubeconfig=/tmp/kubeconfig
+              kubectl config set-context default \
+                --cluster=in-cluster --user=pod-scheduler --kubeconfig=/tmp/kubeconfig
+              kubectl config use-context default --kubeconfig=/tmp/kubeconfig
+              export KUBECONFIG=/tmp/kubeconfig
               kube_url=$(echo "https://${KUBERNETES_SERVICE_HOST}:${KUBERNETES_SERVICE_PORT}")
               while true; do
                 {{- if .Values.server.enabled }}
@@ -69,6 +79,26 @@ spec:
           {{- end }}
           securityContext:
           {{- include "consul.globalContainerSecurityContext" . | nindent 12 }}
+          readinessProbe:
+            exec:
+              command:
+                - /bin/bash
+                - -ec
+                - kubectl --request-timeout=5s -n {{ .Release.Namespace }} auth can-i get pods >/dev/null
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            exec:
+              command:
+                - /bin/bash
+                - -ec
+                - kubectl --request-timeout=5s -n {{ .Release.Namespace }} auth can-i get pods >/dev/null
+            initialDelaySeconds: 60
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
       serviceAccountName: {{ template "consul.fullname" . }}-pod-scheduler
       {{- with .Values.podScheduler.affinity }}
       affinity:
@@ -77,5 +107,5 @@ spec:
       {{- with .Values.podScheduler.nodeSelector }}
       nodeSelector:
         {{ toYaml . | indent 8 | trim }}
-      {{- end }} 
+      {{- end }}
   {{- end }}

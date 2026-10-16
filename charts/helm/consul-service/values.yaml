@@ -40,7 +40,7 @@ global:
   # image: "consul:1.10.0"
   # # Consul Enterprise 1.10.0
   # image: "hashicorp/consul-enterprise:1.10.0-ent"
-  image: "hashicorp/consul:1.20.0"
+  image: "hashicorp/consul:1.22.7"
 
   # Array of objects containing image pull secret names that will be applied to each service account.
   # This can be used to reference image pull secrets if using a custom consul or consul-k8s Docker image.
@@ -64,12 +64,12 @@ global:
   # If using acls.manageSystemACLs then must be >= 0.10.1.
   # If using connect inject then must be >= 0.10.1.
   # If using Consul Enterprise namespaces, must be >= 0.12.
-  imageK8S: "hashicorp/consul-k8s-control-plane:1.6.0"
+  imageK8S: "hashicorp/consul-k8s-control-plane:1.9.9"
 
   # The name (and tag) of the consul-dataplane Docker image used for the
   # connect-injected sidecar proxies and mesh, terminating, and ingress gateways.
   # @default: hashicorp/consul-dataplane:<latest supported version>
-  imageConsulDataplane: "hashicorp/consul-dataplane:1.6.0"
+  imageConsulDataplane: "hashicorp/consul-dataplane:1.9.9"
 
   # The name of the datacenter that the agents should
   # register as. This can't be changed once the Consul cluster is up and running
@@ -378,7 +378,7 @@ global:
     mode: ""
     region: ""
     siteManagerEnabled: true
-    siteManagerApiGroup: "qubership.org"
+    siteManagerApiGroup: "netcracker.com"
     timeout: 600
     backupTimeout: "180s"
     restoreTimeout: "240s"
@@ -583,6 +583,28 @@ server:
     limits:
       memory: "1024Mi"
       cpu: "400m"
+
+  # Configures the liveness probe (https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/)
+  # for the server container. The probe command itself checks the Consul leader status
+  # endpoint and is not configurable, but its timing parameters can be tuned here.
+  # @type: map
+  livenessProbe:
+    initialDelaySeconds: 0
+    periodSeconds: 10
+    timeoutSeconds: 1
+    successThreshold: 1
+    failureThreshold: 3
+
+  # Configures the readiness probe (https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/)
+  # for the server container. The probe command itself checks the Consul leader status
+  # endpoint and is not configurable, but its timing parameters can be tuned here.
+  # @type: map
+  readinessProbe:
+    initialDelaySeconds: 5
+    periodSeconds: 3
+    timeoutSeconds: 5
+    successThreshold: 1
+    failureThreshold: 2
 
   # The security context for the server pods. This should be a YAML map corresponding to a
   # Kubernetes [SecurityContext](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/) object.
@@ -1346,6 +1368,16 @@ ui:
     # @type: string
     annotations: null
 
+  envoyGateway:
+    enabled: true
+    host: ""
+    parentRefs:
+      - group: gateway.networking.k8s.io
+        kind: Gateway
+        name: default-external-gateway
+        namespace: gateway-system
+
+
   # Configurations for displaying metrics in the UI.
   metrics:
     # Enable displaying metrics in the UI. The default value of "-"
@@ -2091,7 +2123,7 @@ meshGateway:
 
 podScheduler:
   enabled: true
-  dockerImage: bitnami/kubectl:1.30.6
+  dockerImage: ghcr.io/netcracker/qubership-docker-kubectl:main
   affinity: {}
   nodeSelector: {}
   resources:
@@ -2148,6 +2180,21 @@ backupDaemon:
     keyId: ""
     keySecret: ""
 
+  # The list of S3 backup alias definitions. If empty, aliases secret is not rendered
+  # and aliases are not mounted to backup daemon.
+  s3Aliases: []
+  # - name: default
+  #   spec:
+  #     default: true
+  #     storageBucket: backup-restore-bucket
+  #     storageProvider: aws
+  #     storageRegion: us-east-1
+  #     storageServerUrl: "https://s3.example.com"
+  #     storageUsername: name
+  #     storageSecret: storage-location
+  #   secretContent:
+  #     storagePassword: pass
+
   extraLabels: {}
 
   # Credentials for Consul Backup Daemon REST API usage.
@@ -2174,7 +2221,7 @@ backupDaemon:
       memory: "64Mi"
       cpu: "25m"
     limits:
-      memory: "256Mi"
+      memory: "512Mi"
       cpu: "200m"
 
   # Affinity Settings for Backup Daemon pod, formatted as a JSON string.
@@ -2229,7 +2276,7 @@ backupDaemon:
 consulAclConfigurator:
   # Enable Consul ACL Configurator installation.
   enabled: true
-  apiGroup: "qubership.org"
+  apiGroup: "netcracker.com"
   # The image of Consul ACL Configurator Kubernetes operator which implements collecting processing Consul ACL configuration custom resources.
   operatorImage: "ghcr.io/netcracker/qubership-consul-acl-configurator:main"
   # The image of Consul ACL Configurator HTTP server which allows execute common reconcile for Consul ACL configuration custom resources by HTTP request from any Kubernetes service account.
@@ -2244,7 +2291,7 @@ consulAclConfigurator:
   # The parameter used to define delay period for repeated a Custom Resource reconcile.
   reconcilePeriod: 100
 
-  # The parameter specifies list of Kubernetes namespaces which watched by Consul ACL Configurator operator. If this parameter is empty all namespaces are watched.
+  # The parameter specifies the list of Kubernetes namespaces watched by the Consul ACL Configurator operator. Use "*" to watch all namespaces.
   namespaces: ""
 
   # The name of Kubernetes service for Consul ACL Configurator HTTP server.
@@ -2304,6 +2351,61 @@ consulAclConfigurator:
     port: ""
 
   allowedNamespaces: ""
+
+  # The global Consul auth method of the binding rules created from ConsulACL resources (CONSUL_AUTH_METHOD_NAME).
+  # When empty, the JWT auth method applications-k8s-m2m created by the operator is used.
+  authMethod: ""
+  # Global auth methods used by earlier versions. Binding rules of a ConsulACL resource left under them
+  # ({crName}_{crNamespace}_... with BindType role) are deleted on the next reconcile and on deletion of the resource,
+  # unless the resource declares the rule with that method as its per-rule AuthMethod.
+  # Empty by default: the old rules are kept. Set ["<fullname>-k8s-auth-method"] after the client services
+  # log in through the current auth method, to remove the rules created by earlier versions.
+  legacyAuthMethods: []
+
+  # BoundIssuer of the applications-k8s-m2m JWT auth method. When empty, the operator reads the issuer
+  # from /.well-known/openid-configuration served by the JWKS proxy (the --service-account-issuer of the cluster).
+  boundIssuer: ""
+  # BoundAudiences of the applications-k8s-m2m JWT auth method, a list of strings. When empty, the issuer is used
+  # (the default --api-audiences of the cluster).
+  boundAudiences: []
+
+  # The proxy that exposes /openid/v1/jwks and /.well-known/openid-configuration of the Kubernetes API server
+  # to Consul servers and to the operator.
+  jwksProxy:
+    replicas: 2
+    resources:
+      requests:
+        cpu: 20m
+        memory: 32Mi
+      limits:
+        cpu: 50m
+        memory: 64Mi
+    # When empty, a preferred anti-affinity spreads the replicas across nodes.
+    affinity: {}
+    tolerations: []
+    nodeSelector: {}
+    priorityClassName: ""
+    extraLabels: {}
+    disruptionBudget:
+      # The PodDisruptionBudget is created only when replicas > 1.
+      enabled: true
+      maxUnavailable: 1
+    networkPolicy:
+      # Allow ingress to the proxy only from Consul server pods and from the Consul ACL Configurator operator.
+      enabled: false
+
+  removeTokens:
+    enabled: true
+    dockerImage: ghcr.io/netcracker/qubership-consul-remove-tokens:main
+    resources:
+      requests:
+        memory: "75Mi"
+        cpu: "75m"
+      limits:
+        memory: "150Mi"
+        cpu: "150m"
+    schedule: "0 0 * * *"
+    securityContext: { }
 
 statusProvisioner:
   enabled: true
@@ -2367,11 +2469,16 @@ integrationTests:
       ]
     }
   }
+  # Test tags to include. Use "OR" to combine multiple tags (e.g. "crud OR ha OR backup")
+  # Available tags: crud, smoke, ha, backup, s3_storage, alerts, consul_images, consul_container_hardening
+  # Leave empty ("") to run ALL tests
   tags: "crud"
   statusWritingEnabled: true
   isShortStatusMessage: true
   # The parameter specifies Consul server port. Default value is 8500 for http, and 8501 for https.
   consulPort: ""
+  # Prometheus URL for alerts tests (e.g., http://prometheus-operated.monitoring:9090)
+  # Leave empty to auto-exclude alerts tests if Prometheus is not available
   prometheusUrl: ""
   resources:
     requests:
@@ -2383,6 +2490,59 @@ integrationTests:
   extraLabels: {}
   securityContext: {}
 
+  # ATP report upload (S3 credentials under atpReport.atpStorage)
+  atpReport:
+    enabled: false
+    atpStorage:
+      # S3 provider type: aws (for real AWS S3), minio, s3 (for S3-compatible with custom endpoint)
+      provider: "aws"
+      # S3 API server URL (e.g., https://s3.amazonaws.com or https://minio.example.com)
+      serverUrl: "https://s3.amazonaws.com"
+      # S3 UI URL for browsing results (e.g., https://minio.example.com)
+      serverUiUrl: "https://console.test.com"
+      # S3 bucket name. If empty - S3 integration is disabled and results stay local
+      bucket: ""
+      # S3 region (required for AWS S3)
+      region: "us-east-1"
+      # S3 credentials (stored in secret when atpReport.enabled)
+      username: ""
+      password: ""
+
+  # URL for viewing Allure reports (e.g., https://reports.example.com)
+  atpReportViewUiUrl: "https://test.com"
+
+  # Environment name for organizing test results path in S3
+  environmentName: "consul"
+
+  # Enable Jira integration (writes to marker file for external processing)
+  enableJiraIntegration: false
+
+# Annotations added to all Consul PVCs (server and backup daemon).
+# @type: object
+pvc:
+  metadata:
+    annotations: {}
+#      argocd.argoproj.io/sync-options: Prune=false
+
+# Server PVC annotation migration during helm upgrade. The backup-daemon PVC is helm-managed,
+# so its annotations are reconciled automatically on upgrade and need no migration job.
+# When enabled, a pre-upgrade resource-migrator Job compares the actual annotations from the server
+# StatefulSet volumeClaimTemplates with the desired pvc.metadata.annotations. If they differ, it patches
+# the existing consul-server PVCs (which are owned by the StatefulSet, not by Helm) to add new annotations
+# and remove stale ones, and then deletes the server StatefulSet with '--cascade=orphan' (pods and PVCs
+# are kept), because volumeClaimTemplates are immutable and the upgrade would fail otherwise.
+# Helm recreates the StatefulSet with the new volumeClaimTemplates during the upgrade.
+resourceMigration:
+  enabled: true
+  resources:
+    requests:
+      memory: "75Mi"
+      cpu: "75m"
+    limits:
+      memory: "150Mi"
+      cpu: "150m"
+  securityContext: {}
+
 # Cloud Release Integration
 # The name of the Service exposed for the database.
 SERVICE_NAME: "consul-service"
@@ -2392,3 +2552,4 @@ PART_OF: "consul-service"
 DELIMITER: "-"
 # Artifact descriptor version which is installed.
 ARTIFACT_DESCRIPTOR_VERSION: ""  # TO_BE_REPLACED
+PAAS_PLATFORM: KUBERNETES

@@ -1,0 +1,85 @@
+{{- if and .Values.ui.envoyGateway.enabled .Values.ui.ingress.enabled }}
+{{- if and (.Capabilities.APIVersions.Has "gateway.networking.k8s.io/v1") (eq .Values.PAAS_PLATFORM "KUBERNETES") }}
+{{- if (and (or (and (ne (.Values.server.enabled | toString) "-") .Values.server.enabled) (and (eq (.Values.server.enabled | toString) "-") .Values.global.enabled)) (or (and (ne (.Values.ui.enabled | toString) "-") .Values.ui.enabled) (and (eq (.Values.ui.enabled | toString) "-") .Values.global.enabled))) }}
+{{- $uiService := (or (and (ne (.Values.ui.service.enabled | toString) "-") .Values.ui.service.enabled) (eq (.Values.ui.service.enabled | toString) "-")) }}
+{{- $serviceName := ternary (printf "%s-%s" (include "consul.fullname" .) "ui") (printf "%s-%s" (include "consul.fullname" .) "server") $uiService }}
+{{- $httpPort := ternary 80 8500 $uiService }}
+{{- $httpsPort := ternary 443 8501 $uiService }}
+{{- $global := .Values.global }}
+
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ template "consul.fullname" . }}-httproute
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ template "consul.name" . }}
+    chart: {{ template "consul.chart" . }}
+    heritage: {{ .Release.Service }}
+    release: {{ .Release.Name }}
+    {{- include "consul-service.defaultLabels" . | nindent 4 }}
+    component: ui
+    deployment.netcracker.com/ingress-type: 'private-network'
+    deployment.netcracker.com/ingress-audience-type: 'ops-user'
+spec:
+  parentRefs:
+  {{- if and .Values.GATEWAY_SYSTEM_NAME .Values.GATEWAY_SYSTEM_NAMESPACE }}
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: {{ .Values.GATEWAY_SYSTEM_NAME }}
+      namespace: {{ .Values.GATEWAY_SYSTEM_NAMESPACE }}
+  {{- else if .Values.ui.envoyGateway.parentRefs }}
+  {{- range .Values.ui.envoyGateway.parentRefs }}
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: {{ .name }}
+      namespace: {{ .namespace }}
+  {{- end }}
+  {{- end }}
+  hostnames:
+  {{- if .Values.ui.envoyGateway.host }}
+    - {{ .Values.ui.envoyGateway.host | quote }}
+  {{- else }}
+  {{- range .Values.ui.ingress.hosts }}
+    - {{ .host | quote }}
+  {{- end }}
+  {{- end }}
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: {{ $serviceName }}
+          group: ""
+          kind: Service
+          weight: 1
+          port: {{ if (and $global.tls.enabled $global.tls.httpsOnly) }}{{ $httpsPort }}{{ else }}{{ $httpPort }}{{ end }}
+
+{{- if and $global.tls.enabled $global.tls.httpsOnly }}
+
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: BackendTLSPolicy
+metadata:
+  name: {{ template "consul.fullname" . }}-backend-tls
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ template "consul.name" . }}
+    release: {{ .Release.Name }}
+spec:
+  targetRefs:
+    - group: ""
+      kind: Service
+      name: {{ $serviceName }}
+  validation:
+    hostname: {{ template "consul.fullname" . }}-server.{{ .Release.Namespace }}.svc
+    caCertificateRefs:
+      - group: ""
+        kind: Secret
+        name: {{ template "server.tlsSecretName" . }}
+
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}

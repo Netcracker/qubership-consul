@@ -46,6 +46,7 @@ spec:
         component: mesh-gateway
         restore-policy: restart
         name: {{ template "consul.fullname" . }}-mesh-gateway
+        {{- include "consul-service.defaultLabels" . | nindent 8 }}
         app.kubernetes.io/name: {{ template "consul.fullname" . }}-mesh-gateway
         consul.hashicorp.com/connect-inject-managed-by: consul-k8s-endpoints-controller
         {{- if .Values.global.extraLabels }}

@@ -1,14 +1,14 @@
 *** Variables ***
 ${CONSUL_BACKUP_DAEMON_HOST}      %{CONSUL_BACKUP_DAEMON_HOST}
 ${CONSUL_BACKUP_DAEMON_PORT}      %{CONSUL_BACKUP_DAEMON_PORT}
-${CONSUL_BACKUP_DAEMON_USERNAME}  %{CONSUL_BACKUP_DAEMON_USERNAME=}
-${CONSUL_BACKUP_DAEMON_PASSWORD}  %{CONSUL_BACKUP_DAEMON_PASSWORD=}
 ${CONSUL_BACKUP_DAEMON_PROTOCOL}  %{CONSUL_BACKUP_DAEMON_PROTOCOL}
 ${DATACENTER_NAME}                %{DATACENTER_NAME}
 ${BACKUP_TIMEOUT}                 2min
 ${BACKUP_TIME_INTERVAL}           10s
 ${RESTORE_TIMEOUT}                2min
 ${RESTORE_TIME_INTERVAL}          10s
+${EVICT_TIMEOUT}                  1min
+${EVICT_TIME_INTERVAL}            5s
 
 *** Settings ***
 Library  String
@@ -33,27 +33,24 @@ Create Unique Key And Value
 
 Convert Json ${json} To Type
     ${json_dictionary}  Evaluate  json.loads('''${json}''')  json
-    [Return]  ${json_dictionary}
+    RETURN  ${json_dictionary}
 
 Create Test Data
     Add Test Data To Consul  ${test_key}  ${test_value}
     Get And Check Test Data From Consul  ${test_key}  ${test_value}
 
 Full Backup
-    ${response}=  Post Request  backupsession  /backup
-    Should Be Equal As Strings  ${response.status_code}  200
-    ${backup_id}=  Set Variable  ${response.content}
-    Wait Until Keyword Succeeds  ${BACKUP_TIMEOUT}  ${BACKUP_TIME_INTERVAL}
-    ...  Check Backup Status  ${backup_id}  ${False}
-    [Return]  ${backup_id}
+    ${backup_id}=  Create Backup With Retry
+    ...  ${CONSUL_BACKUP_DAEMON_PROTOCOL}://${CONSUL_BACKUP_DAEMON_HOST}:${CONSUL_BACKUP_DAEMON_PORT}
+    ...  ${CONSUL_BACKUP_DAEMON_USERNAME}  ${CONSUL_BACKUP_DAEMON_PASSWORD}
+    RETURN  ${backup_id}
 
 Check Backup Status
     [Arguments]  ${backup_id}  ${is_granular}
-    ${status}=  Get Request  backupsession  /listbackups/${backup_id}
-    ${content}=  Set Variable  ${status.json()}
-    Should Be Equal As Strings  ${content['failed']}  False
-    Should Be Equal As Strings  ${content['valid']}  True
-    Should Be Equal As Strings  ${content['is_granular']}  ${is_granular}
+    ${status}=  Get Request  backupsession  /jobstatus/${backup_id}
+    Should Be Equal As Strings  ${status.json()['status']}  Successful
+    ${info}=  Get Request  backupsession  /listbackups/${backup_id}
+    Should Be Equal As Strings  ${info.json()['is_granular']}  ${is_granular}
 
 Delete Test Data
     Delete Test Data From Consul  ${test_key}
@@ -80,14 +77,19 @@ Granular Backup
     ${backup_id}=  Set Variable  ${response.content}
     Wait Until Keyword Succeeds  ${BACKUP_TIMEOUT}  ${BACKUP_TIME_INTERVAL}
     ...  Check Backup Status  ${backup_id}  ${True}
-    [Return]  ${backup_id}
+    RETURN  ${backup_id}
 
 Delete Backup From Backup Daemon
     [Arguments]  ${backup_id}
-    ${resp_delete}=  Post Request  backupsession  /evict/${backup_id}
-    Should Be Equal As Strings  ${resp_delete.status_code}   200
+    Wait Until Keyword Succeeds  ${EVICT_TIMEOUT}  ${EVICT_TIME_INTERVAL}
+    ...  Evict Backup  ${backup_id}
     ${list_backups} =  Get Request  backupsession  /listbackups
     Should Not Contain  ${list_backups.content}  ${backup_id}
+
+Evict Backup
+    [Arguments]  ${backup_id}
+    ${resp_delete}=  Post Request  backupsession  /evict/${backup_id}
+    Should Be Equal As Strings  ${resp_delete.status_code}   200
 
 *** Test Cases ***
 Test Full Backup And Restore

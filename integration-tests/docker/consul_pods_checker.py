@@ -22,7 +22,19 @@ from PlatformLibrary import PlatformLibrary
 environ = os.environ
 namespace = environ.get("CONSUL_NAMESPACE")
 service = environ.get("CONSUL_HOST")
+deployments = [name for name in (environ.get("CONSUL_BACKUP_DAEMON_HOST"),
+                                 environ.get("CONSUL_ACL_CONFIGURATOR_HOST")) if name]
 timeout = 500
+
+
+def components_ready(k8s_library):
+    if not k8s_library.is_stateful_set_rolled_out(service, namespace):
+        return False
+    for name in deployments:
+        if not k8s_library.is_deployment_rolled_out(name, namespace, "app.kubernetes.io/name"):
+            return False
+    return True
+
 
 if __name__ == '__main__':
     try:
@@ -32,17 +44,11 @@ if __name__ == '__main__':
     timeout_start = time.time()
     while time.time() < timeout_start + timeout:
         try:
-            desired_pods = k8s_library.get_stateful_set_replicas_count(service, namespace)
-            all_pods_in_project = k8s_library.get_pods(namespace)
-            ready_pods = 0
-            for pod in all_pods_in_project:
-                if pod.metadata.labels.get('name') == service and pod.status.container_statuses[0].ready:
-                    ready_pods += 1
+            ready = components_ready(k8s_library)
         except:
             time.sleep(10)
             continue
-        if desired_pods == ready_pods:
-            time.sleep(60)
+        if ready:
             exit(0)
         time.sleep(10)
     exit(1)

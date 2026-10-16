@@ -4,22 +4,22 @@ Library    Collections
 Library    RequestsLibrary
 Library    S3BackupLibrary  url=%{S3_URL}
 ...                         bucket=%{S3_BUCKET}
-...                         key_id=%{S3_KEY_ID}
-...                         key_secret=%{S3_KEY_SECRET}
+...                         key_id=${S3_KEY_ID}
+...                         key_secret=${S3_KEY_SECRET}
 ...                         ssl_verify=false
 Suite Setup  Preparation
 
 *** Variables ***
 ${CONSUL_BACKUP_DAEMON_HOST}      %{CONSUL_BACKUP_DAEMON_HOST}
 ${CONSUL_BACKUP_DAEMON_PORT}      %{CONSUL_BACKUP_DAEMON_PORT}
-${CONSUL_BACKUP_DAEMON_USERNAME}  %{CONSUL_BACKUP_DAEMON_USERNAME=}
-${CONSUL_BACKUP_DAEMON_PASSWORD}  %{CONSUL_BACKUP_DAEMON_PASSWORD=}
 ${CONSUL_BACKUP_DAEMON_PROTOCOL}  %{CONSUL_BACKUP_DAEMON_PROTOCOL}
 ${DATACENTER_NAME}                %{DATACENTER_NAME}
 ${BACKUP_TIMEOUT}                 2min
 ${BACKUP_TIME_INTERVAL}           10s
 ${RESTORE_TIMEOUT}                2min
 ${RESTORE_TIME_INTERVAL}          10s
+${EVICT_TIMEOUT}                  1min
+${EVICT_TIME_INTERVAL}            5s
 ${S3_BUCKET}                      %{S3_BUCKET}
 ${BACKUP_STORAGE_PATH}            /opt/consul/backup-storage
 
@@ -47,7 +47,7 @@ Full Backup
     ${backup_id}=  Set Variable  ${response.content}
     Wait Until Keyword Succeeds  ${BACKUP_TIMEOUT}  ${BACKUP_TIME_INTERVAL}
     ...  Check Backup Status  ${backup_id}  ${False}
-    [Return]  ${response.text}
+    RETURN  ${response.text}
 
 Check Backup Status
     [Arguments]  ${backup_id}  ${is_granular}
@@ -82,14 +82,19 @@ Granular Backup
     ${backup_id}=  Set Variable  ${response.content}
     Wait Until Keyword Succeeds  ${BACKUP_TIMEOUT}  ${BACKUP_TIME_INTERVAL}
     ...  Check Backup Status  ${backup_id}  ${True}
-    [Return]  ${response.text}
+    RETURN  ${response.text}
 
 Delete Backup From Backup Daemon
     [Arguments]  ${backup_id}
-    ${resp_delete}=  Post Request  backupsession  /evict/${backup_id}
-    Should Be Equal As Strings  ${resp_delete.status_code}   200
+    Wait Until Keyword Succeeds  ${EVICT_TIMEOUT}  ${EVICT_TIME_INTERVAL}
+    ...  Evict Backup  ${backup_id}
     ${list_backups} =  Get Request  backupsession  /listbackups
     Should Not Contain  ${list_backups.text}  ${backup_id}
+
+Evict Backup
+    [Arguments]  ${backup_id}
+    ${resp_delete}=  Post Request  backupsession  /evict/${backup_id}
+    Should Be Equal As Strings  ${resp_delete.status_code}   200
 
 *** Test Cases ***
 Test Full Backup And Restore On S3 Storage

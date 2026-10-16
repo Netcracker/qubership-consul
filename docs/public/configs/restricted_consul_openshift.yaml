@@ -144,7 +144,7 @@ rules:
       - patch
       - delete
   - apiGroups:
-      - qubership.org
+      - netcracker.com
     resources:
       - '*'
     verbs:

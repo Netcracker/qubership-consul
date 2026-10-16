@@ -1,0 +1,92 @@
+{{- if (eq (include "remove-tokens.enabled" .) "true") }}
+{{- $removeTokensPodSecretsMount := include "consul.podSecretsMountPath" (dict "service" "remove-tokens") -}}
+{{- $aclBootstrapSecretKey := include "consul.aclBootstrapSecretKey" . -}}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: consul-remove-tokens
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "consul-service.defaultLabels" . | nindent 4 }}
+    app.kubernetes.io/name: {{ template "consul.fullname" . }}-remove-tokens
+    name: {{ template "consul.fullname" . }}-remove-tokens
+    app.kubernetes.io/instance: {{ cat (printf "%s-remove-tokens"  (include "consul.fullname" .)) .Values.DELIMITER .Release.Namespace | nospace | trunc 63 }}
+spec:
+  concurrencyPolicy: Forbid
+  schedule: "{{ .Values.consulAclConfigurator.removeTokens.schedule }}"
+  successfulJobsHistoryLimit: 0
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ template "consul.fullname" . }}-remove-tokens
+        component: remove-tokens
+    spec:
+      backoffLimit: 2
+      activeDeadlineSeconds: 600
+      ttlSecondsAfterFinished: 300
+      template:
+        metadata:
+          labels:
+            {{- include "consul-service.defaultLabels" . | nindent 12 }}
+            app.kubernetes.io/name: {{ template "consul.fullname" . }}-remove-tokens
+            component: remove-tokens
+        spec:
+          restartPolicy: Never
+          serviceAccountName: consul-remove-tokens
+{{/*          {{- if not (eq (include "openshift.enabled" .) "true") }}*/}}
+          securityContext:
+{{- include "consul.globalPodSecurityContext" . | nindent 12 }}
+{{- with .Values.consulAclConfigurator.removeTokens.securityContext }}
+{{ toYaml . | nindent 12 }}
+{{- end }}
+          volumes:
+            - name: remove-tokens-pod-secrets
+              secret:
+                secretName: {{ include "consul.aclBootstrapSecretName" . }}
+                defaultMode: 420
+                items:
+                  - key: {{ $aclBootstrapSecretKey }}
+                    path: CONSUL_HTTP_TOKEN
+            {{- if .Values.global.tls.enabled }}
+            - name: consul-ca-cert
+              secret:
+                secretName: {{ template "consul.caCertSecretName" . }}
+                items:
+                  - key: {{ default "tls.crt" .Values.global.tls.caCert.secretKey }}
+                    path: tls.crt
+            {{- end }}
+          containers:
+            - name: remove-tokens
+              image: {{ template "remove-tokens.image" . }}
+              {{- with .Values.consulAclConfigurator.removeTokens.resources }}
+              resources:
+                {{ . | toYaml | indent 16 | trim }}
+              {{- end }}
+              env:
+                - name: CONSUL_HOST
+                  value: "{{ template "consul.fullname" . }}-server"
+                - name: CONSUL_PORT
+                  value: "{{ coalesce .Values.consulAclConfigurator.consul.port (include "consul.port" .) }}"
+                - name: CONSUL_NAMESPACE
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.namespace
+                {{- if .Values.global.tls.enabled }}
+                - name: CONSUL_USE_TLS
+                  value: "true"
+                - name: CONSUL_CACERT_FILE
+                  value: "/consul/tls/ca/tls.crt"
+                {{- end }}
+              volumeMounts:
+                - name: remove-tokens-pod-secrets
+                  mountPath: {{ $removeTokensPodSecretsMount }}
+                  readOnly: true
+                {{- if .Values.global.tls.enabled }}
+                - name: consul-ca-cert
+                  mountPath: /consul/tls/ca/
+                  readOnly: true
+                {{- end }}
+              securityContext:
+                {{- include "consul.globalContainerSecurityContext" . | nindent 16 }}
+{{- end }}

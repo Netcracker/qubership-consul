@@ -17,6 +17,7 @@ package util
 import (
 	"context"
 	consulacl "github.com/Netcracker/consul-acl-configurator/consul-acl-configurator-operator/api/v1alpha1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -37,21 +38,34 @@ func NewCustomResourceUpdater(client client.Client, cr *consulacl.ConsulACL) Cus
 }
 
 func (cru CustomResourceUpdater) UpdateWithRetry(updateFunc func(*consulacl.ConsulACL)) error {
-	return cru.updateWithRetry(updateFunc, cru.client)
+	return cru.updateWithRetry(updateFunc, func(ctx context.Context, obj client.Object) error {
+		return cru.client.Update(ctx, obj)
+	})
 }
 
 func (cru CustomResourceUpdater) UpdateStatusWithRetry(statusUpdateFunc func(*consulacl.ConsulACL)) error {
-	return cru.updateWithRetry(statusUpdateFunc, cru.client.Status())
+	return cru.updateWithRetry(statusUpdateFunc, func(ctx context.Context, obj client.Object) error {
+		return cru.client.Status().Update(ctx, obj)
+	})
 }
 
-func (cru CustomResourceUpdater) updateWithRetry(updateFunc func(*consulacl.ConsulACL), writer client.StatusWriter) error {
+func (cru CustomResourceUpdater) updateWithRetry(updateFunc func(*consulacl.ConsulACL), doUpdate func(context.Context, client.Object) error) error {
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		instance := &consulacl.ConsulACL{}
 		if err := cru.client.Get(context.TODO(),
 			types.NamespacedName{Name: cru.name, Namespace: cru.namespace}, instance); err != nil {
+			if k8serrors.IsNotFound(err) {
+				return nil
+			}
 			return err
 		}
 		updateFunc(instance)
-		return writer.Update(context.TODO(), instance)
+		if err := doUpdate(context.TODO(), instance); err != nil {
+			if k8serrors.IsNotFound(err) {
+				return nil
+			}
+			return err
+		}
+		return nil
 	})
 }

@@ -51,7 +51,7 @@ func (rc RestClient) SendRequest(method string, path string, body io.Reader) (st
 	if err != nil {
 		return
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	statusCode = response.StatusCode
 	responseBody, err = io.ReadAll(response.Body)
 	return

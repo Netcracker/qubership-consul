@@ -10,6 +10,8 @@ The following topics are covered in this chapter:
   * [No Cluster Leader - Election Timeout Reached](#no-cluster-leader---election-timeout-reached)
   * [Consul Client Failed Renaming Node ID](#consul-client-failed-renaming-node-id)
   * [Consul Responses with 429 Code](#consul-responses-with-429-code)
+  * [Failed to get log](#failed-to-get-log)
+  * [Backup Daemon SQLite Database Locked](#backup-daemon-sqlite-database-locked)
 * [Deployment Problem](#deployment-problem)
   * [Consul Server Pod Does Not Start](#consul-server-pod-does-not-start)
     * [Monitoring](#monitoring)
@@ -59,7 +61,7 @@ The following topics are covered in this chapter:
 This section provides detailed troubleshooting procedures for the Consul Service.
 
 If you face any problem with Consul Service refer to the 
-[Official Troubleshooting Guide](https://learn.hashicorp.com/consul/day-2-operations/troubleshooting).
+[Official Troubleshooting Guide](https://developer.hashicorp.com/consul/docs/troubleshoot).
 
 # Common Problems
 
@@ -157,7 +159,7 @@ extra-from-values.json: '{"disable_update_check":true, "disable_host_node_id":tr
 ```
 
 Also, the stored Node ID can be discarded by removing the `/data/node-id` file manually in Client pod terminal.
-In both cases, restart the affected Client pods to apply changes and confirm that unique node id is applied
+In both cases, restart the affected Client pods to apply changes and confirm that unique node ID is applied
 for every Consul Client.
 
 ## Consul Responses with 429 Code
@@ -204,6 +206,35 @@ Problem with error log "agent.server.raft: failed to get log" allows any action:
   4. Trying restore last backup through consul backup daemon. If consul backup daemon don't work, then reload.
   5. Check business applications - key-manager and config-server. If they are failure on authentication to consul, then change secrets to correct from consul-acl-bootstral-secret. Then reboot.
 
+## Backup Daemon SQLite Database Locked
+
+Consul switchover (passivation) fails with a backup-timeout error. The backup-daemon logs contain
+repeated `BusyError: database is locked` errors while backups themselves complete successfully and
+exist in S3:
+
+```text
+[2025-09-03T17:00:45,092][ERROR] Database Error: BusyError: database is locked
+Traceback (most recent call last):
+  File "/opt/backup/db.py", line 73, in __insert_or_delete
+    DB.__log_and_execute(cursor, query, params)
+  File "/opt/backup/db.py", line 64, in __log_and_execute
+    cursor.execute(sql, args)
+  File "src/cursor.c", line 1068, in APSWCursor_execute.sqlite3_prepare
+apsw.BusyError: BusyError: database is locked
+[2025-09-03T17:00:45,093][ERROR] Unable to insert to jobs database
+```
+
+This means the backup process finishes correctly, but the backup-daemon fails to update its
+internal SQLite job status database. Because the status is never recorded, the switchover
+procedure considers the backup as not completed and times out.
+
+As a workaround, restart the backup-daemon pod:
+
+```bash
+kubectl rollout restart deployment/<CONSUL_FULLNAME>-backup-daemon -n <NAMESPACE>
+```
+
+As a permanent solution, upgrade the Consul service to version `0.13.0` or later, which includes new Backup Daemon DB feature that fixes the SQLite database locking issue.
 
 # Deployment Problem
 
@@ -281,7 +312,7 @@ it indicates that the NFS works in "On demand" mode and does not allow to read f
 ==> Error starting agent: Failed to start Consul server: Failed to start Raft: open /consul/data/raft/raft.db: invalid argument
 ```
 
-You need to resolve the issue with NFS configuration or start using local storage instead of NFS.
+You need to resolve the issue with NFS configuration or start using localStorage instead of NFS.
 
 # ACL Issues
 

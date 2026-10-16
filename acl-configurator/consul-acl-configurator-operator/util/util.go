@@ -14,6 +14,11 @@
 
 package util
 
+import (
+	"os"
+	"strings"
+)
+
 func Contains(value string, list []string) bool {
 	for _, element := range list {
 		if value == element {
@@ -21,4 +26,20 @@ func Contains(value string, list []string) bool {
 		}
 	}
 	return false
+}
+
+func getEnv(envKey, defaultValue string) string {
+	if value := os.Getenv(envKey); value != "" {
+		return value
+	}
+	return defaultValue
+}
+
+// GetSecretFromFileOrEnv reads secret from file first, then falls back to envKey.
+func GetSecretFromFileOrEnv(filePath string, envKey string) string {
+	secretBytes, err := os.ReadFile(filePath)
+	if err == nil {
+		return strings.TrimSpace(string(secretBytes))
+	}
+	return getEnv(envKey, "")
 }

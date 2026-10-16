@@ -43,6 +43,7 @@ spec:
         component: webhook-cert-manager
         restore-policy: restart
         name: {{ template "consul.fullname" . }}-webhook-cert-manager
+        {{- include "consul-service.defaultLabels" . | nindent 8 }}
         app.kubernetes.io/name: {{ template "consul.fullname" . }}-webhook-cert-manager
       annotations:
         "consul.hashicorp.com/connect-inject": "false"
@@ -68,6 +69,28 @@ spec:
             memory: 50Mi
         securityContext:
           {{- include "consul.globalContainerSecurityContext" . | nindent 10 }}
+        livenessProbe:
+          exec:
+            command:
+              - /bin/sh
+              - -ec
+              - |
+                pgrep -f 'consul-k8s-control-plane.*webhook-cert-manager' >/dev/null
+          initialDelaySeconds: 30
+          periodSeconds: 20
+          timeoutSeconds: 3
+          failureThreshold: 3
+        readinessProbe:
+          exec:
+            command:
+              - /bin/sh
+              - -ec
+              - |
+                pgrep -f 'consul-k8s-control-plane.*webhook-cert-manager' >/dev/null
+          initialDelaySeconds: 30
+          periodSeconds: 20
+          timeoutSeconds: 3
+          failureThreshold: 3
         volumeMounts:
         - name: config
           mountPath: /bootstrap/config

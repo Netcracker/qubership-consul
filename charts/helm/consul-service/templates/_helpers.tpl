@@ -163,6 +163,8 @@ This template is for an init container.
         -server-port=8501 \
         -ca-file=/consul/tls/ca/tls.crt
         {{- end }}
+  securityContext:
+    {{- include "consul.globalContainerSecurityContext" . | nindent 4 }}
   volumeMounts:
     {{- if not (and .Values.externalServers.enabled .Values.externalServers.useSystemRoots) }}
     - name: consul-ca-cert
@@ -202,6 +204,23 @@ Configure Consul service 'replicasForSingleService' property
 runAsNonRoot: true
 seccompProfile:
   type: "RuntimeDefault"
+{{- if eq (default "" .Values.PAAS_PLATFORM) "KUBERNETES" }}
+runAsUser: 1000
+runAsGroup: 1000
+{{- end }}
+{{- with .Values.global.securityContext }}
+{{ toYaml . }}
+{{- end -}}
+{{- end -}}
+
+{{- define "backupDaemon.podSecurityContext" -}}
+runAsNonRoot: true
+seccompProfile:
+  type: "RuntimeDefault"
+{{- if eq (default "" .Values.PAAS_PLATFORM) "KUBERNETES" }}
+runAsUser: 100
+runAsGroup: 1000
+{{- end }}
 {{- with .Values.global.securityContext }}
 {{ toYaml . }}
 {{- end -}}
@@ -209,8 +228,20 @@ seccompProfile:
 
 {{- define "consul.globalContainerSecurityContext" -}}
 allowPrivilegeEscalation: false
+readOnlyRootFilesystem: true
 capabilities:
   drop: ["ALL"]
+{{- end -}}
+
+{{- define "consul.tmpVolume" -}}
+- name: tmp
+  emptyDir:
+    sizeLimit: {{ . }}
+{{- end -}}
+
+{{- define "consul.tmpVolumeMount" -}}
+- name: tmp
+  mountPath: /tmp
 {{- end -}}
 
 {{/*
@@ -435,6 +466,10 @@ Find a Deployment Status Provisioner image in various places.
     {{- printf "%s" .Values.statusProvisioner.dockerImage -}}
 {{- end -}}
 
+{{- define "remove-tokens.image" -}}
+    {{- printf "%s" .Values.consulAclConfigurator.removeTokens.dockerImage -}}
+{{- end -}}
+
 {{/*
 Returns Consul port to communicate.
 */}}
@@ -637,6 +672,9 @@ DNS names used to generate TLS certificate with "Subject Alternative Name" field
   {{- $consulServerName := printf "%s-server" (include "consul.fullname" .) -}}
   {{- $dnsNames := list "localhost" $consulServerName (printf "*.%s" $consulServerName) (printf "*.%s.%s" $consulServerName .Release.Namespace) (printf "%s.%s" $consulServerName .Release.Namespace) (printf "*.%s.%s.svc" $consulServerName .Release.Namespace) (printf "%s.%s.svc" $consulServerName .Release.Namespace) (printf "server.%s.%s" .Values.global.datacenter .Values.global.domain) (printf "*.server.%s.%s" .Values.global.datacenter .Values.global.domain) -}}
   {{- $dnsNames = concat $dnsNames .Values.global.tls.serverAdditionalDNSSANs -}}
+  {{- if .Values.ui.envoyGateway.host }}
+  {{- $dnsNames = append $dnsNames .Values.ui.envoyGateway.host }}
+  {{- end }}
   {{- $dnsNames | toYaml -}}
 {{- end -}}
 
@@ -777,6 +815,14 @@ Is scheduler enabled
   {{- end -}}
 {{- end -}}
 
+{{- define "remove-tokens.enabled" -}}
+  {{- if .Values.consulAclConfigurator.removeTokens.enabled}}
+    {{- "true" -}}
+  {{- else }}
+    {{- "false" -}}
+  {{- end -}}
+{{- end -}}
+
 {{/*
 Find a kubectl image in various places.
 */}}
@@ -808,6 +854,7 @@ Core Consul operator chart related resources labels with backend component label
 {{- define "consul-service.defaultLabels" -}}
 {{ include "consul-service.coreLabels" . }}
 app.kubernetes.io/component: 'backend'
+app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- end -}}
 
 {{- define "consul.monitoredImages" -}}
@@ -946,6 +993,42 @@ Backup Daemon SSL secret name
 {{- end -}}
 
 {{/*
+Effective backup daemon S3 aliases wrapped in a map: { items: [...] }.
+fromYaml cannot parse bare YAML lists, so the output is a map with an "items" key.
+*/}}
+{{- define "backupDaemon.s3Aliases" -}}
+{{- if and .Values.backupDaemon.s3Aliases -}}
+items: {{ toYaml .Values.backupDaemon.s3Aliases | nindent 2 }}
+{{- else -}}
+items: []
+{{- end -}}
+{{- end -}}
+
+{{/*
+Build backup daemon aliases payload as JSON object.
+*/}}
+{{- define "backupDaemon.s3AliasesJson" -}}
+{{- $s3Data := fromYaml (include "backupDaemon.s3Aliases" .) -}}
+{{- $aliases := dict -}}
+{{- range $s3Data.items }}
+  {{- $out := dict -}}
+  {{- if .spec }}
+    {{- $out = merge $out (omit .spec "storageBucket" "storageUsername" "storageRegion" "storageServerUrl") -}}
+    {{- if .spec.storageBucket }}{{- $out = set $out "bucketName" .spec.storageBucket }}{{- end -}}
+    {{- if .spec.storageUsername }}{{- $out = set $out "accessKeyId" .spec.storageUsername }}{{- end -}}
+    {{- $out = set $out "region" (default "us-east-1" .spec.storageRegion) -}}
+    {{- if .spec.storageServerUrl }}{{- $out = set $out "s3Url" .spec.storageServerUrl }}{{- end -}}
+  {{- end }}
+  {{- if .secretContent }}
+    {{- $out = merge $out (omit .secretContent "storagePassword") -}}
+    {{- if .secretContent.storagePassword }}{{- $out = set $out "accessKeySecret" .secretContent.storagePassword }}{{- end -}}
+  {{- end }}
+  {{- $aliases = set $aliases .name $out -}}
+{{- end }}
+{{- $aliases | toPrettyJson -}}
+{{- end -}}
+
+{{/*
 Service Account for Site Manager depending on smSecureAuth
 */}}
 {{- define "disasterRecovery.siteManagerServiceAccount" -}}
@@ -959,3 +1042,96 @@ Service Account for Site Manager depending on smSecureAuth
     {{- end -}}
   {{- end -}}
 {{- end -}}
+
+{{/*
+Mount path for env→file migrated pod secrets (readOnly projected volume).
+*/}}
+{{- define "consul.podSecretsMountPath" -}}
+{{- printf "/etc/secrets/%s-pod-secrets" .service -}}
+{{- end -}}
+
+{{/*
+Resolve ACL bootstrap / replication token Secret reference used across workloads.
+*/}}
+{{- define "consul.aclBootstrapSecretName" -}}
+{{- if and .Values.global.acls.bootstrapToken.secretName .Values.global.acls.bootstrapToken.secretKey -}}
+{{- .Values.global.acls.bootstrapToken.secretName -}}
+{{- else if and .Values.global.acls.replicationToken.secretName .Values.global.acls.replicationToken.secretKey -}}
+{{- .Values.global.acls.replicationToken.secretName -}}
+{{- else -}}
+{{- printf "%s-bootstrap-acl-token" (include "consul.fullname" .) -}}
+{{- end -}}
+{{- end -}}
+
+{{- define "consul.aclBootstrapSecretKey" -}}
+{{- if and .Values.global.acls.bootstrapToken.secretName .Values.global.acls.bootstrapToken.secretKey -}}
+{{- .Values.global.acls.bootstrapToken.secretKey -}}
+{{- else if and .Values.global.acls.replicationToken.secretName .Values.global.acls.replicationToken.secretKey -}}
+{{- .Values.global.acls.replicationToken.secretKey -}}
+{{- else -}}
+token
+{{- end -}}
+{{- end -}}
+
+{{/*
+Shell file-first secret resolver (inline in container command scripts).
+*/}}
+{{- define "consul.resolveSecretShell" -}}
+SECRETS_DIR="${SECRETS_DIR:-{{ .mountPath }}}"
+resolve_secret_value() {
+  local key="$1"
+  local path="${SECRETS_DIR}/${key}"
+  if [ -r "${path}" ]; then
+    tr -d '\r' < "${path}"
+    return 0
+  fi
+  eval "printf '%s' \"\${${key}:-}\""
+}
+{{- end -}}
+
+{{/*
+Projected pod-secrets volume with defaultMode 420 (0644).
+*/}}
+{{- define "consul.podSecretsProjectedVolume" -}}
+- name: {{ .volumeName }}
+  projected:
+    defaultMode: 420
+    sources:
+{{ .sources | nindent 6 }}
+{{- end -}}
+
+{{/*
+Read-only mount for a pod-secrets projected volume.
+*/}}
+{{- define "consul.podSecretsVolumeMount" -}}
+- name: {{ .volumeName }}
+  mountPath: {{ .mountPath }}
+  readOnly: true
+{{- end -}}
+
+{{/*
+Coerce all annotation values to quoted strings (handles booleans/numbers).
+*/}}
+{{- define "consul.stringifyAnnotations" -}}
+{{- range $key, $value := . }}
+{{ $key }}: {{ $value | toString | quote }}
+{{- end }}
+{{- end -}}
+
+{{/*
+Global annotations applied to all Consul PVCs (server volumeClaimTemplates, server PVCs and backup-daemon PVC).
+*/}}
+{{- define "consul.pvc.metadata.annotations" -}}
+{{- $annotations := .Values.pvc.metadata.annotations | default (dict) -}}
+{{- range $key, $_ := $annotations -}}
+  {{- $namePart := $key -}}
+  {{- if contains "/" $key -}}
+    {{- $namePart = last (splitList "/" $key) -}}
+  {{- end -}}
+  {{- if not (regexMatch "^[A-Za-z0-9]([-A-Za-z0-9_.]*[A-Za-z0-9])?$" $namePart) -}}
+    {{- fail (printf "pvc.metadata.annotations: invalid annotation key %q: name part must consist of alphanumeric characters, '-', '_' or '.', and must start and end with an alphanumeric character" $key) -}}
+  {{- end -}}
+{{- end -}}
+{{- include "consul.stringifyAnnotations" $annotations | trim -}}
+{{- end -}}
+

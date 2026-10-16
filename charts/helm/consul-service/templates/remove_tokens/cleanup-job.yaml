@@ -1,0 +1,63 @@
+{{- if (eq (include "remove-tokens.enabled" .) "true") }}
+# Deletes failed Jobs spawned by the consul-remove-tokens CronJob before an upgrade.
+# Only the finished child Jobs are removed, the CronJob itself is untouched and
+# keeps running on its schedule.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ template "consul.fullname" . }}-remove-tokens-cleanup
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "consul-service.defaultLabels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-upgrade
+    "helm.sh/hook-weight": "1"
+    "helm.sh/hook-delete-policy": hook-succeeded,hook-failed
+spec:
+  backoffLimit: 2
+  template:
+    metadata:
+      name: {{ template "consul.fullname" . }}-remove-tokens-cleanup
+      labels:
+        app: {{ template "consul.name" . }}
+        chart: {{ template "consul.chart" . }}
+        release: {{ .Release.Name }}
+        component: remove-tokens-cleanup
+        {{- include "consul-service.defaultLabels" . | nindent 8 }}
+    spec:
+      {{- if not (eq (include "openshift.enabled" .) "true") }}
+      securityContext:
+        {{- include "consul.globalPodSecurityContext" . | nindent 8 }}
+        {{- with .Values.consulAclConfigurator.removeTokens.securityContext }}
+        {{- toYaml . | nindent 8 -}}
+        {{- end }}
+      {{- end }}
+      restartPolicy: Never
+      serviceAccountName: {{ template "consul.fullname" . }}-remove-tokens-cleanup
+      containers:
+        - name: remove-tokens-cleanup
+          image: {{ template "kubectl.image" . }}
+          command:
+            - "/bin/bash"
+            - "-c"
+            - |
+              kubectl get jobs -n {{ .Release.Namespace }} \
+                -l app.kubernetes.io/name={{ template "consul.fullname" . }}-remove-tokens \
+                -o jsonpath='{range .items[*]}{.metadata.name}{" "}{range .status.conditions[*]}{.type}={.status} {end}{"\n"}{end}' \
+                | grep 'Failed=True' | cut -d' ' -f1 \
+                | while read -r job; do
+                    [ -n "${job}" ] || continue
+                    echo "Deleting failed job ${job}"
+                    kubectl delete job -n {{ .Release.Namespace }} "${job}" --ignore-not-found=true
+                  done
+              exit 0
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "50Mi"
+            limits:
+              cpu: "100m"
+              memory: "100Mi"
+          securityContext:
+            {{- include "consul.globalContainerSecurityContext" . | nindent 12 }}
+{{- end }}
