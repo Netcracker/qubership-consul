@@ -5,6 +5,9 @@ metadata:
   name: {{ template "consul-acl-configurator.name" . }}-jwks-proxy
   namespace: {{ .Release.Namespace }}
   labels:
+    name: {{ template "consul-acl-configurator.name" . }}--jwks-proxy
+    app.kubernetes.io/name: {{ template "consul-acl-configurator.name" . }}--jwks-proxy
+    app.kubernetes.io/technology: go
     {{- include "consul-service.defaultLabels" . | nindent 4 }}
 spec:
   selector:
