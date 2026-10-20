@@ -1913,7 +1913,7 @@ you need to check `Release Notes` and `Breaking Changes` sections for `0.2.0` an
 Consul supports rolling upgrade feature with near-zero downtime.
 
 According to the [Consul upgrade instructions](https://developer.hashicorp.com/consul/docs/upgrade/instructions),
-each upgrade should jump at most 2 major versions, except where dedicated instructions are provided for a larger jump
+each upgrade should jump at most 2 minor versions, except where dedicated instructions are provided for a larger jump
 between specific versions. If you need to upgrade further, upgrade through an intermediate version and review the
 upgrade details of every version on the way. For example, to upgrade from Consul 1.12 to Consul 1.15:
 
