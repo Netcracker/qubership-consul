@@ -9,6 +9,8 @@ metadata:
   labels:
     name: {{ $proxyName }}
     {{- include "consul-service.defaultLabels" . | nindent 4 }}
+    app.kubernetes.io/name: {{ $proxyName }}
+    app.kubernetes.io/technology: go
 spec:
   replicas: {{ $proxy.replicas | default 2 }}
   selector:
@@ -25,6 +27,7 @@ spec:
         {{- end }}
         name: {{ $proxyName }}
         {{- include "consul-service.defaultLabels" . | nindent 8 }}
+        app.kubernetes.io/name: {{ $proxyName }}
       annotations:
         'consul.hashicorp.com/connect-inject': 'false'
     spec:
@@ -59,7 +62,7 @@ spec:
       {{- end }}
       containers:
         - name: kubectl-proxy
-          image: {{ template "deployment-status-provisioner.image" . }}
+          image: {{ template "kubectl.image" . }}
           imagePullPolicy: Always
           command: ["kubectl"]
           args:
