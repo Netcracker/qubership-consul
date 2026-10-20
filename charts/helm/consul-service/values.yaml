@@ -2413,6 +2413,17 @@ statusProvisioner:
   lifetimeAfterCompletion: 600
   podReadinessTimeout: 300
   integrationTestsTimeout: 300
+  # Timeout in seconds to wait for each monitored custom resource to become successful.
+  crProcessingTimeout: 600
+  # ConsulKV and ConsulACL custom resources whose status is checked by the PostSync hook.
+  # The hook fails if the resource is absent or its "Successful" condition is not "True".
+  # Example:
+  # monitoredCustomResources:
+  #   - plural: consulkvs
+  #     name: my-consul-kv
+  #   - plural: consulacls
+  #     name: my-consul-acl
+  monitoredCustomResources: []
   resources:
     requests:
       memory: "50Mi"
