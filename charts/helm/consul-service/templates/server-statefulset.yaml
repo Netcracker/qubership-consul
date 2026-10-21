@@ -463,6 +463,9 @@ spec:
   volumeClaimTemplates:
     - metadata:
         name: data-{{ .Release.Namespace | trunc 58 | trimSuffix "-" }}
+        {{- if .Values.pvc.metadata.annotations }}
+        annotations: {{- include "consul.pvc.metadata.annotations" . | nindent 10 }}
+        {{- end }}
       spec:
         accessModes:
           - ReadWriteOnce

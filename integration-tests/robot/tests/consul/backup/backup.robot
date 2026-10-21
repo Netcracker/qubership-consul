@@ -7,6 +7,10 @@ ${BACKUP_TIMEOUT}                 2min
 ${BACKUP_TIME_INTERVAL}           10s
 ${RESTORE_TIMEOUT}                2min
 ${RESTORE_TIME_INTERVAL}          10s
+${EVICT_TIMEOUT}                  1min
+${EVICT_TIME_INTERVAL}            5s
+${EVICT_ABSENCE_TIMEOUT}          300s
+${EVICT_ABSENCE_INTERVAL}         10s
 
 *** Settings ***
 Library  String
@@ -45,11 +49,10 @@ Full Backup
 
 Check Backup Status
     [Arguments]  ${backup_id}  ${is_granular}
-    ${status}=  Get Request  backupsession  /listbackups/${backup_id}
-    ${content}=  Set Variable  ${status.json()}
-    Should Be Equal As Strings  ${content['failed']}  False
-    Should Be Equal As Strings  ${content['valid']}  True
-    Should Be Equal As Strings  ${content['is_granular']}  ${is_granular}
+    ${status}=  Get Request  backupsession  /jobstatus/${backup_id}
+    Should Be Equal As Strings  ${status.json()['status']}  Successful
+    ${info}=  Get Request  backupsession  /listbackups/${backup_id}
+    Should Be Equal As Strings  ${info.json()['is_granular']}  ${is_granular}
 
 Delete Test Data
     Delete Test Data From Consul  ${test_key}
@@ -80,10 +83,20 @@ Granular Backup
 
 Delete Backup From Backup Daemon
     [Arguments]  ${backup_id}
-    ${resp_delete}=  Post Request  backupsession  /evict/${backup_id}
-    Should Be Equal As Strings  ${resp_delete.status_code}   200
+    Wait Until Keyword Succeeds  ${EVICT_TIMEOUT}  ${EVICT_TIME_INTERVAL}
+    ...  Evict Backup  ${backup_id}
+    Wait Until Keyword Succeeds  ${EVICT_ABSENCE_TIMEOUT}  ${EVICT_ABSENCE_INTERVAL}
+    ...  Check Backup Absence  ${backup_id}
+
+Check Backup Absence
+    [Arguments]  ${backup_id}
     ${list_backups} =  Get Request  backupsession  /listbackups
     Should Not Contain  ${list_backups.content}  ${backup_id}
+
+Evict Backup
+    [Arguments]  ${backup_id}
+    ${resp_delete}=  Post Request  backupsession  /evict/${backup_id}
+    Should Be Equal As Strings  ${resp_delete.status_code}   200
 
 *** Test Cases ***
 Test Full Backup And Restore

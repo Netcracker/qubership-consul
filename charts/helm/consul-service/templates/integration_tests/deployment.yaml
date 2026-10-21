@@ -92,6 +92,8 @@ spec:
             - name: IS_SHORT_STATUS_MESSAGE
               value: "{{ .Values.integrationTests.isShortStatusMessage }}"
             {{- end }}
+            - name: JWKS_URL
+              value: "http://{{ template "consul-acl-configurator.name" . }}-jwks-proxy:8080/openid/v1/jwks"
             - name: CONSUL_HOST
               value: {{ template "consul.fullname" . }}-server
             - name: CONSUL_PORT
@@ -105,6 +107,10 @@ spec:
               value: {{ include "backupDaemon.port" . | quote }}
             - name: CONSUL_BACKUP_DAEMON_PROTOCOL
               value:  {{ template "backupDaemon.protocol" . }}
+            {{- end }}
+            {{- if .Values.consulAclConfigurator.enabled }}
+            - name: CONSUL_ACL_CONFIGURATOR_HOST
+              value: {{ template "consul-acl-configurator.name" . }}-operator
             {{- end }}
             {{- if .Values.backupDaemon.s3.enabled }}
             - name: S3_ENABLED

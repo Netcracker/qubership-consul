@@ -58,8 +58,8 @@ class ConsulLibrary(object):
         url = f'{self.consul_scheme}://{self.consul_host}:{self.consul_port}/v1/kv/{key}'
         headers = {'Authorization': 'Bearer ' + self.consul_token}
         response = requests.Response()
-        # Handle OSError as large PUT request with enabled TLS produces SSLEOFError 
-        try: 
+        # Handle OSError as large PUT request with enabled TLS produces SSLEOFError
+        try:
             response = requests.put(url, data=value, headers=headers, verify=self.consul_cafile)
         except OSError:
             response.status_code = 413
@@ -71,6 +71,170 @@ class ConsulLibrary(object):
         leader_response = requests.get(url, verify=self.consul_cafile)
         return leader_response.status_code == 200 and str(leader_response.content) != ""
 
+    # --- ACL helpers ---
+
+    def _acl_get(self, path):
+        url = f'{self.consul_scheme}://{self.consul_host}:{self.consul_port}/v1/acl/{path}'
+        headers = {'X-Consul-Token': self.consul_token} if self.consul_token else {}
+        response = requests.get(url, headers=headers, verify=self.consul_cafile)
+        response.raise_for_status()
+        return response.json()
+
+    def _acl_delete(self, path):
+        url = f'{self.consul_scheme}://{self.consul_host}:{self.consul_port}/v1/acl/{path}'
+        headers = {'X-Consul-Token': self.consul_token} if self.consul_token else {}
+        response = requests.delete(url, headers=headers, verify=self.consul_cafile)
+        response.raise_for_status()
+
+    def get_acl_policy_by_name(self, name):
+        """Return the policy object with the given name, or None if not found."""
+        try:
+            return self._acl_get(f'policy/name/{name}')
+        except requests.HTTPError as e:
+            if e.response.status_code in (403, 404):
+                return None
+            raise
+
+    def get_acl_role_by_name(self, name):
+        """Return the role object with the given name, or None if not found."""
+        try:
+            return self._acl_get(f'role/name/{name}')
+        except requests.HTTPError as e:
+            if e.response.status_code in (403, 404):
+                return None
+            raise
+
+    def acl_policy_should_exist(self, name):
+        """Fail if no ACL policy with the given name exists in Consul."""
+        result = self.get_acl_policy_by_name(name)
+        assert result is not None, f'ACL policy "{name}" not found in Consul'
+
+    def acl_policy_should_not_exist(self, name):
+        """Fail if an ACL policy with the given name exists in Consul."""
+        result = self.get_acl_policy_by_name(name)
+        assert result is None, f'ACL policy "{name}" should not exist in Consul but was found'
+
+    def acl_role_should_exist(self, name):
+        """Fail if no ACL role with the given name exists in Consul."""
+        result = self.get_acl_role_by_name(name)
+        assert result is not None, f'ACL role "{name}" not found in Consul'
+
+    def acl_role_should_not_exist(self, name):
+        """Fail if an ACL role with the given name exists in Consul."""
+        result = self.get_acl_role_by_name(name)
+        assert result is None, f'ACL role "{name}" should not exist in Consul but was found'
+
+    def create_auth_method(self, name, auth_type="kubernetes", description="", jwks_url=""):
+        """Create a Consul ACL auth method. Idempotent: updates if already exists."""
+        url = f'{self.consul_scheme}://{self.consul_host}:{self.consul_port}/v1/acl/auth-method'
+        headers = {'X-Consul-Token': self.consul_token} if self.consul_token else {}
+        if auth_type == "jwt":
+            resolved_jwks_url = jwks_url or os.getenv("JWKS_URL", "")
+            config = {
+                "JWKSURL": resolved_jwks_url,
+                "BoundIssuer": "https://kubernetes.default.svc.cluster.local",
+                "BoundAudiences": ["https://kubernetes.default.svc.cluster.local"],
+                "ClaimMappings": {
+                    "/kubernetes.io/namespace": "namespace",
+                    "/kubernetes.io/serviceaccount/name": "serviceaccount",
+                },
+            }
+        else:
+            k8s_ca_path = '/var/run/secrets/kubernetes.io/serviceaccount/ca.crt'
+            k8s_token_path = '/var/run/secrets/kubernetes.io/serviceaccount/token'
+            ca_cert = open(k8s_ca_path).read() if os.path.exists(k8s_ca_path) else ''
+            sa_jwt = open(k8s_token_path).read() if os.path.exists(k8s_token_path) else ''
+            config = {"Host": "https://kubernetes.default.svc", "CACert": ca_cert, "ServiceAccountJWT": sa_jwt}
+        payload = {"Name": name, "Type": auth_type, "Description": description, "Config": config}
+        response = requests.put(url, json=payload, headers=headers, verify=self.consul_cafile)
+        response.raise_for_status()
+        return response.json()
+
+    def delete_auth_method(self, name):
+        """Delete a Consul ACL auth method. No-op if not found."""
+        try:
+            self._acl_delete(f'auth-method/{name}')
+        except requests.HTTPError as e:
+            if e.response.status_code == 404:
+                return
+            raise
+
+    def get_auth_method(self, name):
+        """Return the auth method object with the given name, or None if not found."""
+        try:
+            return self._acl_get(f'auth-method/{name}')
+        except requests.HTTPError as e:
+            if e.response.status_code in (403, 404):
+                return None
+            raise
+
+    def auth_method_should_exist(self, name):
+        """Fail if no auth method with the given name exists in Consul."""
+        result = self.get_auth_method(name)
+        assert result is not None, f'Auth method "{name}" not found in Consul'
+
+    def auth_method_should_not_exist(self, name):
+        """Fail if an auth method with the given name exists in Consul."""
+        result = self.get_auth_method(name)
+        assert result is None, f'Auth method "{name}" should not exist in Consul but was found'
+
+    def get_k8s_ca_cert(self):
+        """Return the in-cluster Kubernetes CA certificate PEM string."""
+        path = '/var/run/secrets/kubernetes.io/serviceaccount/ca.crt'
+        return open(path).read() if os.path.exists(path) else ''
+
+    def get_k8s_service_account_jwt(self):
+        """Return the in-cluster Kubernetes service account JWT."""
+        path = '/var/run/secrets/kubernetes.io/serviceaccount/token'
+        return open(path).read() if os.path.exists(path) else ''
+
+    def list_acl_binding_rules(self, auth_method):
+        """Return list of binding rules for the given auth method."""
+        try:
+            return self._acl_get(f'binding-rules?authmethod={auth_method}')
+        except requests.HTTPError as e:
+            if e.response.status_code == 403:
+                return []
+            raise
+
+    def acl_binding_rule_should_exist(self, bind_name, auth_method):
+        """Fail if no binding rule with bind_name exists under auth_method."""
+        rules = self.list_acl_binding_rules(auth_method)
+        for rule in rules:
+            if rule.get('BindName') == bind_name:
+                return
+        raise AssertionError(
+            f'Binding rule with BindName "{bind_name}" under auth method "{auth_method}" not found in Consul'
+        )
+
+    def acl_binding_rule_should_not_exist(self, bind_name, auth_method):
+        """Fail if a binding rule with bind_name exists under auth_method."""
+        rules = self.list_acl_binding_rules(auth_method)
+        for rule in rules:
+            if rule.get('BindName') == bind_name:
+                raise AssertionError(
+                    f'Binding rule with BindName "{bind_name}" under auth method "{auth_method}" should not exist but was found'
+                )
+
+    def acl_binding_rule_count_should_be(self, bind_name, auth_method, expected_count):
+        """Fail if the number of binding rules with bind_name under auth_method differs from expected_count."""
+        rules = self.list_acl_binding_rules(auth_method)
+        count = sum(1 for rule in rules if rule.get('BindName') == bind_name)
+        expected = int(expected_count)
+        if count != expected:
+            raise AssertionError(
+                f'Expected {expected} binding rule(s) with BindName "{bind_name}" under "{auth_method}", but found {count}'
+            )
+
+    def kv_key_should_exist(self, key):
+        """Fail if the KV key does not exist in Consul."""
+        index, data = self.connect.kv.get(key)
+        assert data is not None, f'KV key "{key}" not found in Consul'
+
+    def kv_key_should_not_exist(self, key):
+        """Fail if the KV key exists in Consul."""
+        index, data = self.connect.kv.get(key)
+        assert data is None, f'KV key "{key}" should not exist in Consul but was found'
     def create_backup_with_retry(self, base_url, username, password, verify=None,
                                  attempts=3, backup_timeout=120, poll_interval=10):
         """Create a full backup, retrying the whole backup up to ``attempts`` times.
@@ -80,9 +244,11 @@ class ConsulLibrary(object):
         successful state within ``backup_timeout`` seconds. On such a failure the
         backup is re-issued (a new POST /backup), up to ``attempts`` times.
 
-        Backup completion is polled via ``/listbackups/<id>`` (the ``failed`` /
-        ``valid`` fields) -- the backup counterpart of ``/jobstatus/<task_id>``
-        used for restore. Returns the backup id on success; fails otherwise.
+        Backup completion is polled via ``/jobstatus/<backup_id>`` (a backup's task
+        id equals its backup id), whose terminal ``status`` reflects the backup
+        script's exit code -- so a backup that failed to take the snapshot is seen
+        as ``Failed`` and re-issued, instead of being wrongly accepted as valid.
+        Returns the backup id on success; fails otherwise.
         """
         attempts = int(attempts)
         auth = (username, password)
@@ -116,22 +282,20 @@ class ConsulLibrary(object):
         last = 'no status received'
         while time.time() < deadline:
             try:
-                response = requests.get(f'{base_url}/listbackups/{backup_id}',
+                response = requests.get(f'{base_url}/jobstatus/{backup_id}',
                                         auth=auth, verify=verify, timeout=30)
             except requests.exceptions.RequestException as e:
                 last = f'status request failed: {e}'
                 time.sleep(float(interval))
                 continue
-            if response.status_code == 200:
-                content = response.json()
-                if content.get('failed') is True:
-                    return False, f'backup {backup_id} reported failed=True: {content}'
-                if content.get('failed') is False and content.get('valid') is True:
-                    return True, ''
-                last = f'not ready yet: {content}'
-            else:
-                # 404 while the backup is still running, or after a failed backup
-                # that was never stored -- keep polling until timeout.
-                last = f'HTTP {response.status_code}: {response.text}'
+            try:
+                status = response.json().get('status')
+            except ValueError:
+                status = None
+            if status == 'Successful':
+                return True, ''
+            if status == 'Failed':
+                return False, f'backup {backup_id} reported Failed: {response.text}'
+            last = f'not ready yet: HTTP {response.status_code}: {response.text}'
             time.sleep(float(interval))
         return False, f'backup {backup_id} not successful within {timeout}s ({last})'
