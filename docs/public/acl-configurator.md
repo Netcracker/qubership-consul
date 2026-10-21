@@ -310,6 +310,10 @@ This allows multiple CRs to safely reference the same key — the key is only de
 - Key exists with `Flags>0` (owned by another CR) → operator increments `Flags`. Key is **co-owned**; it will
   only be deleted when all owning CRs are removed.
 
+> [!WARNING]
+> Do not create or delete keys through the Consul KV REST API in parallel with `ConsulKV` CRs for the
+> same keys. The CRs keep the reference count, and when the CR is deleted the value is deleted as well.
+
 If the same key is declared more than once in one CR, the key is written once with the value of the last entry.
 The earlier entries are reported in the CR status as `skipped (duplicate key)`; all other keys are written normally.
 
