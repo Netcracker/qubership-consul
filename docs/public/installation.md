@@ -66,6 +66,7 @@ The following topics are covered in this chapter:
 * [Upgrade](#upgrade)
   * [Common](#common-1)
   * [Rolling Upgrade](#rolling-upgrade)
+  * [Upgrade to Consul 2.0.x](#upgrade-to-consul-20x)
   * [CRD Upgrade](#crd-upgrade)
     * [Automatic CRD Upgrade](#automatic-crd-upgrade)
   * [Migration From DVM to Helm](#migration-from-dvm-to-helm)
@@ -1912,6 +1913,29 @@ you need to check `Release Notes` and `Breaking Changes` sections for `0.2.0` an
 ## Rolling Upgrade
 
 Consul supports rolling upgrade feature with near-zero downtime.
+
+According to the [Consul upgrade instructions](https://developer.hashicorp.com/consul/docs/upgrade/instructions),
+each upgrade should jump at most 2 minor versions, except where dedicated instructions are provided for a larger jump
+between specific versions. If you need to upgrade further, upgrade through an intermediate version and review the
+upgrade details of every version on the way. For example, to upgrade from Consul 1.12 to Consul 1.15:
+
+1. Upgrade to Consul 1.14 as an intermediate step.
+2. Upgrade to Consul 1.15.
+
+The upgrade from Consul 1.22.x to 2.0.x is a single major version step.
+
+## Upgrade to Consul 2.0.x
+
+The information below is based on the official Consul
+[upgrade instructions](https://developer.hashicorp.com/consul/docs/upgrade/instructions/upgrade-to-2-0-x) and
+[release notes](https://developer.hashicorp.com/consul/docs/release-notes/consul/v2_0_x). Review the release notes
+of the target version before the upgrade.
+
+* The HTTP server `read_timeout` and `write_timeout` (`http_config`) are increased from 30 seconds to 15 minutes by
+  default (2.0.0).
+* The following endpoints cap the request body at 512 KiB and return HTTP `413` for bigger bodies (2.0.3):
+  `PUT /v1/agent/check/update/:id`, `PUT /v1/agent/check/register`, `PUT /v1/agent/service/register` and
+  `POST /v1/agent/connect/authorize`.
 
 ## CRD Upgrade
 

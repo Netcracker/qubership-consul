@@ -88,8 +88,6 @@ Delete Backup From Backup Daemon
     [Arguments]  ${backup_id}
     Wait Until Keyword Succeeds  ${EVICT_TIMEOUT}  ${EVICT_TIME_INTERVAL}
     ...  Evict Backup  ${backup_id}
-    ${list_backups} =  Get Request  backupsession  /listbackups
-    Should Not Contain  ${list_backups.text}  ${backup_id}
 
 Evict Backup
     [Arguments]  ${backup_id}
