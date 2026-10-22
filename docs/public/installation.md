@@ -413,8 +413,8 @@ the following steps:
 * It is required to upgrade the component before upgrading OpenShift. Follow the information in tags regarding OpenShift
   certified versions.
 * To enable OpenShift mode, the following parameters are checked in order of priority, and the first one that is defined decides:
-    - PAAS_PLATFORM_CUSTOM, if given, must not be KUBERNETES.
-    - PAAS_PLATFORM, if given, must not be KUBERNETES.
+    - PAAS_PLATFORM_CUSTOM must be OPENSHIFT
+    - PAAS_PLATFORM must be OPENSHIFT.
     - `global.openshift.enabled` parameter must be set to `true`.
 * The following annotations should be specified for the project:
 
@@ -930,15 +930,15 @@ The section lists the configurable parameters of the Consul chart and their defa
 
 ## Cloud Integration Parameters
 
-| Parameter                           | Type     | Mandatory | Default value | Description                                                                                                                                                       |
-|-------------------------------------|----------|-----------|---------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| MONITORING_ENABLED                  | boolean  | no        | `false`       | Specifies whether Consul Monitoring component is to be deployed or not.                                                                                           |
-| STORAGE_RWO_CLASS                   | string   | yes       | `""`          | Storage class name used to dynamically provide volumes.                                                                                                           |
-| INFRA_CONSUL_FS_GROUP               | integer  | no        |               | Specifies group ID used inside Consul pods.                                                                                                                       |
-| INFRA_CONSUL_REPLICAS               | integer  | no        |               | Specifies Consul replicas count.                                                                                                                                  |
-| INFRA_CONSUL_RESTRICTED_ENVIRONMENT | boolean  | no        | `false`       | Specifies whether the Consul service is to be deployed in restricted environment.                                                                                 |
-| PAAS_PLATFORM                       | string   | no        | KUBERNETES    | The platform the service is deployed to. If it is not `KUBERNETES`, OpenShift mode is enabled. It has a higher priority than `global.openshift.enabled`.          |
-| PAAS_PLATFORM_CUSTOM                | string   | no        | null          | The custom platform override. If it is not `KUBERNETES`, OpenShift mode is enabled. It has a higher priority than `PAAS_PLATFORM` and `global.openshift.enabled`. |
+| Parameter                           | Type     | Mandatory | Default value | Description                                                                                                                                                      |
+|-------------------------------------|----------|-----------|---------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| MONITORING_ENABLED                  | boolean  | no        | `false`       | Specifies whether Consul Monitoring component is to be deployed or not.                                                                                          |
+| STORAGE_RWO_CLASS                   | string   | yes       | `""`          | Storage class name used to dynamically provide volumes.                                                                                                          |
+| INFRA_CONSUL_FS_GROUP               | integer  | no        |               | Specifies group ID used inside Consul pods.                                                                                                                      |
+| INFRA_CONSUL_REPLICAS               | integer  | no        |               | Specifies Consul replicas count.                                                                                                                                 |
+| INFRA_CONSUL_RESTRICTED_ENVIRONMENT | boolean  | no        | `false`       | Specifies whether the Consul service is to be deployed in restricted environment.                                                                                |
+| PAAS_PLATFORM                       | string   | no        | KUBERNETES    | The platform the service is deployed to. The platform can be either KUBERNETES or OPENSHIFT. It has a higher priority than `global.openshift.enabled`.          |
+| PAAS_PLATFORM_CUSTOM                | string   | no        | null          | The custom platform override. The platform can be either KUBERNETES or OPENSHIFT. It has a higher priority than `PAAS_PLATFORM` and `global.openshift.enabled`. |
 
 ## Global
 
