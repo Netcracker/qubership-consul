@@ -1,6 +1,6 @@
 # Build the manager binary
 # Note: this uses host platform for the build, and we ask go build to target the needed platform, so we do not spend time on qemu emulation when running "go build"
-FROM --platform=$BUILDPLATFORM golang:1.27-alpine3.24 as builder
+FROM --platform=$BUILDPLATFORM golang:1.27-alpine3.24@sha256:b8c9b82affbbb82a020bbcf998dad2ba9516944ac7e883524642a481a9505e9c as builder
 ARG BUILDPLATFORM
 ARG TARGETOS
 ARG TARGETARCH
