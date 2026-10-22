@@ -12,8 +12,6 @@ metadata:
     app.kubernetes.io/instance: {{ cat (printf "%s-jwks"  (include "consul.fullname" .)) .Values.DELIMITER .Release.Namespace | nospace | trunc 63 }}
     app.kubernetes.io/technology: go
     {{- include "consul-service.defaultLabels" . | nindent 4 }}
-    app.kubernetes.io/name: {{ $proxyName }}
-    app.kubernetes.io/technology: go
 spec:
   replicas: {{ $proxy.replicas | default 2 }}
   selector:

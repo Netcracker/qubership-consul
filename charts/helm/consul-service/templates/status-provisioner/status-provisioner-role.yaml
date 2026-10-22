@@ -21,13 +21,4 @@ rules:
     verbs:
       - get
       - patch
-{{- if .Values.statusProvisioner.monitoredCustomResources }}
-  - apiGroups:
-      - netcracker.com
-    resources:
-      - consulkvs
-      - consulacls
-    verbs:
-      - get
-{{- end }}
 {{- end }}

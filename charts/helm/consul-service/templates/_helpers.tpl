@@ -1135,16 +1135,3 @@ Global annotations applied to all Consul PVCs (server volumeClaimTemplates, serv
 {{- include "consul.stringifyAnnotations" $annotations | trim -}}
 {{- end -}}
 
-
-{{/*
-Custom resources monitored by the status provisioner, in the MONITORED_CUSTOM_RESOURCES format:
-"group version plural name jsonpath successful failed", separated by commas.
-Usage: include "consul-status-provisioner.monitoredCustomResources" .Values.statusProvisioner.monitoredCustomResources
-*/}}
-{{- define "consul-status-provisioner.monitoredCustomResources" -}}
-{{- $items := list -}}
-{{- range . -}}
-{{- $items = append $items (printf "netcracker.com v1alpha1 %s %s $.status.conditions[?(@.type=='Successful')].status True False" .plural .name) -}}
-{{- end -}}
-{{- join "," $items -}}
-{{- end -}}

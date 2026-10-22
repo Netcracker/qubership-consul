@@ -58,12 +58,6 @@ spec:
               value: "ConsulServiceReadinessStatus"
             - name: POD_READINESS_TIMEOUT
               value: "{{ .Values.statusProvisioner.podReadinessTimeout | default 300 }}"
-          {{- with .Values.statusProvisioner.monitoredCustomResources }}
-            - name: MONITORED_CUSTOM_RESOURCES
-              value: {{ include "consul-status-provisioner.monitoredCustomResources" . | quote }}
-            - name: CR_PROCESSING_TIMEOUT
-              value: "{{ $.Values.statusProvisioner.crProcessingTimeout | default 600 }}"
-          {{- end }}
           {{- if and .Values.integrationTests.enabled .Values.integrationTests.statusWritingEnabled (eq (include "consul.replicasForSingleService" .) "1") }}
             - name: INTEGRATION_TESTS_RESOURCE
               value: {{ printf "apps v1 deployments %s" (include "consul-integration-tests.name" .) }}
