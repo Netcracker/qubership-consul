@@ -937,8 +937,8 @@ The section lists the configurable parameters of the Consul chart and their defa
 | INFRA_CONSUL_FS_GROUP               | integer  | no        |               | Specifies group ID used inside Consul pods.                                                                                                                      |
 | INFRA_CONSUL_REPLICAS               | integer  | no        |               | Specifies Consul replicas count.                                                                                                                                 |
 | INFRA_CONSUL_RESTRICTED_ENVIRONMENT | boolean  | no        | `false`       | Specifies whether the Consul service is to be deployed in restricted environment.                                                                                |
-| PAAS_PLATFORM                       | string   | no        | KUBERNETES    | The platform the service is deployed to. The platform can be either KUBERNETES or OPENSHIFT. It has a higher priority than `global.openshift.enabled`.          |
-| PAAS_PLATFORM_CUSTOM                | string   | no        | null          | The custom platform override. The platform can be either KUBERNETES or OPENSHIFT. It has a higher priority than `PAAS_PLATFORM` and `global.openshift.enabled`. |
+| PAAS_PLATFORM                       | string   | no        | KUBERNETES    | The platform the service is deployed to. The platform can be either KUBERNETES or OPENSHIFT. It has a higher priority than `global.openshift.enabled`.           |
+| PAAS_PLATFORM_CUSTOM                | string   | no        | null          | The custom platform override. The platform can be either KUBERNETES or OPENSHIFT. It has a higher priority than `PAAS_PLATFORM` and `global.openshift.enabled`.  |
 
 ## Global
 
