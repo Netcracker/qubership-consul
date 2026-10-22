@@ -801,6 +801,7 @@
           "description": "global.velero parameters"
         }
       },
+      "additionalProperties": true,
       "title": "The global schema",
       "description": "global parameters"
     },
