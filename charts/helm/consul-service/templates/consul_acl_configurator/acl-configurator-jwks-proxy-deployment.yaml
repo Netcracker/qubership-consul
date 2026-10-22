@@ -62,7 +62,7 @@ spec:
       {{- end }}
       containers:
         - name: kubectl-proxy
-          image: {{ template "deployment-status-provisioner.image" . }}
+          image: {{ template "kubectl.image" . }}
           imagePullPolicy: Always
           command: ["kubectl"]
           args:
