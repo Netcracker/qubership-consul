@@ -28,7 +28,6 @@ spec:
         {{- end }}
         name: {{ $proxyName }}
         {{- include "consul-service.defaultLabels" . | nindent 8 }}
-        app.kubernetes.io/name: {{ $proxyName }}
       annotations:
         'consul.hashicorp.com/connect-inject': 'false'
     spec:
