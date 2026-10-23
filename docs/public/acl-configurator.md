@@ -11,7 +11,7 @@ Kubernetes custom resource.
 For example,
 
 ```yaml
-apiVersion: netcracker.com/v1alpha1
+apiVersion: netcracker.com/v1
 kind: ConsulACL
 metadata:
   name: example-consul-acl-config
@@ -53,7 +53,7 @@ spec:
 
 There are some required yaml fields
 
-- `apiVersion` (netcracker.com/v1alpha1),
+- `apiVersion` (netcracker.com/v1),
 - `kind` (ConsulACL),
 - `metadata.name` (any name but it should be unique for namespace "consulacls" CRs),
 - `spec.acl.name` (any name),
@@ -173,7 +173,7 @@ level — it never enters their reconcile queue.
 - `operatorNamespace` present — only the operator whose own namespace matches the value processes the CR, wherever
   the CR is created. The operator must watch the CR namespace (`consulAclConfigurator.namespaces`, `*` for all).
 
-The same rules apply to `spec.kv.operatorNamespace` of [ConsulKV](#consulkv) resources.
+The same rules apply to `spec.operatorNamespace` of [ConsulKV](#consulkv) resources.
 
 ## Authentication method
 
@@ -280,17 +280,16 @@ To start common reconcile manually we recommend scale down and then scale up Con
 The `ConsulKV` custom resource allows provisioning Consul KV entries. For example:
 
 ```yaml
-apiVersion: netcracker.com/v1alpha1
+apiVersion: netcracker.com/v1
 kind: ConsulKV
 metadata:
   name: example-consulkv
   namespace: my-service
 spec:
   kv:
-    entries:
-      - key: "config/my-service/application/"
-      - key: "config/my-service/LOG_LEVEL"
-        value: "INFO"
+    - key: "config/my-service/application/"
+    - key: "config/my-service/LOG_LEVEL"
+      value: "INFO"
 ```
 
 Keys are created exactly as defined in the spec — no automatic prefixes are applied.
@@ -323,9 +322,9 @@ the CR status as written (or released), only the keys of the failed transaction 
 operator retries them after `consulAclConfigurator.reconcilePeriod`. The CR becomes `synced` only when all keys
 are written.
 
-### spec.kv.purgeOnDelete
+### spec.purgeOnDelete
 
-If `spec.kv.purgeOnDelete: true` is set, deleting the CR removes each declared key and everything below it,
+If `spec.purgeOnDelete: true` is set, deleting the CR removes each declared key and everything below it,
 bypassing the ownership counter: also keys used by other CRs are removed. Use this only when the CR owns an
 entire key namespace exclusively.
 
@@ -335,8 +334,7 @@ for `config/my-service` it deletes `config/my-service` and `config/my-service/..
 
 ```yaml
 spec:
+  purgeOnDelete: true
   kv:
-    purgeOnDelete: true
-    entries:
-      - key: "config/my-service/"
+    - key: "config/my-service/"
 ```

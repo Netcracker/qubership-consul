@@ -32,7 +32,7 @@ import (
 
 	"time"
 
-	consulacl "github.com/Netcracker/consul-acl-configurator/consul-acl-configurator-operator/api/v1alpha1"
+	consulacl "github.com/Netcracker/consul-acl-configurator/consul-acl-configurator-operator/api/v1"
 	"github.com/Netcracker/consul-acl-configurator/consul-acl-configurator-operator/util"
 	consulApi "github.com/hashicorp/consul/api"
 	"k8s.io/apimachinery/pkg/types"
@@ -91,7 +91,7 @@ func (r *ConsulKVReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	} else {
 		if util.Contains(consulKVFinalizer, instance.GetFinalizers()) {
 			var deleteErr error
-			if instance.Spec.KV.PurgeOnDelete {
+			if instance.Spec.PurgeOnDelete {
 				deleteErr = deleteKVTree(instance.Status.Entries)
 			} else {
 				var released map[string]bool
@@ -124,8 +124,8 @@ func (r *ConsulKVReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		}
 	}
 
-	entryStatuses, applyErr := applyKVEntries(instance.Spec.KV.Entries, ownedKeys)
-	cleanedKeys, removeErr := deleteRemovedEntries(instance.Status.Entries, instance.Spec.KV.Entries)
+	entryStatuses, applyErr := applyKVEntries(instance.Spec.KV, ownedKeys)
+	cleanedKeys, removeErr := deleteRemovedEntries(instance.Status.Entries, instance.Spec.KV)
 
 	reconcileErr := applyErr
 	if reconcileErr == nil {
@@ -174,7 +174,7 @@ func (r *ConsulKVReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		// When operatorNamespace is set, the CR is owned by the operator whose own
 		// namespace matches it, regardless of the CR's own namespace. Otherwise fall
 		// back to matching the CR's namespace against the operator's namespace.
-		operatorNs := cr.Spec.KV.OperatorNamespace
+		operatorNs := cr.Spec.OperatorNamespace
 		if operatorNs != "" {
 			return operatorNs == r.OwnNamespace
 		}
