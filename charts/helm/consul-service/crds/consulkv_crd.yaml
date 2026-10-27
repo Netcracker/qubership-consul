@@ -88,6 +88,9 @@ spec:
                   - type
                   type: object
                 type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
               entries:
                 items:
                   properties:
@@ -109,7 +112,7 @@ spec:
             type: object
         type: object
     selectableFields:
-    - jsonPath: .spec.operatorNamespace
+    - jsonPath: .spec.kv.operatorNamespace
     served: true
     storage: true
     subresources:
@@ -187,6 +190,9 @@ spec:
                   - type
                   type: object
                 type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
               entries:
                 items:
                   properties:
