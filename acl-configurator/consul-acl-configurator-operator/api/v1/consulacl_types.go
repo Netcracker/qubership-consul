@@ -19,28 +19,27 @@ import (
 )
 
 type ACL struct {
-	Json            string `json:"json"`
-	Name            string `json:"name"`
-	CommonReconcile string `json:"commonReconcile,omitempty"`
-	ExplicitName    bool   `json:"explicitName,omitempty"`
+	Json              string `json:"json"`
+	Name              string `json:"name"`
+	CommonReconcile   string `json:"commonReconcile,omitempty"`
+	ExplicitName      bool   `json:"explicitName,omitempty"`
+	OperatorNamespace string `json:"operatorNamespace,omitempty"`
 }
 
 // ConsulACLSpec defines the desired state of ConsulACL
 type ConsulACLSpec struct {
-	// OperatorNamespace, when set, binds this CR to the operator whose own namespace
-	// matches this value, allowing the CR to live in a different namespace than the
-	// operator. When empty, the CR is owned by the operator running in its own namespace.
-	OperatorNamespace string `json:"operatorNamespace,omitempty"`
-	ACL               *ACL   `json:"acl"`
+	ACL *ACL `json:"acl"`
 }
 
 // ConsulACLStatus defines the observed state of ConsulACL
 type ConsulACLStatus struct {
-	PoliciesStatus  string             `json:"policiesStatus"`
-	RolesStatus     string             `json:"rolesStatus,omitempty"`
-	BindRulesStatus string             `json:"bindRulesStatus,omitempty"`
-	GeneralStatus   string             `json:"generalStatus,omitempty"`
-	Conditions      []metav1.Condition `json:"conditions,omitempty"`
+	PoliciesStatus  string `json:"policiesStatus"`
+	RolesStatus     string `json:"rolesStatus,omitempty"`
+	BindRulesStatus string `json:"bindRulesStatus,omitempty"`
+	GeneralStatus   string `json:"generalStatus,omitempty"`
+	// +listType=map
+	// +listMapKey=type
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 //+kubebuilder:object:root=true

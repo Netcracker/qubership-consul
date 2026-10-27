@@ -43,11 +43,14 @@ type ConsulKVStatus struct {
 	Entries       []ConsulKVEntryStatus `json:"entries,omitempty"`
 	GeneralStatus string                `json:"generalStatus,omitempty"`
 	ManagedBy     string                `json:"managedBy,omitempty"`
-	Conditions    []metav1.Condition    `json:"conditions,omitempty"`
+	// +listType=map
+	// +listMapKey=type
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+//+kubebuilder:storageversion
 
 // ConsulKV is the Schema for the consulkvs API
 type ConsulKV struct {
