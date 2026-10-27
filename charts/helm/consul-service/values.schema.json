@@ -1,4 +1,4 @@
-{
+﻿{
   "$schema": "https://json-schema.org/draft-07/schema",
   "type": "object",
   "nc_schema_gen_version": "1.0.0",
@@ -20,6 +20,7 @@
         },
         "extraLabels": {
           "type": "object",
+          "additionalProperties": true,
           "default": {},
           "title": "The global.extraLabels schema",
           "description": "The custom labels for all pods which are related to the Consul service"
@@ -86,6 +87,7 @@
         },
         "gossipEncryption": {
           "type": "object",
+          "additionalProperties": true,
           "properties": {
             "secretName": {
               "type": "string",
@@ -111,6 +113,7 @@
         },
         "tls": {
           "type": "object",
+          "additionalProperties": true,
           "properties": {
             "enabled": {
               "type": "boolean",
@@ -132,6 +135,7 @@
             },
             "certManager": {
               "type": "object",
+              "additionalProperties": true,
               "properties": {
                 "enabled": {
                   "type": "boolean",
@@ -181,6 +185,7 @@
             },
             "caCert": {
               "type": "object",
+              "additionalProperties": true,
               "properties": {
                 "secretName": {
                   "type": [
@@ -206,6 +211,7 @@
             },
             "caKey": {
               "type": "object",
+              "additionalProperties": true,
               "properties": {
                 "secretName": {
                   "type": [
@@ -231,12 +237,15 @@
             },
             "init": {
               "type": "object",
+              "additionalProperties": true,
               "properties": {
                 "resources": {
                   "type": "object",
+                  "additionalProperties": true,
                   "properties": {
                     "requests": {
                       "type": "object",
+                      "additionalProperties": true,
                       "properties": {
                         "memory": {
                           "type": "string",
@@ -256,6 +265,7 @@
                     },
                     "limits": {
                       "type": "object",
+                      "additionalProperties": true,
                       "properties": {
                         "memory": {
                           "type": "string",
@@ -287,6 +297,7 @@
         },
         "ports": {
           "type": "object",
+          "additionalProperties": true,
           "properties": {
             "https": {
               "type": [
@@ -321,6 +332,7 @@
         },
         "acls": {
           "type": "object",
+          "additionalProperties": true,
           "properties": {
             "manageSystemACLs": {
               "type": "boolean",
@@ -336,6 +348,7 @@
             },
             "bootstrapToken": {
               "type": "object",
+              "additionalProperties": true,
               "properties": {
                 "secretName": {
                   "type": [
@@ -367,6 +380,7 @@
             },
             "replicationToken": {
               "type": "object",
+              "additionalProperties": true,
               "properties": {
                 "secretName": {
                   "type": [
@@ -392,12 +406,15 @@
             },
             "init": {
               "type": "object",
+              "additionalProperties": true,
               "properties": {
                 "resources": {
                   "type": "object",
+                  "additionalProperties": true,
                   "properties": {
                     "requests": {
                       "type": "object",
+                      "additionalProperties": true,
                       "properties": {
                         "memory": {
                           "type": "string",
@@ -417,6 +434,7 @@
                     },
                     "limits": {
                       "type": "object",
+                      "additionalProperties": true,
                       "properties": {
                         "memory": {
                           "type": "string",
@@ -448,6 +466,7 @@
         },
         "federation": {
           "type": "object",
+          "additionalProperties": true,
           "properties": {
             "enabled": {
               "type": "boolean",
@@ -487,6 +506,7 @@
             },
             "securityContext": {
               "type": "object",
+              "additionalProperties": true,
               "default": {},
               "title": "The global.federation.securityContext schema",
               "description": "The pod-level security attributes and common container settings for Federation job pod"
@@ -497,6 +517,7 @@
         },
         "metrics": {
           "type": "object",
+          "additionalProperties": true,
           "properties": {
             "enabled": {
               "type": "boolean",
@@ -546,6 +567,7 @@
         },
         "disasterRecovery": {
           "type": "object",
+          "additionalProperties": true,
           "properties": {
             "image": {
               "type": "string",
@@ -555,6 +577,7 @@
             },
             "tls": {
               "type": "object",
+              "additionalProperties": true,
               "properties": {
                 "enabled": {
                   "type": "boolean",
@@ -564,6 +587,7 @@
                 },
                 "certificates": {
                   "type": "object",
+                  "additionalProperties": true,
                   "properties": {
                     "crt": {
                       "type": "string",
@@ -601,6 +625,7 @@
                 },
                 "subjectAlternativeName": {
                   "type": "object",
+                  "additionalProperties": true,
                   "properties": {
                     "additionalDnsNames": {
                       "type": "array",
@@ -624,6 +649,7 @@
             },
             "httpAuth": {
               "type": "object",
+              "additionalProperties": true,
               "properties": {
                 "enabled": {
                   "type": "boolean",
@@ -703,9 +729,11 @@
             },
             "resources": {
               "type": "object",
+              "additionalProperties": true,
               "properties": {
                 "requests": {
                   "type": "object",
+                  "additionalProperties": true,
                   "properties": {
                     "cpu": {
                       "default": "25m",
@@ -725,6 +753,7 @@
                 },
                 "limits": {
                   "type": "object",
+                  "additionalProperties": true,
                   "properties": {
                     "cpu": {
                       "default": "100m",
@@ -748,12 +777,14 @@
             },
             "extraLabels": {
               "type": "object",
+              "additionalProperties": true,
               "default": {},
               "title": "The global.disasterRecovery.extraLabels schema",
               "description": "The custom labels for Consul Disaster Recovery pod"
             },
             "securityContext": {
               "type": "object",
+              "additionalProperties": true,
               "default": {},
               "title": "The global.disasterRecovery.securityContext schema",
               "description": "The pod-level security attributes and common container settings for Disaster Recovery pod"
@@ -764,6 +795,7 @@
         },
         "openshift": {
           "type": "object",
+          "additionalProperties": true,
           "properties": {
             "enabled": {
               "type": "boolean",
@@ -783,12 +815,14 @@
         },
         "securityContext": {
           "type": "object",
+          "additionalProperties": true,
           "default": {},
           "title": "The global.securityContext schema",
           "description": "The pod-level security attributes and common container settings for all pods that are related to the Consul service"
         },
         "velero": {
           "type": "object",
+          "additionalProperties": true,
           "properties": {
             "postHookRestoreEnabled": {
               "type": "boolean",
