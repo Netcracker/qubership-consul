@@ -174,7 +174,7 @@ func configureMgrNamespaces(mgrOptions *ctrl.Options, namespace string, ownNames
 	if strings.TrimSpace(namespace) == "*" {
 		// Cluster-wide watch: configure per-namespace cache filters for ConsulACL and
 		// ConsulKV so each operator only caches its own CRs. Requires the
-		// spec.acl.operatorNamespace / spec.operatorNamespace fields to be declared as
+		// spec.operatorNamespace field of both kinds to be declared as
 		// CRD selectableFields (k8s >= 1.30).
 		//
 		// - ownNamespace: no field selector — the operator processes CRs here by default
@@ -189,7 +189,7 @@ func configureMgrNamespaces(mgrOptions *ctrl.Options, namespace string, ownNames
 					ownNamespace: {},
 					cache.AllNamespaces: {
 						FieldSelector: fields.SelectorFromSet(fields.Set{
-							"spec.acl.operatorNamespace": ownNamespace,
+							"spec.operatorNamespace": ownNamespace,
 						}),
 					},
 				},

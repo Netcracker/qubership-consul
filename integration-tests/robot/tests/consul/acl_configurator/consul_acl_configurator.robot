@@ -46,13 +46,13 @@ Delete Override Auth Method
 Build ConsulACL Body
     [Arguments]    ${name}    ${explicit}    ${json}
     ${body}=    Evaluate
-    ...    {'apiVersion': 'netcracker.com/v1', 'kind': 'ConsulACL', 'metadata': {'name': $name, 'namespace': $TEST_NAMESPACE}, 'spec': {'acl': {'name': $name, 'explicitName': bool($explicit), 'operatorNamespace': $TEST_NAMESPACE, 'json': $json}}}
+    ...    {'apiVersion': 'netcracker.com/v1', 'kind': 'ConsulACL', 'metadata': {'name': $name, 'namespace': $TEST_NAMESPACE}, 'spec': {'operatorNamespace': $TEST_NAMESPACE, 'acl': {'name': $name, 'explicitName': bool($explicit), 'json': $json}}}
     RETURN    ${body}
 
 Build ConsulACL Body In Namespace
     [Arguments]    ${name}    ${namespace}    ${explicit}    ${operator_namespace}    ${json}
     ${body}=    Evaluate
-    ...    {'apiVersion': 'netcracker.com/v1', 'kind': 'ConsulACL', 'metadata': {'name': $name, 'namespace': $namespace}, 'spec': {'acl': {'name': $name, 'explicitName': bool($explicit), 'operatorNamespace': $operator_namespace, 'json': $json}}}
+    ...    {'apiVersion': 'netcracker.com/v1', 'kind': 'ConsulACL', 'metadata': {'name': $name, 'namespace': $namespace}, 'spec': {'operatorNamespace': $operator_namespace, 'acl': {'name': $name, 'explicitName': bool($explicit), 'json': $json}}}
     RETURN    ${body}
 
 Apply ConsulACL CR In Namespace

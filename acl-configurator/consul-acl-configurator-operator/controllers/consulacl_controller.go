@@ -215,8 +215,8 @@ func (r *ConsulACLReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 // isManaged reports whether the given ConsulACL resource is reconciled by this operator instance.
 func (r *ConsulACLReconciler) isManaged(cr *consulacl.ConsulACL) bool {
-	if cr.Spec.ACL != nil && cr.Spec.ACL.OperatorNamespace != "" {
-		return cr.Spec.ACL.OperatorNamespace == r.OwnNamespace
+	if cr.Spec.OperatorNamespace != "" {
+		return cr.Spec.OperatorNamespace == r.OwnNamespace
 	}
 	return cr.GetNamespace() == r.OwnNamespace
 }

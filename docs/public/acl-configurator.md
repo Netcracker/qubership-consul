@@ -143,18 +143,18 @@ was introduced have no marker and are deleted together with the CR as before.
 
 Do not edit the `[consul-acl-owners: ...]` line manually: the operator uses it to decide when an entity can be deleted.
 
-### Operator ownership via spec.acl.operatorNamespace
+### Operator ownership via spec.operatorNamespace
 
 When multiple Consul ACL Configurator operators are deployed in different namespaces and all watch the cluster
-(`WATCH_NAMESPACE=*`), use `spec.acl.operatorNamespace` to pin a CR to a specific operator instance.
+(`WATCH_NAMESPACE=*`), use `spec.operatorNamespace` to pin a CR to a specific operator instance.
 
 The field is typically populated in the client's Helm chart by extracting the namespace from the Consul URL:
 
 ```yaml
 spec:
+  operatorNamespace: {{ (index (splitList "." (first (splitList ":" (last (splitList "://" .Values.CONSUL_URL))))) 1) | quote }}  # yamllint disable-line rule:braces
   acl:
     name: consul-acls
-    operatorNamespace: {{ (index (splitList "." (first (splitList ":" (last (splitList "://" .Values.CONSUL_URL))))) 1) | quote }}  # yamllint disable-line rule:braces
     json: >
       { ... }
 ```
@@ -173,7 +173,7 @@ level — it never enters their reconcile queue.
 - `operatorNamespace` present — only the operator whose own namespace matches the value processes the CR, wherever
   the CR is created. The operator must watch the CR namespace (`consulAclConfigurator.namespaces`, `*` for all).
 
-The same rules apply to `spec.operatorNamespace` of [ConsulKV](#consulkv) resources.
+The same field and rules are used by [ConsulKV](#consulkv) resources.
 
 ## Authentication method
 
