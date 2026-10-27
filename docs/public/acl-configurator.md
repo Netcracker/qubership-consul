@@ -11,7 +11,7 @@ Kubernetes custom resource.
 For example,
 
 ```yaml
-apiVersion: netcracker.com/v1alpha1
+apiVersion: netcracker.com/v1
 kind: ConsulACL
 metadata:
   name: example-consul-acl-config
@@ -53,7 +53,7 @@ spec:
 
 There are some required yaml fields
 
-- `apiVersion` (netcracker.com/v1alpha1),
+- `apiVersion` (netcracker.com/v1),
 - `kind` (ConsulACL),
 - `metadata.name` (any name but it should be unique for namespace "consulacls" CRs),
 - `spec.acl.name` (any name),
@@ -280,7 +280,7 @@ To start common reconcile manually we recommend scale down and then scale up Con
 The `ConsulKV` custom resource allows provisioning Consul KV entries. For example:
 
 ```yaml
-apiVersion: netcracker.com/v1alpha1
+apiVersion: netcracker.com/v1
 kind: ConsulKV
 metadata:
   name: example-consulkv

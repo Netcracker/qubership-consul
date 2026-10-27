@@ -47,7 +47,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
-	consulacl "github.com/Netcracker/consul-acl-configurator/consul-acl-configurator-operator/api/v1alpha1"
+	consulacl "github.com/Netcracker/consul-acl-configurator/consul-acl-configurator-operator/api/v1"
 )
 
 const errNotFound = "ACL not found"

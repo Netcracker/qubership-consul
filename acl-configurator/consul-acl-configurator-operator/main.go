@@ -40,7 +40,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
-	qubershiporgv1 "github.com/Netcracker/consul-acl-configurator/consul-acl-configurator-operator/api/v1alpha1"
+	qubershiporgv1 "github.com/Netcracker/consul-acl-configurator/consul-acl-configurator-operator/api/v1"
 	"github.com/Netcracker/consul-acl-configurator/consul-acl-configurator-operator/controllers"
 	//+kubebuilder:scaffold:imports
 )

@@ -11,7 +11,7 @@ ${AUTH_METHOD}           applications-k8s-m2m
 ${RECONCILE_TIMEOUT}     60s
 ${RECONCILE_INTERVAL}    2s
 ${GROUP}                 netcracker.com
-${VERSION}               v1alpha1
+${VERSION}               v1
 ${OTHER_NAMESPACE}       other-namespace
 
 
@@ -46,13 +46,13 @@ Delete Override Auth Method
 Build ConsulACL Body
     [Arguments]    ${name}    ${explicit}    ${json}
     ${body}=    Evaluate
-    ...    {'apiVersion': 'netcracker.com/v1alpha1', 'kind': 'ConsulACL', 'metadata': {'name': $name, 'namespace': $TEST_NAMESPACE}, 'spec': {'acl': {'name': $name, 'explicitName': bool($explicit), 'operatorNamespace': $TEST_NAMESPACE, 'json': $json}}}
+    ...    {'apiVersion': 'netcracker.com/v1', 'kind': 'ConsulACL', 'metadata': {'name': $name, 'namespace': $TEST_NAMESPACE}, 'spec': {'acl': {'name': $name, 'explicitName': bool($explicit), 'operatorNamespace': $TEST_NAMESPACE, 'json': $json}}}
     RETURN    ${body}
 
 Build ConsulACL Body In Namespace
     [Arguments]    ${name}    ${namespace}    ${explicit}    ${operator_namespace}    ${json}
     ${body}=    Evaluate
-    ...    {'apiVersion': 'netcracker.com/v1alpha1', 'kind': 'ConsulACL', 'metadata': {'name': $name, 'namespace': $namespace}, 'spec': {'acl': {'name': $name, 'explicitName': bool($explicit), 'operatorNamespace': $operator_namespace, 'json': $json}}}
+    ...    {'apiVersion': 'netcracker.com/v1', 'kind': 'ConsulACL', 'metadata': {'name': $name, 'namespace': $namespace}, 'spec': {'acl': {'name': $name, 'explicitName': bool($explicit), 'operatorNamespace': $operator_namespace, 'json': $json}}}
     RETURN    ${body}
 
 Apply ConsulACL CR In Namespace
