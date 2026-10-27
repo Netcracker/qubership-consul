@@ -58,6 +58,9 @@ type ConsulKVReconciler struct {
 	Client       client.Client
 	Scheme       *runtime.Scheme
 	OwnNamespace string
+	// StrictNamespaceValidation limits the operator to the resources that name its namespace in
+	// operatorNamespace and to the resources of its own namespace without operatorNamespace.
+	StrictNamespaceValidation bool
 }
 
 //+kubebuilder:rbac:groups=netcracker.com,resources=consulkvs,verbs=get;list;watch;create;update;patch;delete
@@ -171,14 +174,7 @@ func (r *ConsulKVReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		if !ok {
 			return true
 		}
-		// When operatorNamespace is set, the CR is owned by the operator whose own
-		// namespace matches it, regardless of the CR's own namespace. Otherwise fall
-		// back to matching the CR's namespace against the operator's namespace.
-		operatorNs := cr.Spec.OperatorNamespace
-		if operatorNs != "" {
-			return operatorNs == r.OwnNamespace
-		}
-		return obj.GetNamespace() == r.OwnNamespace
+		return isOwnedByOperator(cr.Spec.OperatorNamespace, obj.GetNamespace(), r.OwnNamespace, r.StrictNamespaceValidation)
 	})
 
 	return ctrl.NewControllerManagedBy(mgr).

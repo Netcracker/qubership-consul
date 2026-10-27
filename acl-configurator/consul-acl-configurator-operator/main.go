@@ -19,6 +19,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/Netcracker/consul-acl-configurator/consul-acl-configurator-operator/util"
@@ -102,7 +103,13 @@ func main() {
 		LeaderElectionReleaseOnCancel: true,
 	}
 
-	configureMgrNamespaces(&mgrOptions, watchNamespaces, ownNamespace)
+	strictNamespaceValidation, err := getStrictNamespaceValidation()
+	if err != nil {
+		setupLog.Error(err, "unable to read STRICT_NAMESPACE_VALIDATION")
+		os.Exit(1)
+	}
+
+	configureMgrNamespaces(&mgrOptions, watchNamespaces, ownNamespace, strictNamespaceValidation)
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), mgrOptions)
 	if err != nil {
@@ -115,6 +122,8 @@ func main() {
 		Scheme:           mgr.GetScheme(),
 		ResourceVersions: map[string]string{},
 		OwnNamespace:     ownNamespace,
+
+		StrictNamespaceValidation: strictNamespaceValidation,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ConsulACL")
 		os.Exit(1)
@@ -124,6 +133,8 @@ func main() {
 		Client:       mgr.GetClient(),
 		Scheme:       mgr.GetScheme(),
 		OwnNamespace: ownNamespace,
+
+		StrictNamespaceValidation: strictNamespaceValidation,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ConsulKV")
 		os.Exit(1)
@@ -170,7 +181,16 @@ func getWatchNamespace() (string, error) {
 	return ns, nil
 }
 
-func configureMgrNamespaces(mgrOptions *ctrl.Options, namespace string, ownNamespace string) {
+// getStrictNamespaceValidation reads STRICT_NAMESPACE_VALIDATION. The default is false.
+func getStrictNamespaceValidation() (bool, error) {
+	value, found := os.LookupEnv("STRICT_NAMESPACE_VALIDATION")
+	if !found || strings.TrimSpace(value) == "" {
+		return false, nil
+	}
+	return strconv.ParseBool(strings.TrimSpace(value))
+}
+
+func configureMgrNamespaces(mgrOptions *ctrl.Options, namespace string, ownNamespace string, strict bool) {
 	if strings.TrimSpace(namespace) == "*" {
 		// Cluster-wide watch: configure per-namespace cache filters for ConsulACL and
 		// ConsulKV so each operator only caches its own CRs. Requires the
@@ -183,6 +203,13 @@ func configureMgrNamespaces(mgrOptions *ctrl.Options, namespace string, ownNames
 		//   operatorNamespace explicitly targets this operator.
 		//
 		// Without this, every operator would hold the full cluster's CR set in memory.
+		//
+		// In non-strict mode the operator also owns CRs without operatorNamespace in any
+		// namespace. A field selector can not express "equal or empty", so the filter is
+		// skipped and the owner predicate of the controllers selects the CRs instead.
+		if !strict {
+			return
+		}
 		mgrOptions.Cache.ByObject = map[client.Object]cache.ByObject{
 			&qubershiporgv1.ConsulACL{}: {
 				Namespaces: map[string]cache.Config{

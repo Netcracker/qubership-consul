@@ -167,11 +167,16 @@ level — it never enters their reconcile queue.
 
 **Rules:**
 
-- `operatorNamespace` absent — the CR is processed only by the operator deployed in the same namespace as the CR.
-  Operators in other namespaces ignore it, even if they watch the CR namespace. A CR created in a namespace without
-  an operator is therefore not processed until `operatorNamespace` is set.
 - `operatorNamespace` present — only the operator whose own namespace matches the value processes the CR, wherever
   the CR is created. The operator must watch the CR namespace (`consulAclConfigurator.namespaces`, `*` for all).
+- `operatorNamespace` absent — depends on `consulAclConfigurator.strictNamespaceValidation`:
+  - `false` (default) — every operator that watches the CR namespace processes the CR.
+  - `true` — the CR is processed only by the operator deployed in the same namespace as the CR. Operators in other
+    namespaces ignore it, even if they watch the CR namespace. A CR created in a namespace without an operator is
+    therefore not processed until `operatorNamespace` is set.
+
+With `WATCH_NAMESPACE=*` and `strictNamespaceValidation: true` an operator caches only the CRs it owns. With
+`strictNamespaceValidation: false` it caches the CRs of all namespaces and filters them by the rules above.
 
 The same field and rules are used by [ConsulKV](#consulkv) resources.
 
