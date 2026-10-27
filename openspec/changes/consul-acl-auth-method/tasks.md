@@ -1,6 +1,6 @@
 ## 1. ConsulACL — API Type: explicitName field
 
-- [x] 1.1 Add `ExplicitName bool` field to the `ACL` struct in `api/v1alpha1/consulacl_types.go` with `json:"explicitName,omitempty"` tag
+- [x] 1.1 Add `ExplicitName bool` field to the `ACL` struct in `api/v1/consulacl_types.go` with `json:"explicitName,omitempty"` tag
 - [x] 1.2 Use the project's `controller-gen` tooling to regenerate all generated Kubernetes API artifacts after adding the `ExplicitName` field. Do not edit generated files manually.
 
 > Covers: Role Naming — Default Prefixed, Role Naming — Explicit, BindingRule BindName — Default Prefixed, BindingRule BindName — Explicit, spec.acl.explicitName Is Optional and Backward Compatible
@@ -80,7 +80,7 @@
 
 ## 9. ConsulKV — API types
 
-- [x] 9.1 Create `api/v1alpha1/consulkv_types.go` with `ConsulKVEntry`, `ConsulKVConfig`, `ConsulKVSpec`, `ConsulKVStatus`, `ConsulKV`, and `ConsulKVList` types matching the structure defined in the spec
+- [x] 9.1 Create `api/v1/consulkv_types.go` with `ConsulKVEntry`, `ConsulKVConfig`, `ConsulKVSpec`, `ConsulKVStatus`, `ConsulKV`, and `ConsulKVList` types matching the structure defined in the spec
 - [x] 9.2 Add `+kubebuilder:object:root=true` and `+kubebuilder:subresource:status` markers to `ConsulKV`
 - [x] 9.3 Register `ConsulKV` and `ConsulKVList` with `SchemeBuilder.Register` in `groupversion_info.go` (or in the new types file's `init()`)
 - [x] 9.4 Regenerate or manually update `zz_generated.deepcopy.go` to include `DeepCopyInto` and `DeepCopyObject` for all new ConsulKV types
