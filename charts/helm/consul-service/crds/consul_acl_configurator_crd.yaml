@@ -1,10 +1,10 @@
+---
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
     crd/version: 0.0.19
-    controller-gen.kubebuilder.io/version: v0.6.2
-  creationTimestamp: null
+    controller-gen.kubebuilder.io/version: v0.16.5
   name: consulacls.netcracker.com
 spec:
   group: netcracker.com
@@ -15,99 +15,177 @@ spec:
     singular: consulacl
   scope: Namespaced
   versions:
-    - name: v1
-      schema:
-        openAPIV3Schema:
-          properties:
-            apiVersion:
-              type: string
-            kind:
-              type: string
-            metadata:
-              type: object
-            spec:
-              properties:
-                acl:
+  - name: v1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            type: string
+          kind:
+            type: string
+          metadata:
+            type: object
+          spec:
+            properties:
+              acl:
+                properties:
+                  commonReconcile:
+                    type: string
+                  explicitName:
+                    type: boolean
+                  json:
+                    type: string
+                  name:
+                    type: string
+                  operatorNamespace:
+                    type: string
+                required:
+                - json
+                - name
+                type: object
+            required:
+            - acl
+            type: object
+          status:
+            properties:
+              bindRulesStatus:
+                type: string
+              conditions:
+                items:
                   properties:
-                    commonReconcile:
+                    lastTransitionTime:
+                      format: date-time
                       type: string
-                    explicitName:
-                      type: boolean
-                    json:
+                    message:
+                      maxLength: 32768
                       type: string
-                    name:
+                    observedGeneration:
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
                       type: string
-                    operatorNamespace:
+                    status:
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
                       type: string
                   required:
-                    - json
-                    - name
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
                   type: object
-              required:
-                - acl
-              type: object
-            status:
-              properties:
-                bindRulesStatus:
-                  type: string
-                conditions:
-                  items:
-                    properties:
-                      lastTransitionTime:
-                        format: date-time
-                        type: string
-                      message:
-                        maxLength: 32768
-                        type: string
-                      observedGeneration:
-                        format: int64
-                        minimum: 0
-                        type: integer
-                      reason:
-                        maxLength: 1024
-                        minLength: 1
-                        pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
-                        type: string
-                      status:
-                        enum:
-                          - "True"
-                          - "False"
-                          - Unknown
-                        type: string
-                      type:
-                        maxLength: 316
-                        pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
-                        type: string
-                    required:
-                      - lastTransitionTime
-                      - message
-                      - reason
-                      - status
-                      - type
-                    type: object
-                  type: array
-                  x-kubernetes-list-map-keys:
-                    - type
-                  x-kubernetes-list-type: map
-                generalStatus:
-                  type: string
-                policiesStatus:
-                  type: string
-                rolesStatus:
-                  type: string
-              required:
-                - policiesStatus
-              type: object
-          type: object
-      selectableFields:
-        - jsonPath: .spec.acl.operatorNamespace
-      served: true
-      storage: true
-      subresources:
-        status: {}
-status:
-  acceptedNames:
-    kind: ""
-    plural: ""
-  conditions: []
-  storedVersions: []
+                type: array
+              generalStatus:
+                type: string
+              policiesStatus:
+                type: string
+              rolesStatus:
+                type: string
+            required:
+            - policiesStatus
+            type: object
+        type: object
+    selectableFields:
+    - jsonPath: .spec.acl.operatorNamespace
+    served: true
+    storage: true
+    subresources:
+      status: {}
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            type: string
+          kind:
+            type: string
+          metadata:
+            type: object
+          spec:
+            properties:
+              acl:
+                properties:
+                  commonReconcile:
+                    type: string
+                  explicitName:
+                    type: boolean
+                  json:
+                    type: string
+                  name:
+                    type: string
+                  operatorNamespace:
+                    type: string
+                required:
+                - json
+                - name
+                type: object
+            required:
+            - acl
+            type: object
+          status:
+            properties:
+              bindRulesStatus:
+                type: string
+              conditions:
+                items:
+                  properties:
+                    lastTransitionTime:
+                      format: date-time
+                      type: string
+                    message:
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+              generalStatus:
+                type: string
+              policiesStatus:
+                type: string
+              rolesStatus:
+                type: string
+            required:
+            - policiesStatus
+            type: object
+        type: object
+    selectableFields:
+    - jsonPath: .spec.acl.operatorNamespace
+    served: true
+    storage: false
+    subresources:
+      status: {}

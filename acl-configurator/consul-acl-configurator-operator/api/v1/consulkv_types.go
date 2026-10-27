@@ -51,6 +51,7 @@ type ConsulKVStatus struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+//+kubebuilder:storageversion
 
 // ConsulKV is the Schema for the consulkvs API
 type ConsulKV struct {
