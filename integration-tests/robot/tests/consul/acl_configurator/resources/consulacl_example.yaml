@@ -1,7 +1,7 @@
 # This file is a Helm template example showing how a client service should define a ConsulACL CR.
 # .Values.CONSUL_URL must be a full URL: http://<service>.<namespace>.svc.cluster.local:<port>
 # operatorNamespace is extracted automatically from the second segment of the hostname.
-apiVersion: netcracker.com/v1alpha1
+apiVersion: netcracker.com/v1
 kind: ConsulACL
 metadata:
   name: example-consulacl
