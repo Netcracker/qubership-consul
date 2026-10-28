@@ -888,10 +888,12 @@
                   "description": "The root CA certificate in base64 format"
                 }
               },
+              "additionalProperties": true,
               "title": "The server.tls.certificates schema",
               "description": "server.tls.certificates parameters"
             }
           },
+          "additionalProperties": true,
           "title": "The server.tls schema",
           "description": "server.tls parameters"
         },
@@ -932,6 +934,7 @@
                   "description": "The LAN gossip port for the Consul servers"
                 }
               },
+              "additionalProperties": true,
               "title": "The server.ports.serflan schema",
               "description": "server.ports.serflan parameters"
             },
@@ -963,6 +966,7 @@
               "description": "Customize the server's grpc consul port providing the ability to deploy two Consul instances with enabled Clients to one cluster"
             }
           },
+          "additionalProperties": true,
           "title": "The server.ports schema",
           "description": "server.ports parameters"
         },
@@ -1012,6 +1016,7 @@
               "description": "The additional annotations for the server service account"
             }
           },
+          "additionalProperties": true,
           "title": "The server.serviceAccount schema",
           "description": "server.serviceAccount parameters"
         },
@@ -1057,6 +1062,7 @@
               "description": "server.resources.limits parameters"
             }
           },
+          "additionalProperties": true,
           "title": "The server.resources schema",
           "description": "server.resources parameters"
         },
@@ -1368,6 +1374,7 @@
           "description": "Sets the minimum number of raft commit entries between snapshots that are saved to disk"
         }
       },
+      "additionalProperties": true,
       "title": "The server schema",
       "description": "server parameters"
     },
