@@ -39,12 +39,16 @@ spec:
                     type: string
                   name:
                     type: string
-                  operatorNamespace:
-                    type: string
                 required:
                 - json
                 - name
                 type: object
+              operatorNamespace:
+                description: |-
+                  OperatorNamespace, when set, binds this CR to the operator whose own namespace
+                  matches this value, allowing the CR to live in a different namespace than the
+                  operator. When empty, the CR is owned by the operator running in its own namespace.
+                type: string
             required:
             - acl
             type: object
@@ -102,7 +106,7 @@ spec:
             type: object
         type: object
     selectableFields:
-    - jsonPath: .spec.acl.operatorNamespace
+    - jsonPath: .spec.operatorNamespace
     served: true
     storage: true
     subresources:

@@ -28,25 +28,25 @@ spec:
           spec:
             properties:
               kv:
-                properties:
-                  entries:
-                    items:
-                      properties:
-                        key:
-                          type: string
-                        value:
-                          type: string
-                      required:
-                      - key
-                      type: object
-                    type: array
-                  operatorNamespace:
-                    type: string
-                  purgeOnDelete:
-                    type: boolean
-                required:
-                - entries
-                type: object
+                description: KV is the list of keys managed by this CR.
+                items:
+                  properties:
+                    key:
+                      type: string
+                    value:
+                      type: string
+                  required:
+                  - key
+                  type: object
+                type: array
+              operatorNamespace:
+                description: |-
+                  OperatorNamespace, when set, binds this CR to the operator whose own namespace
+                  matches this value, allowing the CR to live in a different namespace than the
+                  operator. When empty, the CR is owned by the operator running in its own namespace.
+                type: string
+              purgeOnDelete:
+                type: boolean
             required:
             - kv
             type: object
@@ -112,7 +112,7 @@ spec:
             type: object
         type: object
     selectableFields:
-    - jsonPath: .spec.kv.operatorNamespace
+    - jsonPath: .spec.operatorNamespace
     served: true
     storage: true
     subresources:

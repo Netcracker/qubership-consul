@@ -442,7 +442,7 @@ func TestSiblingEntities_SameNamespaceOnly(t *testing.T) {
 	deleting.DeletionTimestamp = &now
 	deleting.Finalizers = []string{consulAclFinalizer}
 	foreignOperator := newConsulACL("foreign", "ns1", `{"roles":[{"Name":"foreign-role"}]}`, true)
-	foreignOperator.Spec.ACL.OperatorNamespace = "another-consul"
+	foreignOperator.Spec.OperatorNamespace = "another-consul"
 
 	r := &ConsulACLReconciler{
 		Client:       fake.NewClientBuilder().WithScheme(kvScheme()).WithObjects(self, explicit, prefixed, otherNs, deleting, foreignOperator).Build(),

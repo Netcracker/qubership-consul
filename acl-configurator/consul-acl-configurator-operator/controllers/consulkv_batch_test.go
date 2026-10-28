@@ -141,7 +141,7 @@ func TestReconcile_PurgeOnDelete_RemovesTreeAndFinalizer(t *testing.T) {
 
 	now := metav1.Now()
 	cr := newConsulKV("test-kv", "default", []string{consulKVFinalizer}, []consulacl.ConsulKVEntry{{Key: "config/app"}})
-	cr.Spec.KV.PurgeOnDelete = true
+	cr.Spec.PurgeOnDelete = true
 	cr.DeletionTimestamp = &now
 	cr.Status.Entries = []consulacl.ConsulKVEntryStatus{{Key: "config/app", Status: "synced", Owned: true}}
 	fakeClient := fake.NewClientBuilder().WithScheme(kvScheme()).WithObjects(cr).Build()

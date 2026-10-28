@@ -45,7 +45,7 @@ func newConsulKV(name, namespace string, finalizers []string, entries []consulac
 			Finalizers: finalizers,
 		},
 		Spec: consulacl.ConsulKVSpec{
-			KV: consulacl.ConsulKVConfig{Entries: entries},
+			KV: entries,
 		},
 	}
 }

@@ -38,8 +38,7 @@ Build KV Entry
 Build ConsulKV Body
     [Arguments]    ${name}    @{entries}
     &{metadata}=    Create Dictionary    name=${name}    namespace=${TEST_NAMESPACE}
-    &{kv}=          Create Dictionary    entries=@{entries}
-    &{spec}=        Create Dictionary    kv=&{kv}
+    &{spec}=        Create Dictionary    kv=${entries}
     &{body}=        Create Dictionary    apiVersion=netcracker.com/v1    kind=ConsulKV    metadata=&{metadata}    spec=&{spec}
     RETURN    &{body}
 

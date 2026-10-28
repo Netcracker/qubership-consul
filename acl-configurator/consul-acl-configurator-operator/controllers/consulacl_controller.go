@@ -92,6 +92,9 @@ type ConsulACLReconciler struct {
 	Scheme           *runtime.Scheme
 	ResourceVersions map[string]string
 	OwnNamespace     string
+	// StrictNamespaceValidation limits the operator to the resources that name its namespace in
+	// operatorNamespace and to the resources of its own namespace without operatorNamespace.
+	StrictNamespaceValidation bool
 }
 
 //+kubebuilder:rbac:groups=netcracker.com,resources=consulacls,verbs=get;list;watch;create;update;patch;delete
@@ -215,10 +218,7 @@ func (r *ConsulACLReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 // isManaged reports whether the given ConsulACL resource is reconciled by this operator instance.
 func (r *ConsulACLReconciler) isManaged(cr *consulacl.ConsulACL) bool {
-	if cr.Spec.ACL != nil && cr.Spec.ACL.OperatorNamespace != "" {
-		return cr.Spec.ACL.OperatorNamespace == r.OwnNamespace
-	}
-	return cr.GetNamespace() == r.OwnNamespace
+	return isOwnedByOperator(cr.Spec.OperatorNamespace, cr.GetNamespace(), r.OwnNamespace, r.StrictNamespaceValidation)
 }
 
 // siblingEntities collects the Consul names of entities declared by the other ConsulACL
