@@ -2294,6 +2294,13 @@ consulAclConfigurator:
   # The parameter specifies the list of Kubernetes namespaces watched by the Consul ACL Configurator operator. Use "*" to watch all namespaces.
   namespaces: ""
 
+  # The parameter defines which custom resources without `spec.operatorNamespace` the operator processes.
+  # If `false`, the operator processes the resources that name its namespace in `spec.operatorNamespace`
+  # and all resources without `spec.operatorNamespace` in the watched namespaces.
+  # If `true`, the operator processes only the resources that name its namespace in `spec.operatorNamespace`
+  # and the resources of its own namespace without `spec.operatorNamespace`.
+  strictNamespaceValidation: false
+
   # The name of Kubernetes service for Consul ACL Configurator HTTP server.
   serviceName: "consul-acl-configurator-reconcile"
 
