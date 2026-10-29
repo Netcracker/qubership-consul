@@ -11,7 +11,7 @@ Kubernetes custom resource.
 For example,
 
 ```yaml
-apiVersion: netcracker.com/v1alpha1
+apiVersion: netcracker.com/v1
 kind: ConsulACL
 metadata:
   name: example-consul-acl-config
@@ -53,7 +53,7 @@ spec:
 
 There are some required yaml fields
 
-- `apiVersion` (netcracker.com/v1alpha1),
+- `apiVersion` (netcracker.com/v1),
 - `kind` (ConsulACL),
 - `metadata.name` (any name but it should be unique for namespace "consulacls" CRs),
 - `spec.acl.name` (any name),
@@ -143,18 +143,18 @@ was introduced have no marker and are deleted together with the CR as before.
 
 Do not edit the `[consul-acl-owners: ...]` line manually: the operator uses it to decide when an entity can be deleted.
 
-### Operator ownership via spec.acl.operatorNamespace
+### Operator ownership via spec.operatorNamespace
 
 When multiple Consul ACL Configurator operators are deployed in different namespaces and all watch the cluster
-(`WATCH_NAMESPACE=*`), use `spec.acl.operatorNamespace` to pin a CR to a specific operator instance.
+(`WATCH_NAMESPACE=*`), use `spec.operatorNamespace` to pin a CR to a specific operator instance.
 
 The field is typically populated in the client's Helm chart by extracting the namespace from the Consul URL:
 
 ```yaml
 spec:
+  operatorNamespace: {{ (index (splitList "." (first (splitList ":" (last (splitList "://" .Values.CONSUL_URL))))) 1) | quote }}  # yamllint disable-line rule:braces
   acl:
     name: consul-acls
-    operatorNamespace: {{ (index (splitList "." (first (splitList ":" (last (splitList "://" .Values.CONSUL_URL))))) 1) | quote }}  # yamllint disable-line rule:braces
     json: >
       { ... }
 ```
@@ -167,13 +167,18 @@ level — it never enters their reconcile queue.
 
 **Rules:**
 
-- `operatorNamespace` absent — the CR is processed only by the operator deployed in the same namespace as the CR.
-  Operators in other namespaces ignore it, even if they watch the CR namespace. A CR created in a namespace without
-  an operator is therefore not processed until `operatorNamespace` is set.
 - `operatorNamespace` present — only the operator whose own namespace matches the value processes the CR, wherever
   the CR is created. The operator must watch the CR namespace (`consulAclConfigurator.namespaces`, `*` for all).
+- `operatorNamespace` absent — depends on `consulAclConfigurator.strictNamespaceValidation`:
+  - `false` (default) — every operator that watches the CR namespace processes the CR.
+  - `true` — the CR is processed only by the operator deployed in the same namespace as the CR. Operators in other
+    namespaces ignore it, even if they watch the CR namespace. A CR created in a namespace without an operator is
+    therefore not processed until `operatorNamespace` is set.
 
-The same rules apply to `spec.kv.operatorNamespace` of [ConsulKV](#consulkv) resources.
+With `WATCH_NAMESPACE=*` and `strictNamespaceValidation: true` an operator caches only the CRs it owns. With
+`strictNamespaceValidation: false` it caches the CRs of all namespaces and filters them by the rules above.
+
+The same field and rules are used by [ConsulKV](#consulkv) resources.
 
 ## Authentication method
 
@@ -280,17 +285,16 @@ To start common reconcile manually we recommend scale down and then scale up Con
 The `ConsulKV` custom resource allows provisioning Consul KV entries. For example:
 
 ```yaml
-apiVersion: netcracker.com/v1alpha1
+apiVersion: netcracker.com/v1
 kind: ConsulKV
 metadata:
   name: example-consulkv
   namespace: my-service
 spec:
   kv:
-    entries:
-      - key: "config/my-service/application/"
-      - key: "config/my-service/LOG_LEVEL"
-        value: "INFO"
+    - key: "config/my-service/application/"
+    - key: "config/my-service/LOG_LEVEL"
+      value: "INFO"
 ```
 
 Keys are created exactly as defined in the spec — no automatic prefixes are applied.
@@ -310,6 +314,10 @@ This allows multiple CRs to safely reference the same key — the key is only de
 - Key exists with `Flags>0` (owned by another CR) → operator increments `Flags`. Key is **co-owned**; it will
   only be deleted when all owning CRs are removed.
 
+> [!WARNING]
+> Do not create or delete keys through the Consul KV REST API in parallel with `ConsulKV` CRs for the
+> same keys. The CRs keep the reference count, and when the CR is deleted the value is deleted as well.
+
 If the same key is declared more than once in one CR, the key is written once with the value of the last entry.
 The earlier entries are reported in the CR status as `skipped (duplicate key)`; all other keys are written normally.
 
@@ -319,9 +327,9 @@ the CR status as written (or released), only the keys of the failed transaction 
 operator retries them after `consulAclConfigurator.reconcilePeriod`. The CR becomes `synced` only when all keys
 are written.
 
-### spec.kv.purgeOnDelete
+### spec.purgeOnDelete
 
-If `spec.kv.purgeOnDelete: true` is set, deleting the CR removes each declared key and everything below it,
+If `spec.purgeOnDelete: true` is set, deleting the CR removes each declared key and everything below it,
 bypassing the ownership counter: also keys used by other CRs are removed. Use this only when the CR owns an
 entire key namespace exclusively.
 
@@ -331,8 +339,7 @@ for `config/my-service` it deletes `config/my-service` and `config/my-service/..
 
 ```yaml
 spec:
+  purgeOnDelete: true
   kv:
-    purgeOnDelete: true
-    entries:
-      - key: "config/my-service/"
+    - key: "config/my-service/"
 ```

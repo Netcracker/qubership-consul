@@ -66,6 +66,7 @@ The following topics are covered in this chapter:
 * [Upgrade](#upgrade)
   * [Common](#common-1)
   * [Rolling Upgrade](#rolling-upgrade)
+  * [Upgrade to Consul 2.0.x](#upgrade-to-consul-20x)
   * [CRD Upgrade](#crd-upgrade)
     * [Automatic CRD Upgrade](#automatic-crd-upgrade)
   * [Migration From DVM to Helm](#migration-from-dvm-to-helm)
@@ -1540,7 +1541,8 @@ Consul ACLs configuration. Also, Consul ACL Configurator has a separate docker c
 | `consulAclConfigurator.resources.limits.cpu`                      | string  | no        | 100m                                 | The maximum number of CPUs the Consul ACL Configurator containers should use.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | `consulAclConfigurator.resources.limits.memory`                   | string  | no        | 128Mi                                | The maximum amount of memory the Consul ACL Configurator containers should use.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | `consulAclConfigurator.reconcilePeriod`                           | integer | no        | 100                                  | The delay period for repeated a Custom Resource reconciliation in seconds.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| `consulAclConfigurator.namespaces`                                | string  | no        | ""                                   | The comma-separated list of Kubernetes namespaces watched by Consul ACL Configurator operator, in addition to its own namespace. If this parameter is empty, only the namespace of the operator is watched. Set `*` to watch all namespaces; in this mode CRs from other namespaces are processed only when their `operatorNamespace` points to this operator, and Kubernetes 1.30 or later is required (CRD `selectableFields`). For more information, refer to [Consul ACL Configurator](acl-configurator.md#operator-ownership-via-specacloperatornamespace).           |
+| `consulAclConfigurator.namespaces`                                | string  | no        | ""                                   | The comma-separated list of Kubernetes namespaces watched by Consul ACL Configurator operator, in addition to its own namespace. If this parameter is empty, only the namespace of the operator is watched. Set `*` to watch all namespaces; with `strictNamespaceValidation: true`, CRs from other namespaces are processed only when their `operatorNamespace` points to this operator (requires Kubernetes 1.30+, CRD `selectableFields`). For more information, refer to [Consul ACL Configurator](acl-configurator.md#operator-ownership-via-specoperatornamespace).  |
+| `consulAclConfigurator.strictNamespaceValidation`                 | boolean | no        | false                                | Defines which custom resources without `operatorNamespace` the operator processes. If `false`, the operator processes the resources that name its namespace in `operatorNamespace` and all resources without `operatorNamespace` in the watched namespaces. If `true`, the operator processes only the resources that name its namespace in `operatorNamespace` and the resources of its own namespace without `operatorNamespace`. For more information, refer to [Consul ACL Configurator](acl-configurator.md#operator-ownership-via-specoperatornamespace).            |
 | `consulAclConfigurator.serviceName`                               | string  | no        | consul-acl-configurator-reconcile    | The name of Kubernetes service for Consul ACL Configurator HTTP server.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | `consulAclConfigurator.tolerations`                               | object  | no        | {}                                   | The list of toleration policies for Consul ACL Configurator pods in JSON format.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | `consulAclConfigurator.extraLabels`                               | object  | no        | {}                                   | The extra labels to attach to the Consul ACL Configurator pods. It should be a YAML map.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
@@ -1910,6 +1912,29 @@ you need to check `Release Notes` and `Breaking Changes` sections for `0.2.0` an
 ## Rolling Upgrade
 
 Consul supports rolling upgrade feature with near-zero downtime.
+
+According to the [Consul upgrade instructions](https://developer.hashicorp.com/consul/docs/upgrade/instructions),
+each upgrade should jump at most 2 minor versions, except where dedicated instructions are provided for a larger jump
+between specific versions. If you need to upgrade further, upgrade through an intermediate version and review the
+upgrade details of every version on the way. For example, to upgrade from Consul 1.12 to Consul 1.15:
+
+1. Upgrade to Consul 1.14 as an intermediate step.
+2. Upgrade to Consul 1.15.
+
+The upgrade from Consul 1.22.x to 2.0.x is a single major version step.
+
+## Upgrade to Consul 2.0.x
+
+The information below is based on the official Consul
+[upgrade instructions](https://developer.hashicorp.com/consul/docs/upgrade/instructions/upgrade-to-2-0-x) and
+[release notes](https://developer.hashicorp.com/consul/docs/release-notes/consul/v2_0_x). Review the release notes
+of the target version before the upgrade.
+
+* The HTTP server `read_timeout` and `write_timeout` (`http_config`) are increased from 30 seconds to 15 minutes by
+  default (2.0.0).
+* The following endpoints cap the request body at 512 KiB and return HTTP `413` for bigger bodies (2.0.3):
+  `PUT /v1/agent/check/update/:id`, `PUT /v1/agent/check/register`, `PUT /v1/agent/service/register` and
+  `POST /v1/agent/connect/authorize`.
 
 ## CRD Upgrade
 

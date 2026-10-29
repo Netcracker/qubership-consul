@@ -8,7 +8,7 @@ ${TEST_NAMESPACE}        %{CONSUL_NAMESPACE}
 ${RECONCILE_TIMEOUT}     60s
 ${RECONCILE_INTERVAL}    2s
 ${GROUP}                 netcracker.com
-${VERSION}               v1alpha1
+${VERSION}               v1
 
 
 *** Keywords ***
@@ -38,9 +38,8 @@ Build KV Entry
 Build ConsulKV Body
     [Arguments]    ${name}    @{entries}
     &{metadata}=    Create Dictionary    name=${name}    namespace=${TEST_NAMESPACE}
-    &{kv}=          Create Dictionary    entries=@{entries}
-    &{spec}=        Create Dictionary    kv=&{kv}
-    &{body}=        Create Dictionary    apiVersion=netcracker.com/v1alpha1    kind=ConsulKV    metadata=&{metadata}    spec=&{spec}
+    &{spec}=        Create Dictionary    kv=${entries}
+    &{body}=        Create Dictionary    apiVersion=netcracker.com/v1    kind=ConsulKV    metadata=&{metadata}    spec=&{spec}
     RETURN    &{body}
 
 ConsulKV Apply Keys Should Exist

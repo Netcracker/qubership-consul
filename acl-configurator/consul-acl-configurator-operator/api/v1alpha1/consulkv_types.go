@@ -46,7 +46,9 @@ type ConsulKVStatus struct {
 	Entries       []ConsulKVEntryStatus `json:"entries,omitempty"`
 	GeneralStatus string                `json:"generalStatus,omitempty"`
 	ManagedBy     string                `json:"managedBy,omitempty"`
-	Conditions    []metav1.Condition    `json:"conditions,omitempty"`
+	// +listType=map
+	// +listMapKey=type
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 //+kubebuilder:object:root=true
@@ -68,8 +70,4 @@ type ConsulKVList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []ConsulKV `json:"items"`
-}
-
-func init() {
-	SchemeBuilder.Register(&ConsulKV{}, &ConsulKVList{})
 }

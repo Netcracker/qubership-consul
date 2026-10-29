@@ -39,7 +39,7 @@ import (
 
 var deploymentRes = schema.GroupVersionResource{
 	Group:    getEnv("API_GROUP", "netcracker.com"),
-	Version:  "v1alpha1",
+	Version:  "v1",
 	Resource: "consulacls"}
 
 var kubeconfig = new(string)

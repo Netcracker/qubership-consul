@@ -1,4 +1,4 @@
-FROM ghcr.io/netcracker/qubership-docker-integration-tests:0.6.2
+FROM ghcr.io/netcracker/qubership-docker-integration-tests:0.6.2@sha256:6037b2af4643cea6f31b539d545a67744fa2b6c4b157ec5cf20fa438b86e75f6
 
 # Switch to root for installation of dependencies and packages
 # Required for AWS EKS deployments and S3 integration scripts.
@@ -12,8 +12,8 @@ ENV STATUS_CUSTOM_RESOURCE_VERSION=v1
 ENV STATUS_CUSTOM_RESOURCE_PLURAL=deployments
 ENV STATUS_CUSTOM_RESOURCE_NAME=consul-integration-tests-runner
 
-RUN echo "https://dl-cdn.alpinelinux.org/alpine/v3.23/main" > /etc/apk/repositories && \
-    echo "https://dl-cdn.alpinelinux.org/alpine/v3.23/community" >> /etc/apk/repositories
+RUN echo "https://dl-cdn.alpinelinux.org/alpine/v3.24/main" > /etc/apk/repositories && \
+    echo "https://dl-cdn.alpinelinux.org/alpine/v3.24/community" >> /etc/apk/repositories
 
 RUN mkdir -p ${ROBOT_OUTPUT}
 
@@ -30,6 +30,14 @@ RUN apk add --no-cache wget python3 py3-pip
 
 # Upgrade all tools to avoid vulnerabilities
 RUN set -x && apk add --update --no-cache apk-tools && apk upgrade --no-cache --available
+
+RUN set -x \
+    && pip3 install --no-cache-dir --upgrade pip==26.2.1 \
+    && pip3 install --no-cache-dir \
+        "setuptools==83.0.0" \
+        "jaraco.context==6.1.0" \
+        "jaraco.text==4.2.0" \
+        "wheel==0.46.2"
 
 # Fix permissions for non-root user (1000:0)
 # Added for AWS EKS security policies and S3 adapter scripts.

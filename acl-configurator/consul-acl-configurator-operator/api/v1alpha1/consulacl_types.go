@@ -33,16 +33,17 @@ type ConsulACLSpec struct {
 
 // ConsulACLStatus defines the observed state of ConsulACL
 type ConsulACLStatus struct {
-	PoliciesStatus  string             `json:"policiesStatus"`
-	RolesStatus     string             `json:"rolesStatus,omitempty"`
-	BindRulesStatus string             `json:"bindRulesStatus,omitempty"`
-	GeneralStatus   string             `json:"generalStatus,omitempty"`
-	Conditions      []metav1.Condition `json:"conditions,omitempty"`
+	PoliciesStatus  string `json:"policiesStatus"`
+	RolesStatus     string `json:"rolesStatus,omitempty"`
+	BindRulesStatus string `json:"bindRulesStatus,omitempty"`
+	GeneralStatus   string `json:"generalStatus,omitempty"`
+	// +listType=map
+	// +listMapKey=type
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
-//+kubebuilder:storageversion
 //+genclient:nonNamespaced
 
 // ConsulACL is the Schema for the consulacls API
@@ -61,8 +62,4 @@ type ConsulACLList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []ConsulACL `json:"items"`
-}
-
-func init() {
-	SchemeBuilder.Register(&ConsulACL{}, &ConsulACLList{})
 }
