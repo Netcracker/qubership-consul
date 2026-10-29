@@ -1,0 +1,51 @@
+apiVersion: {{ .Values.consulAclConfigurator.apiGroup }}/v1
+kind: ConsulACL
+metadata:
+  name: {{ template "consul-acl-configurator.name" . }}-test-healthy
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "consul-service.defaultLabels" . | nindent 4 }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "10"
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec:
+  operatorNamespace: {{ .Release.Namespace | quote }}
+  acl:
+    name: {{ template "consul-acl-configurator.name" . }}-test-healthy
+    explicitName: true
+    json: >
+      {
+        "policies": [
+          {
+            "Name": "test_healthy_policy",
+            "Description": "Policy of the healthy ConsulACL test resource",
+            "Rules": "key_prefix \"test/healthy/\" { policy = \"read\" }"
+          }
+        ],
+        "roles": [
+          {
+            "Name": "test_healthy_role",
+            "Description": "Role of the healthy ConsulACL test resource",
+            "policy_names": ["test_healthy_policy"]
+          }
+        ],
+        "bind_rules": []
+      }
+---
+apiVersion: {{ .Values.consulAclConfigurator.apiGroup }}/v1
+kind: ConsulKV
+metadata:
+  name: {{ template "consul-acl-configurator.name" . }}-test-healthy
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "consul-service.defaultLabels" . | nindent 4 }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "10"
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec:
+  operatorNamespace: {{ .Release.Namespace | quote }}
+  purgeOnDelete: true
+  kv:
+    - key: "test/healthy/config/"
+    - key: "test/healthy/config/LOG_LEVEL"
+      value: "INFO"

@@ -1,0 +1,41 @@
+{{- /* Enable with: --set consulAclConfigurator.testResources.degraded.enabled=true */ -}}
+{{- if and .Values.consulAclConfigurator.enabled (dig "degraded" "enabled" false (.Values.consulAclConfigurator.testResources | default dict)) }}
+# The json below is not valid on purpose: the operator cannot parse it and sets Successful=False.
+apiVersion: {{ .Values.consulAclConfigurator.apiGroup }}/v1
+kind: ConsulACL
+metadata:
+  name: {{ template "consul-acl-configurator.name" . }}-test-degraded
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "consul-service.defaultLabels" . | nindent 4 }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "10"
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec:
+  operatorNamespace: {{ .Release.Namespace | quote }}
+  acl:
+    name: {{ template "consul-acl-configurator.name" . }}-test-degraded
+    explicitName: true
+    json: "{ this is not a valid json"
+---
+# The value is bigger than the Consul limit of 512 KB (524288 bytes), so Consul rejects the write
+# transaction and the operator sets generalStatus "degraded" and Successful=False.
+# ServerSideApply is required: the value is larger than the 256 KB limit of the last-applied-configuration
+# annotation that client-side apply writes.
+apiVersion: {{ .Values.consulAclConfigurator.apiGroup }}/v1
+kind: ConsulKV
+metadata:
+  name: {{ template "consul-acl-configurator.name" . }}-test-degraded
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "consul-service.defaultLabels" . | nindent 4 }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "10"
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true,ServerSideApply=true
+spec:
+  operatorNamespace: {{ .Release.Namespace | quote }}
+  purgeOnDelete: true
+  kv:
+    - key: "test/degraded/config/BIG_VALUE"
+      value: {{ repeat 600000 "a" | quote }}
+{{- end }}
