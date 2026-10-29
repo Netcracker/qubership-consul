@@ -1,6 +1,3 @@
-{{- /* Enable with: --set consulAclConfigurator.testResources.degraded.enabled=true */ -}}
-{{- if and .Values.consulAclConfigurator.enabled (dig "degraded" "enabled" false (.Values.consulAclConfigurator.testResources | default dict)) }}
-# The json below is not valid on purpose: the operator cannot parse it and sets Successful=False.
 apiVersion: {{ .Values.consulAclConfigurator.apiGroup }}/v1
 kind: ConsulACL
 metadata:
@@ -38,4 +35,3 @@ spec:
   kv:
     - key: "test/degraded/config/BIG_VALUE"
       value: {{ repeat 600000 "a" | quote }}
-{{- end }}
