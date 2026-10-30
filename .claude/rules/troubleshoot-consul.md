@@ -1,0 +1,9 @@
+---
+paths:
+  - "**/*"
+---
+
+When diagnosing a Consul problem — a degraded or down cluster, no cluster
+leader, CPU, memory, or full data volume, a server or client pod that does not
+start, ACL reset, a backup daemon failure, or a failed Velero restore —
+apply the `troubleshoot-consul` skill.

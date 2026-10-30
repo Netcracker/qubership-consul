@@ -1,0 +1,13 @@
+name: troubleshoot-consul
+version: 1.0.0
+description: Diagnose Consul server, quorum, CPU, memory, disk, ACL, backup, and Velero restore failures.
+author: Netcracker
+targets:
+  - claude
+  - copilot
+  - cursor
+dependencies:
+  apm: []
+  mcp: []
+includes: auto
+scripts: {}
