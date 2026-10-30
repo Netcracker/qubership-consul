@@ -412,7 +412,10 @@ the following steps:
 
 * It is required to upgrade the component before upgrading OpenShift. Follow the information in tags regarding OpenShift
   certified versions.
-* `global.openshift.enabled` parameter should be set to `true`.
+* To enable OpenShift mode, the following parameters are checked in order of priority, and the first one that is defined decides:
+    - PAAS_PLATFORM_CUSTOM must be OPENSHIFT
+    - PAAS_PLATFORM must be OPENSHIFT.
+    - `global.openshift.enabled` parameter must be set to `true`.
 * The following annotations should be specified for the project:
 
   ```sh
@@ -927,13 +930,15 @@ The section lists the configurable parameters of the Consul chart and their defa
 
 ## Cloud Integration Parameters
 
-| Parameter                           | Type    | Mandatory | Default value | Description                                                                       |
-|-------------------------------------|---------|-----------|---------------|-----------------------------------------------------------------------------------|
-| MONITORING_ENABLED                  | boolean | no        | `false`       | Specifies whether Consul Monitoring component is to be deployed or not.           |
-| STORAGE_RWO_CLASS                   | string  | yes       | `""`          | Storage class name used to dynamically provide volumes.                           |
-| INFRA_CONSUL_FS_GROUP               | integer | no        |               | Specifies group ID used inside Consul pods.                                       |
-| INFRA_CONSUL_REPLICAS               | integer | no        |               | Specifies Consul replicas count.                                                  |
-| INFRA_CONSUL_RESTRICTED_ENVIRONMENT | boolean | no        | `false`       | Specifies whether the Consul service is to be deployed in restricted environment. |
+| Parameter                           | Type     | Mandatory | Default value | Description                                                                                                                                                      |
+|-------------------------------------|----------|-----------|---------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| MONITORING_ENABLED                  | boolean  | no        | `false`       | Specifies whether Consul Monitoring component is to be deployed or not.                                                                                          |
+| STORAGE_RWO_CLASS                   | string   | yes       | `""`          | Storage class name used to dynamically provide volumes.                                                                                                          |
+| INFRA_CONSUL_FS_GROUP               | integer  | no        |               | Specifies group ID used inside Consul pods.                                                                                                                      |
+| INFRA_CONSUL_REPLICAS               | integer  | no        |               | Specifies Consul replicas count.                                                                                                                                 |
+| INFRA_CONSUL_RESTRICTED_ENVIRONMENT | boolean  | no        | `false`       | Specifies whether the Consul service is to be deployed in restricted environment.                                                                                |
+| PAAS_PLATFORM                       | string   | no        | KUBERNETES    | The platform the service is deployed to. The platform can be either KUBERNETES or OPENSHIFT. It has a higher priority than `global.openshift.enabled`.           |
+| PAAS_PLATFORM_CUSTOM                | string   | no        | null          | The custom platform override. The platform can be either KUBERNETES or OPENSHIFT. It has a higher priority than `PAAS_PLATFORM` and `global.openshift.enabled`.  |
 
 ## Global
 
@@ -966,7 +971,7 @@ You should also set the global parameters based on your specific environment req
 | `global.metrics.disableHostname`           | boolean | no        | true                     | Whether the runtime telemetry with the machine hostname is to be prepended.                                                                                                                                                                                                                                                                                                                                                                                          |
 | `global.logLevel`                          | string  | no        | info                     | The default log level to apply to all components which do not override this setting. It is recommended to generally not set this below "info" unless actively debugging due to logging verbosity. The possible values are `debug`, `info`, `warn`, `error`.                                                                                                                                                                                                          |
 | `global.logJSON`                           | boolean | no        | false                    | Whether the output in JSON format for all component logs is to be enabled.                                                                                                                                                                                                                                                                                                                                                                                           |
-| `global.openshift.enabled`                 | boolean | no        | false                    | Whether the necessary configuration for running Consul components on OpenShift is to be created.                                                                                                                                                                                                                                                                                                                                                                     |
+| `global.openshift.enabled`                 | boolean | no        | false                    | Whether the necessary configuration for running Consul components on OpenShift is to be created. Note: it has the lowest priority. If the PAAS_PLATFORM_CUSTOM or PAAS_PLATFORM deployment parameter is defined, its value is used instead (KUBERNETES disables OpenShift mode). Refer to [OpenShift](#openshift).                                                                                                                                                   |
 | `global.consulAPITimeout`                  | string  | no        | 5s                       | The time in seconds that the Consul API client waits for a response from the API before cancelling the request.                                                                                                                                                                                                                                                                                                                                                      |
 | `global.securityContext`                   | object  | no        | {}                       | The pod-level security attributes and common container settings for all pods that are related to the Consul service. This security context can be overridden by component `securityContext` parameter.                                                                                                                                                                                                                                                               |
 | `global.velero.postHookRestoreEnabled`     | boolean | no        | true                     | Whether Velero restore post-hook with Auth Method restore command is to be enabled. If parameter is set to `true`, Consul Backup Daemon initiates update of Consul Auth Methods with actual tokens after Velero restore procedure. For more information about Velero restore hooks, see [Restore Hooks](https://velero.io/docs/v1.9/restore-hooks/). **NOTE**: Backup Daemon should be enabled for Velero integration (`backupDaemon.enabled: true`).                |
