@@ -1124,12 +1124,24 @@ Global annotations applied to all Consul PVCs (server volumeClaimTemplates, serv
 {{- define "consul.pvc.metadata.annotations" -}}
 {{- $annotations := .Values.pvc.metadata.annotations | default (dict) -}}
 {{- range $key, $_ := $annotations -}}
-  {{- $namePart := $key -}}
-  {{- if contains "/" $key -}}
-    {{- $namePart = last (splitList "/" $key) -}}
+  {{- $parts := splitList "/" $key -}}
+  {{- if gt (len $parts) 2 -}}
+    {{- fail (printf "pvc.metadata.annotations: invalid annotation key %q: at most one '/' allowed" $key) -}}
   {{- end -}}
-  {{- if not (regexMatch "^[A-Za-z0-9]([-A-Za-z0-9_.]*[A-Za-z0-9])?$" $namePart) -}}
-    {{- fail (printf "pvc.metadata.annotations: invalid annotation key %q: name part must consist of alphanumeric characters, '-', '_' or '.', and must start and end with an alphanumeric character" $key) -}}
+  {{- $namePart := last $parts -}}
+  {{- if not (regexMatch "^[A-Za-z0-9]([-A-Za-z0-9_.]{0,61}[A-Za-z0-9])?$" $namePart) -}}
+    {{- fail (printf "pvc.metadata.annotations: invalid annotation key %q: name part must be ≤63 chars, alphanumeric start/end, may contain '-', '_', '.'" $key) -}}
+  {{- end -}}
+  {{- if contains "/" $key -}}
+    {{- $prefix := first $parts -}}
+    {{- range (splitList "." $prefix) -}}
+      {{- if not (regexMatch "^[a-z0-9][-a-z0-9]*[a-z0-9]$|^[a-z0-9]$" .) -}}
+        {{- fail (printf "pvc.metadata.annotations: invalid annotation key %q: prefix must be a valid DNS subdomain (each label: lowercase alphanumeric, may contain '-', must start and end with alphanumeric)" $key) -}}
+      {{- end -}}
+    {{- end -}}
+    {{- if gt (len $prefix) 253 -}}
+      {{- fail (printf "pvc.metadata.annotations: invalid annotation key %q: prefix must be ≤253 chars" $key) -}}
+    {{- end -}}
   {{- end -}}
 {{- end -}}
 {{- include "consul.stringifyAnnotations" $annotations | trim -}}
