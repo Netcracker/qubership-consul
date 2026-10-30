@@ -1135,3 +1135,14 @@ Global annotations applied to all Consul PVCs (server volumeClaimTemplates, serv
 {{- include "consul.stringifyAnnotations" $annotations | trim -}}
 {{- end -}}
 
+{{/*
+Return type for gateway
+*/}}
+{{- define "gateway.type" -}}
+{{- if and .Values.GATEWAY_SYSTEM_TYPE .Values.global.cloudIntegrationEnabled }}
+    {{- .Values.GATEWAY_SYSTEM_TYPE }}
+{{- else }}
+    {{- "legacy-ingress" }}
+{{- end -}}
+{{- end -}}
+
