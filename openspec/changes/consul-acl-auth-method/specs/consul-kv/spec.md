@@ -2,7 +2,7 @@
 
 ## Overview
 
-Introduces the `ConsulKV` custom resource for declarative management of Consul KV entries. Each resource declares a list of key-value entries under `spec.kv.entries`; the controller writes each entry to the Consul KV store on apply and deletes each entry on removal.
+Introduces the `ConsulKV` custom resource for declarative management of Consul KV entries. Each resource declares a list of key-value entries under `spec.kv`; the controller writes each entry to the Consul KV store on apply and deletes each entry on removal.
 
 The controller follows the same reconciliation patterns as the existing `ConsulACLReconciler`: finalizer on creation, apply on every generation change, delete on `DeletionTimestamp`. It reuses the same Consul client configuration (host, port, scheme, TLS, and token).
 
@@ -11,9 +11,9 @@ The controller follows the same reconciliation patterns as the existing `ConsulA
 ## Terminology
 
 - **ConsulKV** — the Kubernetes custom resource that declares one or more desired Consul KV entries.
-- **entry** — a single `{key, value}` pair in `spec.kv.entries`.
-- **key** — the Consul KV store path for an entry, specified as `spec.kv.entries[*].key`. Used verbatim; no prefix is added.
-- **value** — the optional string value for an entry, specified as `spec.kv.entries[*].value`. May be absent or an empty string.
+- **entry** — a single `{key, value}` pair in `spec.kv`.
+- **key** — the Consul KV store path for an entry, specified as `spec.kv[*].key`. Used verbatim; no prefix is added.
+- **value** — the optional string value for an entry, specified as `spec.kv[*].value`. May be absent or an empty string.
 - **finalizer** — a controller-owned string added to `metadata.finalizers` to ensure the controller deletes all Consul KV entries before the Kubernetes resource is removed.
 
 ---
@@ -22,7 +22,7 @@ The controller follows the same reconciliation patterns as the existing `ConsulA
 
 ### Requirement: Resource Structure
 
-A `ConsulKV` resource SHALL declare its desired KV entries under `spec.kv.entries` as a list. Each entry SHALL have a `key` field. The `value` field is optional and MAY be absent or an empty string.
+A `ConsulKV` resource SHALL declare its desired KV entries under `spec.kv` as a list. Each entry SHALL have a `key` field. The `value` field is optional and MAY be absent or an empty string.
 
 The resource type structure is:
 
@@ -45,7 +45,7 @@ type ConsulKVSpec struct {
 
 #### Scenario: Valid ConsulKV resource with multiple entries accepted
 
-- **WHEN** a `ConsulKV` resource is created with `spec.kv.entries` containing one or more entries, each with a non-empty `key`
+- **WHEN** a `ConsulKV` resource is created with `spec.kv` containing one or more entries, each with a non-empty `key`
 - **THEN** the controller SHALL proceed to reconcile the resource and write all declared entries to the Consul KV store
 
 #### Scenario: Entry with no value is accepted
@@ -86,7 +86,7 @@ When a `ConsulKV` resource is created and does not yet carry the controller's fi
 
 ### Requirement: Finalizer Removed After Cleanup
 
-The controller SHALL remove its finalizer from a `ConsulKV` resource only after all Consul KV entries declared in `spec.kv.entries` have been successfully deleted or confirmed absent.
+The controller SHALL remove its finalizer from a `ConsulKV` resource only after all Consul KV entries declared in `spec.kv` have been successfully deleted or confirmed absent.
 
 #### Scenario: Finalizer removed after all KV entries deleted
 
@@ -97,11 +97,11 @@ The controller SHALL remove its finalizer from a `ConsulKV` resource only after 
 
 ### Requirement: KVPut per Entry on Apply
 
-When a `ConsulKV` resource is reconciled and carries no `DeletionTimestamp`, the controller SHALL call KVPut for each entry in `spec.kv.entries`, writing each entry's value to its key in the Consul KV store.
+When a `ConsulKV` resource is reconciled and carries no `DeletionTimestamp`, the controller SHALL call KVPut for each entry in `spec.kv`, writing each entry's value to its key in the Consul KV store.
 
 #### Scenario: All declared entries written to Consul on apply
 
-- **WHEN** a `ConsulKV` resource is first reconciled with three entries in `spec.kv.entries`
+- **WHEN** a `ConsulKV` resource is first reconciled with three entries in `spec.kv`
 - **THEN** the controller SHALL call KVPut for each of the three entries, creating or overwriting each key in the Consul KV store
 
 #### Scenario: Entry with empty value written as empty key
@@ -113,7 +113,7 @@ When a `ConsulKV` resource is reconciled and carries no `DeletionTimestamp`, the
 
 ### Requirement: Verbatim Keys — No Automatic Prefix
 
-The controller SHALL use each `key` exactly as declared in `spec.kv.entries`. The controller SHALL NOT prepend the CR name, CR namespace, or any other automatic prefix to any key.
+The controller SHALL use each `key` exactly as declared in `spec.kv`. The controller SHALL NOT prepend the CR name, CR namespace, or any other automatic prefix to any key.
 
 #### Scenario: Key written verbatim
 
@@ -140,11 +140,11 @@ The controller's KVPut operation SHALL be idempotent. Re-applying a `ConsulKV` r
 
 ### Requirement: Apply on Generation Change
 
-The controller SHALL call KVPut for all entries in `spec.kv.entries` on every change to `spec` that increments `metadata.generation`. It SHALL NOT write to Consul when only `status` fields change.
+The controller SHALL call KVPut for all entries in `spec.kv` on every change to `spec` that increments `metadata.generation`. It SHALL NOT write to Consul when only `status` fields change.
 
 #### Scenario: Updated entry value written to Consul
 
-- **WHEN** a `ConsulKV` resource's `spec.kv.entries` is modified, causing `metadata.generation` to increment
+- **WHEN** a `ConsulKV` resource's `spec.kv` is modified, causing `metadata.generation` to increment
 - **THEN** the controller SHALL call KVPut for all current entries, writing the updated values to the Consul KV store
 
 #### Scenario: Status-only update does not trigger KV write
@@ -156,11 +156,11 @@ The controller SHALL call KVPut for all entries in `spec.kv.entries` on every ch
 
 ### Requirement: KVDelete per Entry on Delete
 
-When a `ConsulKV` resource has a non-zero `DeletionTimestamp` and the controller's finalizer is present, the controller SHALL call KVDelete for each entry in `spec.kv.entries` before removing the finalizer.
+When a `ConsulKV` resource has a non-zero `DeletionTimestamp` and the controller's finalizer is present, the controller SHALL call KVDelete for each entry in `spec.kv` before removing the finalizer.
 
 #### Scenario: All declared entries deleted from Consul on resource deletion
 
-- **WHEN** a `ConsulKV` resource is deleted by a user and contains three entries in `spec.kv.entries`
+- **WHEN** a `ConsulKV` resource is deleted by a user and contains three entries in `spec.kv`
 - **THEN** the controller SHALL call KVDelete for each of the three keys, removing them from the Consul KV store, and then remove its finalizer from the resource
 
 ---
@@ -249,11 +249,11 @@ The operator's ClusterRole SHALL grant the necessary permissions on `consulkvs`,
 
 ### Requirement: Entry Key Must Not Be Empty
 
-An entry in `spec.kv.entries` with an empty `key` SHALL be skipped during reconciliation. The controller SHALL record the validation failure in `.status` for that entry and SHALL continue processing remaining entries.
+An entry in `spec.kv` with an empty `key` SHALL be skipped during reconciliation. The controller SHALL record the validation failure in `.status` for that entry and SHALL continue processing remaining entries.
 
 #### Scenario: Entry with empty key is skipped
 
-- **WHEN** a `ConsulKV` resource is reconciled and one entry in `spec.kv.entries` has an empty `key` field
+- **WHEN** a `ConsulKV` resource is reconciled and one entry in `spec.kv` has an empty `key` field
 - **THEN** the controller SHALL skip that entry, record an error in `.status` for it, and continue calling KVPut for all other valid entries
 
 ---
@@ -308,14 +308,14 @@ When a `ConsulKV` resource declares the same `key` more than once, the controlle
 
 #### Scenario: Same key declared twice
 
-- **WHEN** `spec.kv.entries` contains `config/app/url` twice
+- **WHEN** `spec.kv` contains `config/app/url` twice
 - **THEN** the key SHALL be written once with the value of the last entry, the earlier entry SHALL be reported as `skipped (duplicate key)`, and the other entries SHALL be written
 
 ---
 
 ### Requirement: Purge on Delete
 
-When `spec.kv.purgeOnDelete` is `true`, the controller SHALL, on deletion of the CR, remove each declared key and everything below it, regardless of which other resources use those keys. The declared key SHALL be treated as a directory: the controller SHALL delete the exact key and then the tree `<key>/` (the trailing `/` is appended when missing and a declared key without `/` is accepted as is), so that keys that merely share the string prefix, such as `config/application/...` for `config/app`, are not deleted.
+When `spec.purgeOnDelete` is `true`, the controller SHALL, on deletion of the CR, remove each declared key and everything below it, regardless of which other resources use those keys. The declared key SHALL be treated as a directory: the controller SHALL delete the exact key and then the tree `<key>/` (the trailing `/` is appended when missing and a declared key without `/` is accepted as is), so that keys that merely share the string prefix, such as `config/application/...` for `config/app`, are not deleted.
 
 #### Scenario: Prefix collision
 
@@ -331,7 +331,7 @@ When `spec.kv.purgeOnDelete` is `true`, the controller SHALL, on deletion of the
 
 ### Requirement: Operator Namespace Binding
 
-When `spec.kv.operatorNamespace` is set, the CR SHALL be reconciled only by the operator whose own namespace equals this value, which allows the CR to live in a different namespace. When it is empty, the CR SHALL be reconciled by the operator running in the CR's own namespace.
+When `spec.operatorNamespace` is set, the CR SHALL be reconciled only by the operator whose own namespace equals this value, which allows the CR to live in a different namespace. When it is empty, the CR SHALL be reconciled by the operator running in the CR's own namespace.
 
 #### Scenario: CR bound to another operator
 

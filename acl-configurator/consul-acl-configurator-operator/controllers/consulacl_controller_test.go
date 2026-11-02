@@ -20,7 +20,7 @@ import (
 	"strings"
 	"testing"
 
-	consulacl "github.com/Netcracker/consul-acl-configurator/consul-acl-configurator-operator/api/v1alpha1"
+	consulacl "github.com/Netcracker/consul-acl-configurator/consul-acl-configurator-operator/api/v1"
 	consulApi "github.com/hashicorp/consul/api"
 )
 

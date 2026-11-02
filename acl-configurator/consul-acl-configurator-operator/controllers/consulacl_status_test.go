@@ -19,7 +19,7 @@ import (
 	"strings"
 	"testing"
 
-	consulacl "github.com/Netcracker/consul-acl-configurator/consul-acl-configurator-operator/api/v1alpha1"
+	consulacl "github.com/Netcracker/consul-acl-configurator/consul-acl-configurator-operator/api/v1"
 	consulApi "github.com/hashicorp/consul/api"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

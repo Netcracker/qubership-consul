@@ -133,6 +133,8 @@ spec:
               value: {{ join "," (default (list) .Values.consulAclConfigurator.boundAudiences) | quote }}
             - name: WATCH_NAMESPACE
               value: {{ default "" .Values.consulAclConfigurator.namespaces | quote }}
+            - name: STRICT_NAMESPACE_VALIDATION
+              value: {{ default false .Values.consulAclConfigurator.strictNamespaceValidation | quote }}
             - name: NAMESPACE
               valueFrom:
                 fieldRef:

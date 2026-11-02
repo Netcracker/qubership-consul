@@ -53,7 +53,7 @@ Additionally, there is no declarative path for Consul KV entries — teams curre
 
 ### 3. ConsulKV as a new CRD and controller — same package, same patterns
 
-**Decision:** Add a `ConsulKV` CRD in `api/v1alpha1/consulkv_types.go` and a `ConsulKVReconciler` in `controllers/consulkv_controller.go`. Register it in `main.go` alongside `ConsulACLReconciler`. Use the identical lifecycle: finalizer on creation, apply on generation change, delete on `DeletionTimestamp`.
+**Decision:** Add a `ConsulKV` CRD in `api/v1/consulkv_types.go` and a `ConsulKVReconciler` in `controllers/consulkv_controller.go`. Register it in `main.go` alongside `ConsulACLReconciler`. Use the identical lifecycle: finalizer on creation, apply on generation change, delete on `DeletionTimestamp`.
 
 **Spec shape:**
 ```
@@ -70,7 +70,7 @@ ConsulKVStatus {
 - Delete: per key, decrement `Flags` or delete the key at `Flags<=1`; with `purgeOnDelete` a recursive delete (see Decision 10).
 - Finalizer string: `{group}/consulkvconfigurator-controller` (consistent with the existing ACL finalizer pattern).
 
-**Rationale:** Using the same `api/v1alpha1` package, the same `CustomResourceUpdater` pattern, and the same `makeAclClient` parent Consul client follows established conventions. The KV API (`consul.KV()`) is already available on the same Consul client used for ACL operations. No new dependencies.
+**Rationale:** Using the same `api/v1` package, the same `CustomResourceUpdater` pattern, and the same `makeAclClient` parent Consul client follows established conventions. The KV API (`consul.KV()`) is already available on the same Consul client used for ACL operations. No new dependencies.
 
 **Alternative considered:** A separate operator binary. Rejected: unnecessary operational complexity; the existing deployment is a single pod with co-located containers, and the operator already manages one controller type — adding a second controller to the same manager is the idiomatic controller-runtime approach.
 
