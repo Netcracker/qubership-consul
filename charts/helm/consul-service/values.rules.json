@@ -4,6 +4,17 @@
     "add": {
       "comment": "don't use type field, because it breaks backward compatibility"
     },
-    "remove": ["type"]
+    "remove": [
+      "type"
+    ]
+  },
+  "^global\\.federation\\.primaryDatacenter$": {
+    "comment": "null is kept as default: the server config checksum depends on it",
+    "add": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
   }
 }
