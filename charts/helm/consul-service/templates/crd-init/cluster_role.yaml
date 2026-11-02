@@ -1,0 +1,16 @@
+{{- if and .Values.consulAclConfigurator.enabled (ne (.Values.DISABLE_CRD | toString) "true") (ne (include "consul.restrictedEnvironment" .) "true") }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ template "consul.fullname" . }}-crd-init-{{ .Release.Namespace }}
+  labels:
+    {{- include "consul-service.defaultLabels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-delete-policy": hook-succeeded,before-hook-creation
+    "helm.sh/hook-weight": "-20"
+rules:
+  - apiGroups: ["apiextensions.k8s.io"]
+    resources: ["customresourcedefinitions"]
+    verbs: ["create", "get", "update"]
+{{- end }}

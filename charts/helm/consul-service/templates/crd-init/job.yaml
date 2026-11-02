@@ -1,0 +1,66 @@
+{{- if and .Values.consulAclConfigurator.enabled (ne (.Values.DISABLE_CRD | toString) "true") (ne (include "consul.restrictedEnvironment" .) "true") }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ template "consul.fullname" . }}-crd-init
+  labels:
+    {{- include "consul-service.defaultLabels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-delete-policy": hook-succeeded,before-hook-creation
+    "helm.sh/hook-weight": "1"
+    "argocd.argoproj.io/hook": PreSync
+    "argocd.argoproj.io/sync-wave": "1"
+    "argocd.argoproj.io/hook-delete-policy": HookSucceeded
+spec:
+  ttlSecondsAfterFinished: {{ .Values.crdInit.lifetimeAfterCompletion | default 120 }}
+  template:
+    metadata:
+      name: {{ template "consul.fullname" . }}-crd-init
+      labels:
+        app: {{ template "consul.name" . }}
+        chart: {{ template "consul.chart" . }}
+        release: {{ .Release.Name }}
+        component: crd-init
+        {{- include "consul-service.defaultLabels" . | nindent 8 }}
+    spec:
+      restartPolicy: Never
+      serviceAccountName: {{ template "consul.fullname" . }}-crd-init
+      {{- if ne (include "openshift.enabled" .) "true" }}
+      securityContext:
+        {{- include "consul.globalPodSecurityContext" . | nindent 8 }}
+      {{- end }}
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 16Mi
+      containers:
+        - name: crd-init
+          image: {{ template "crd-init.image" . }}
+          imagePullPolicy: Always
+          env:
+            - name: PYTHONDONTWRITEBYTECODE
+              value: "1"
+            - name: IGNORE_CRD_FAILURE
+              value: {{ .Values.IGNORE_CRD_FAILURE | toString | default "true" | quote }}
+            - name: CRD_UPGRADE_WAITING_TIME
+              value: {{ .Values.CRD_UPGRADE_WAITING_TIME | default "30" | quote }}
+            - name: SLEEP_AFTER_COMPLETION
+              value: {{ .Values.crdInit.sleepAfterCompletion | toString | default "1" | quote }}
+            - name: CRDS_TO_CREATE
+              value: "consul_acl_configurator_crd.yaml,consulkv_crd.yaml"
+            - name: API_GROUP
+              value: {{ .Values.consulAclConfigurator.apiGroup | quote }}
+          resources:
+            requests:
+              memory: 128Mi
+              cpu: 25m
+            limits:
+              memory: 128Mi
+              cpu: 100m
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+          securityContext:
+            {{- include "consul.globalContainerSecurityContext" . | nindent 12 }}
+{{- end }}

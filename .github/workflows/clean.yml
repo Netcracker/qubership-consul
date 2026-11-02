@@ -33,6 +33,9 @@ jobs:
           - name: qubership-consul-remove-tokens
             file: remove-tokens/docker/Dockerfile
             context: remove-tokens
+          - name: qubership-consul-crd-init
+            file: crd-init/docker/Dockerfile
+            context: crd-init
     if: github.event.ref_type == 'branch'
     runs-on: ubuntu-latest
     steps:
