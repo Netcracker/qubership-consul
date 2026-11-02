@@ -7,13 +7,15 @@
       "type": "object",
       "properties": {
         "cloudIntegrationEnabled": {
-          "type": "boolean",
+          "type": ["boolean", "string"],
+          "pattern": "^(true|false)$",
           "default": false,
           "title": "The global.cloudIntegrationEnabled schema",
           "description": "This parameter specifies whether to apply [Cloud Integration Parameters](#cloud-integration-parameters) instead of parameters described in Consul"
         },
         "enabled": {
-          "type": "boolean",
+          "type": ["boolean", "string"],
+          "pattern": "^(true|false)$",
           "default": true,
           "title": "The global.enabled schema",
           "description": "Whether all the components within this chart are to be enabled by default"
@@ -38,13 +40,15 @@
           "description": "The domain to register the Consul DNS server to listen for"
         },
         "ipv6": {
-          "type": "boolean",
+          "type": ["boolean", "string"],
+          "pattern": "^(true|false)$",
           "default": false,
           "title": "The global.ipv6 schema",
           "description": "Whether the Consul services REST API is to be started on `IPv6` interface"
         },
         "restrictedEnvironment": {
-          "type": "boolean",
+          "type": ["boolean", "string"],
+          "pattern": "^(true|false)$",
           "default": false,
           "title": "The global.restrictedEnvironment schema",
           "description": "Whether the Consul service is to be deployed in restricted environment"
@@ -80,7 +84,8 @@
           "description": "The name of the datacenter that the agents should register"
         },
         "enablePodSecurityPolicies": {
-          "type": "boolean",
+          "type": ["boolean", "string"],
+          "pattern": "^(true|false)$",
           "default": false,
           "title": "The global.enablePodSecurityPolicies schema",
           "description": "Whether pod security policies are to be created for the Consul components created by the chart"
@@ -116,13 +121,15 @@
           "additionalProperties": true,
           "properties": {
             "enabled": {
-              "type": "boolean",
+              "type": ["boolean", "string"],
+              "pattern": "^(true|false)$",
               "default": false,
               "title": "The global.tls.enabled schema",
               "description": "Whether TLS is to be enabled for all Consul components"
             },
             "enableAutoEncrypt": {
-              "type": "boolean",
+              "type": ["boolean", "string"],
+              "pattern": "^(true|false)$",
               "default": false,
               "title": "The global.tls.enableAutoEncrypt schema",
               "description": "Whether the `auto-encrypt` feature is to enabled on clients and servers"
@@ -138,7 +145,8 @@
               "additionalProperties": true,
               "properties": {
                 "enabled": {
-                  "type": "boolean",
+                  "type": ["boolean", "string"],
+                  "pattern": "^(true|false)$",
                   "default": false,
                   "title": "The global.tls.certManager.enabled schema",
                   "description": "Whether TLS certificates are to be generated and managed by Cert Manager"
@@ -150,7 +158,8 @@
                   "description": "The name of the `ClusterIssuer` resource"
                 },
                 "durationDays": {
-                  "type": "integer",
+                  "type": ["integer", "string"],
+                  "pattern": "^[0-9]+$",
                   "default": 730,
                   "title": "The global.tls.certManager.durationDays schema",
                   "description": "The TLS certificates validity period in days"
@@ -172,13 +181,15 @@
               "description": "The list of additional IP addresses names to set as Subject Alternative Names (SANs) in the server certificate"
             },
             "verify": {
-              "type": "boolean",
+              "type": ["boolean", "string"],
+              "pattern": "^(true|false)$",
               "default": true,
               "title": "The global.tls.verify schema",
               "description": "Whether servers and client configuration is to be verified"
             },
             "httpsOnly": {
-              "type": "boolean",
+              "type": ["boolean", "string"],
+              "pattern": "^(true|false)$",
               "default": false,
               "title": "The global.tls.httpsOnly schema",
               "description": "Whether the HTTP port on both clients and servers is to be disabled and only HTTPS connections are to be accepted"
@@ -335,13 +346,15 @@
           "additionalProperties": true,
           "properties": {
             "manageSystemACLs": {
-              "type": "boolean",
+              "type": ["boolean", "string"],
+              "pattern": "^(true|false)$",
               "default": true,
               "title": "The global.acls.manageSystemACLs schema",
               "description": "Whether ACL tokens and policies for all Consul and `consul-k8s` components are to be managed"
             },
             "createAuthMethod": {
-              "type": "boolean",
+              "type": ["boolean", "string"],
+              "pattern": "^(true|false)$",
               "default": true,
               "title": "The global.acls.createAuthMethod schema",
               "description": "Whether Consul authentication method is to be created"
@@ -373,7 +386,8 @@
               "description": "global.acls.bootstrapToken parameters"
             },
             "createReplicationToken": {
-              "type": "boolean",
+              "type": ["boolean", "string"],
+              "pattern": "^(true|false)$",
               "default": false,
               "title": "The global.acls.createReplicationToken schema",
               "description": "Whether ACL token that can be used in secondary datacenters for replication is to be created"
@@ -469,13 +483,15 @@
           "additionalProperties": true,
           "properties": {
             "enabled": {
-              "type": "boolean",
+              "type": ["boolean", "string"],
+              "pattern": "^(true|false)$",
               "default": false,
               "title": "The global.federation.enabled schema",
               "description": "Whether the datacenter is to be federation-capable"
             },
             "createFederationSecret": {
-              "type": "boolean",
+              "type": ["boolean", "string"],
+              "pattern": "^(true|false)$",
               "default": false,
               "title": "The global.federation.createFederationSecret schema",
               "description": "Whether the Kubernetes secret that can be imported into secondary datacenters, so they can federate with this datacenter, is to be created"
@@ -520,13 +536,15 @@
           "additionalProperties": true,
           "properties": {
             "enabled": {
-              "type": "boolean",
+              "type": ["boolean", "string"],
+              "pattern": "^(true|false)$",
               "default": true,
               "title": "The global.metrics.enabled schema",
               "description": "Whether the components to expose Prometheus metrics for the Consul service mesh are to be configured"
             },
             "enableAgentMetrics": {
-              "type": "boolean",
+              "type": ["boolean", "string"],
+              "pattern": "^(true|false)$",
               "default": true,
               "title": "The global.metrics.enableAgentMetrics schema",
               "description": "Whether the metrics for Consul agent are to be configured"
@@ -538,13 +556,15 @@
               "description": "The retention time for metrics in Consul clients and servers"
             },
             "enableGatewayMetrics": {
-              "type": "boolean",
+              "type": ["boolean", "string"],
+              "pattern": "^(true|false)$",
               "default": true,
               "title": "The global.metrics.enableGatewayMetrics schema",
               "description": "Whether the `mesh`, `terminating`, and `ingress` gateways are to expose their Consul DataPlane metrics on port `20200` at the `/metrics` path and all gateway pods are to have Prometheus scrape annotations"
             },
             "disableHostname": {
-              "type": "boolean",
+              "type": ["boolean", "string"],
+              "pattern": "^(true|false)$",
               "default": true,
               "title": "The global.metrics.disableHostname schema",
               "description": "Whether the runtime telemetry with the machine hostname is to be prepended"
@@ -560,7 +580,8 @@
           "description": "The default log level to apply to all components which do not override this setting"
         },
         "logJSON": {
-          "type": "boolean",
+          "type": ["boolean", "string"],
+          "pattern": "^(true|false)$",
           "default": false,
           "title": "The global.logJSON schema",
           "description": "Whether the output in JSON format for all component logs is to be enabled"
@@ -580,7 +601,8 @@
               "additionalProperties": true,
               "properties": {
                 "enabled": {
-                  "type": "boolean",
+                  "type": ["boolean", "string"],
+                  "pattern": "^(true|false)$",
                   "default": true,
                   "title": "The global.disasterRecovery.tls.enabled schema",
                   "description": "Whether TLS is to be enabled for Disaster Recovery Daemon"
@@ -652,13 +674,15 @@
               "additionalProperties": true,
               "properties": {
                 "enabled": {
-                  "type": "boolean",
+                  "type": ["boolean", "string"],
+                  "pattern": "^(true|false)$",
                   "default": false,
                   "title": "The global.disasterRecovery.httpAuth.enabled schema",
                   "description": "Whether site manager authentication is to be enabled"
                 },
                 "smSecureAuth": {
-                  "type": "boolean",
+                  "type": ["boolean", "string"],
+                  "pattern": "^(true|false)$",
                   "default": false,
                   "title": "The global.disasterRecovery.httpAuth.smSecureAuth schema",
                   "description": "Whether the `smSecureAuth` mode is enabled for Site Manager or not"
@@ -698,13 +722,15 @@
               "description": "The region of cloud where current instance of Consul service is installed"
             },
             "siteManagerEnabled": {
-              "type": "boolean",
+              "type": ["boolean", "string"],
+              "pattern": "^(true|false)$",
               "default": true,
               "title": "The global.disasterRecovery.siteManagerEnabled schema",
               "description": "Whether creation of a Kubernetes Custom Resource for `SiteManager` is to be enabled"
             },
             "timeout": {
-              "type": "integer",
+              "type": ["integer", "string"],
+              "pattern": "^[0-9]+$",
               "default": 600,
               "title": "The global.disasterRecovery.timeout schema",
               "description": "The timeout for switchover process"
@@ -798,7 +824,8 @@
           "additionalProperties": true,
           "properties": {
             "enabled": {
-              "type": "boolean",
+              "type": ["boolean", "string"],
+              "pattern": "^(true|false)$",
               "default": false,
               "title": "The global.openshift.enabled schema",
               "description": "Whether the necessary configuration for running Consul components on OpenShift is to be created"
@@ -825,7 +852,8 @@
           "additionalProperties": true,
           "properties": {
             "postHookRestoreEnabled": {
-              "type": "boolean",
+              "type": ["boolean", "string"],
+              "pattern": "^(true|false)$",
               "default": true,
               "title": "The global.velero.postHookRestoreEnabled schema",
               "description": "Whether Velero restore post-hook with Auth Method restore command is to be enabled"
@@ -858,7 +886,8 @@
           "description": "Enables The log verbosity level"
         },
         "enableAgentDebug": {
-          "type": "boolean",
+          "type": ["boolean", "string"],
+          "pattern": "^(true|false)$",
           "default": false,
           "title": "The server.enableAgentDebug schema",
           "description": "Enables Consul to report additional debugging information, including runtime profiling (pprof) data"
@@ -898,7 +927,8 @@
           "description": "server.tls parameters"
         },
         "replicas": {
-          "type": "integer",
+          "type": ["integer", "string"],
+          "pattern": "^[0-9]+$",
           "default": 3,
           "title": "The server.replicas schema",
           "description": "The number of Consul server nodes"
@@ -913,7 +943,8 @@
           "description": "The number of servers that are expected to be running"
         },
         "exposeGossipAndRPCPorts": {
-          "type": "boolean",
+          "type": ["boolean", "string"],
+          "pattern": "^(true|false)$",
           "default": false,
           "title": "The server.exposeGossipAndRPCPorts schema",
           "description": "Whether the servers' gossip and RPC ports as hostPorts are to be exposed"
@@ -998,7 +1029,8 @@
           "description": "The list of Kubernetes node names to assign Consul server nodes"
         },
         "connect": {
-          "type": "boolean",
+          "type": ["boolean", "string"],
+          "pattern": "^(true|false)$",
           "default": true,
           "title": "The server.connect schema",
           "description": "Whether `connect` on all the servers is to be enabled, initializing a CA for Connect-related connections"
@@ -1070,31 +1102,36 @@
           "type": "object",
           "properties": {
             "initialDelaySeconds": {
-              "type": "integer",
+              "type": ["integer", "string"],
+              "pattern": "^[0-9]+$",
               "default": 0,
               "title": "The server.livenessProbe.initialDelaySeconds schema",
               "description": "The number of seconds after the container has started before the liveness probe is initiated"
             },
             "periodSeconds": {
-              "type": "integer",
+              "type": ["integer", "string"],
+              "pattern": "^[0-9]+$",
               "default": 10,
               "title": "The server.livenessProbe.periodSeconds schema",
               "description": "How often (in seconds) the liveness probe is to be performed"
             },
             "timeoutSeconds": {
-              "type": "integer",
+              "type": ["integer", "string"],
+              "pattern": "^[0-9]+$",
               "default": 1,
               "title": "The server.livenessProbe.timeoutSeconds schema",
               "description": "The number of seconds after which the liveness probe times out"
             },
             "successThreshold": {
-              "type": "integer",
+              "type": ["integer", "string"],
+              "pattern": "^[0-9]+$",
               "default": 1,
               "title": "The server.livenessProbe.successThreshold schema",
               "description": "The minimum number of consecutive successes for the liveness probe to be considered successful after having failed"
             },
             "failureThreshold": {
-              "type": "integer",
+              "type": ["integer", "string"],
+              "pattern": "^[0-9]+$",
               "default": 3,
               "title": "The server.livenessProbe.failureThreshold schema",
               "description": "The number of consecutive failures for the liveness probe to be considered failed, after which the container is restarted"
@@ -1107,31 +1144,36 @@
           "type": "object",
           "properties": {
             "initialDelaySeconds": {
-              "type": "integer",
+              "type": ["integer", "string"],
+              "pattern": "^[0-9]+$",
               "default": 5,
               "title": "The server.readinessProbe.initialDelaySeconds schema",
               "description": "The number of seconds after the container has started before the readiness probe is initiated"
             },
             "periodSeconds": {
-              "type": "integer",
+              "type": ["integer", "string"],
+              "pattern": "^[0-9]+$",
               "default": 3,
               "title": "The server.readinessProbe.periodSeconds schema",
               "description": "How often (in seconds) the readiness probe is to be performed"
             },
             "timeoutSeconds": {
-              "type": "integer",
+              "type": ["integer", "string"],
+              "pattern": "^[0-9]+$",
               "default": 5,
               "title": "The server.readinessProbe.timeoutSeconds schema",
               "description": "The number of seconds after which the readiness probe times out"
             },
             "successThreshold": {
-              "type": "integer",
+              "type": ["integer", "string"],
+              "pattern": "^[0-9]+$",
               "default": 1,
               "title": "The server.readinessProbe.successThreshold schema",
               "description": "The minimum number of consecutive successes for the readiness probe to be considered successful after having failed"
             },
             "failureThreshold": {
-              "type": "integer",
+              "type": ["integer", "string"],
+              "pattern": "^[0-9]+$",
               "default": 2,
               "title": "The server.readinessProbe.failureThreshold schema",
               "description": "The number of consecutive failures for the readiness probe to be considered failed, after which the pod is marked as not ready"
@@ -1152,7 +1194,8 @@
           "description": "The pod-level security attributes and common container settings for Consul server pod"
         },
         "updatePartition": {
-          "type": "integer",
+          "type": ["integer", "string"],
+          "pattern": "^[0-9]+$",
           "default": 0,
           "title": "The server.updatePartition schema",
           "description": "The partition to perform a rolling update"
@@ -1161,7 +1204,8 @@
           "type": "object",
           "properties": {
             "enabled": {
-              "type": "boolean",
+              "type": ["boolean", "string"],
+              "pattern": "^(true|false)$",
               "default": true,
               "title": "The server.disruptionBudget.enabled schema",
               "description": "Whether the creation of a `PodDisruptionBudget` to prevent voluntary degrading of the Consul server cluster is to be created"
@@ -1290,13 +1334,15 @@
                   "description": "Enables or disables rate limiting"
                 },
                 "readRate": {
-                  "type": "integer",
+                  "type": ["integer", "string"],
+                  "pattern": "^[0-9]+$",
                   "default": -1,
                   "title": "The server.limits.requestLimits.readRate schema",
                   "description": "Sets how frequently RPC, gRPC, and HTTP queries are allowed to happen"
                 },
                 "writeRate": {
-                  "type": "integer",
+                  "type": ["integer", "string"],
+                  "pattern": "^[0-9]+$",
                   "default": -1,
                   "title": "The server.limits.requestLimits.writeRate schema",
                   "description": "Sets how frequently RPC, gRPC, and HTTP writes are allowed to happen"
@@ -1362,13 +1408,15 @@
           "description": "server.aclInit parameters"
         },
         "serverLocalityEnabled": {
-          "type": "boolean",
+          "type": ["boolean", "string"],
+          "pattern": "^(true|false)$",
           "default": false,
           "title": "The server.serverLocalityEnabled schema",
           "description": "Enables Consul server to set locality From its topology region label"
         },
         "raftSnapshotThreshold": {
-          "type": "integer",
+          "type": ["integer", "string"],
+          "pattern": "^[0-9]+$",
           "default": 500,
           "title": "The server.raftSnapshotThreshold schema",
           "description": "Sets the minimum number of raft commit entries between snapshots that are saved to disk"
@@ -1382,7 +1430,8 @@
       "type": "object",
       "properties": {
         "enabled": {
-          "type": "boolean",
+          "type": ["boolean", "string"],
+          "pattern": "^(true|false)$",
           "default": false,
           "title": "The externalServers.enabled schema",
           "description": "Whether the Helm chart is to be configured to talk to the external servers"
@@ -1412,7 +1461,8 @@
           "description": "The server name to use as the SNI host header when connecting with HTTPS"
         },
         "useSystemRoots": {
-          "type": "boolean",
+          "type": ["boolean", "string"],
+          "pattern": "^(true|false)$",
           "default": false,
           "title": "The externalServers.useSystemRoots schema",
           "description": "Whether `consul-k8s` components are to ignore the CA set in `global"
@@ -1427,7 +1477,8 @@
           "description": "The address of the Kubernetes API server"
         },
         "skipServerWatch": {
-          "type": "boolean",
+          "type": ["boolean", "string"],
+          "pattern": "^(true|false)$",
           "default": false,
           "title": "The externalServers.skipServerWatch schema",
           "description": "Whether the `consul-dataplane` and `consul-k8s` components are to watch the Consul servers for changes"
@@ -1440,7 +1491,8 @@
       "type": "object",
       "properties": {
         "enabled": {
-          "type": "boolean",
+          "type": ["boolean", "string"],
+          "pattern": "^(true|false)$",
           "default": false,
           "title": "The client.enabled schema",
           "description": "Whether Consul clients are to be run on every node within the Kubernetes cluster"
@@ -1522,7 +1574,8 @@
           "description": "The absolute path to a directory on the host machine to use as the Consul client data directory"
         },
         "grpc": {
-          "type": "boolean",
+          "type": ["boolean", "string"],
+          "pattern": "^(true|false)$",
           "default": true,
           "title": "The client.grpc schema",
           "description": "Whether the gRPC listener is to be enabled"
@@ -1538,7 +1591,8 @@
           "description": "The arbitrary metadata key-value pair to associate with the node"
         },
         "exposeGossipPorts": {
-          "type": "boolean",
+          "type": ["boolean", "string"],
+          "pattern": "^(true|false)$",
           "default": false,
           "title": "The client.exposeGossipPorts schema",
           "description": "Whether the clients' gossip ports as `hostPorts` are to be exposed"
@@ -1714,7 +1768,8 @@
           "description": "The [Pod DNS policy](https://kubernetes"
         },
         "hostNetwork": {
-          "type": "boolean",
+          "type": ["boolean", "string"],
+          "pattern": "^(true|false)$",
           "default": false,
           "title": "The client.hostNetwork schema",
           "description": "Whether host networking is to be used instead of hostPort in the event that a CNI plugin doesn't support hostPort"
@@ -1779,7 +1834,8 @@
       "type": "object",
       "properties": {
         "enabled": {
-          "type": "boolean",
+          "type": ["boolean", "string"],
+          "pattern": "^(true|false)$",
           "default": false,
           "title": "The ui.enabled schema",
           "description": "Whether Consul UI is to be enabled"
@@ -1788,7 +1844,8 @@
           "type": "object",
           "properties": {
             "enabled": {
-              "type": "boolean",
+              "type": ["boolean", "string"],
+              "pattern": "^(true|false)$",
               "default": true,
               "title": "The ui.service.enabled schema",
               "description": "Whether the service entry for the Consul UI is to be created"
@@ -1847,7 +1904,8 @@
           "type": "object",
           "properties": {
             "enabled": {
-              "type": "boolean",
+              "type": ["boolean", "string"],
+              "pattern": "^(true|false)$",
               "default": false,
               "title": "The ui.ingress.enabled schema",
               "description": "Whether `Ingress` resource to access Consul UI outside the cloud is to be created"
@@ -1881,7 +1939,8 @@
           "type": "object",
           "properties": {
             "enabled": {
-              "type": "boolean",
+              "type": ["boolean", "string"],
+              "pattern": "^(true|false)$",
               "default": true,
               "title": "The ui.envoyGateway.enabled schema",
               "description": "Enables creation of a Gateway API HTTPRoute resource to expose the Consul UI via Envoy Gateway"
@@ -1961,13 +2020,15 @@
       "type": "object",
       "properties": {
         "enabled": {
-          "type": "boolean",
+          "type": ["boolean", "string"],
+          "pattern": "^(true|false)$",
           "default": false,
           "title": "The syncCatalog.enabled schema",
           "description": "Whether the catalog sync process to sync K8S with Consul services is to be enabled"
         },
         "default": {
-          "type": "boolean",
+          "type": ["boolean", "string"],
+          "pattern": "^(true|false)$",
           "default": true,
           "title": "The syncCatalog.default schema",
           "description": "Whether the sync is enabled by default, otherwise it requires annotation"
@@ -1979,13 +2040,15 @@
           "description": "The priority class to be used to assign priority to Sync Catalog pods"
         },
         "toConsul": {
-          "type": "boolean",
+          "type": ["boolean", "string"],
+          "pattern": "^(true|false)$",
           "default": true,
           "title": "The syncCatalog.toConsul schema",
           "description": "Whether syncing is to be enabled to Consul as a destination"
         },
         "toK8S": {
-          "type": "boolean",
+          "type": ["boolean", "string"],
+          "pattern": "^(true|false)$",
           "default": true,
           "title": "The syncCatalog.toK8S schema",
           "description": "Whether syncing is to be enabled to K8S as a destination"
@@ -2032,7 +2095,8 @@
           "description": "The Kubernetes namespace to watch for service changes and sync to Consul"
         },
         "addK8SNamespaceSuffix": {
-          "type": "boolean",
+          "type": ["boolean", "string"],
+          "pattern": "^(true|false)$",
           "default": true,
           "title": "The syncCatalog.addK8SNamespaceSuffix schema",
           "description": "Whether sync catalog is to append Kubernetes namespace suffix to each service name synced to Consul, separated by a dash"
@@ -2062,7 +2126,8 @@
           "description": "The Consul synthetic node that all services will be registered to"
         },
         "syncClusterIPServices": {
-          "type": "boolean",
+          "type": ["boolean", "string"],
+          "pattern": "^(true|false)$",
           "default": true,
           "title": "The syncCatalog.syncClusterIPServices schema",
           "description": "Whether services of the ClusterIP type are to be synced"
@@ -2218,13 +2283,15 @@
       "type": "object",
       "properties": {
         "enabled": {
-          "type": "boolean",
+          "type": ["boolean", "string"],
+          "pattern": "^(true|false)$",
           "default": false,
           "title": "The connectInject.enabled schema",
           "description": "Whether the automatic Connect sidecar injector is to be enabled"
         },
         "replicas": {
-          "type": "integer",
+          "type": ["integer", "string"],
+          "pattern": "^[0-9]+$",
           "default": 1,
           "title": "The connectInject.replicas schema",
           "description": "The number of Connect Inject deployment replicas"
@@ -2236,7 +2303,8 @@
           "description": "The extra labels to attach to the Connect Injector pods"
         },
         "default": {
-          "type": "boolean",
+          "type": ["boolean", "string"],
+          "pattern": "^(true|false)$",
           "default": false,
           "title": "The connectInject.default schema",
           "description": "Whether the inject is enabled by default, otherwise it requires annotation"
@@ -2245,13 +2313,15 @@
           "type": "object",
           "properties": {
             "defaultEnabled": {
-              "type": "boolean",
+              "type": ["boolean", "string"],
+              "pattern": "^(true|false)$",
               "default": true,
               "title": "The connectInject.transparentProxy.defaultEnabled schema",
               "description": "Whether all Consul Service mesh are to run with transparent proxy enabled by default, i"
             },
             "defaultOverwriteProbes": {
-              "type": "boolean",
+              "type": ["boolean", "string"],
+              "pattern": "^(true|false)$",
               "default": true,
               "title": "The connectInject.transparentProxy.defaultOverwriteProbes schema",
               "description": "Whether Kubernetes HTTP probes of the pod are to be overridden to point to the Consul DataPlane proxy instead"
@@ -2264,7 +2334,8 @@
           "type": "object",
           "properties": {
             "enabled": {
-              "type": "boolean",
+              "type": ["boolean", "string"],
+              "pattern": "^(true|false)$",
               "default": true,
               "title": "The connectInject.disruptionBudget.enabled schema",
               "description": "Whether the creation of a `PodDisruptionBudget` to prevent voluntary degrading of the Connect inject pods is to be created"
@@ -2304,7 +2375,8 @@
               "description": "Whether connect-injector is to add prometheus annotations to connect-injected pods automatically"
             },
             "defaultEnableMerging": {
-              "type": "boolean",
+              "type": ["boolean", "string"],
+              "pattern": "^(true|false)$",
               "default": false,
               "title": "The connectInject.metrics.defaultEnableMerging schema",
               "description": "Whether the Consul sidecar is to run a merged metrics server to combine and serve both Consul DataPlane and Connect service metrics"
@@ -2646,13 +2718,15 @@
       "type": "object",
       "properties": {
         "enabled": {
-          "type": "boolean",
+          "type": ["boolean", "string"],
+          "pattern": "^(true|false)$",
           "default": false,
           "title": "The meshGateway.enabled schema",
           "description": "Whether Consul service mesh is to be configured to use gateways"
         },
         "replicas": {
-          "type": "integer",
+          "type": ["integer", "string"],
+          "pattern": "^[0-9]+$",
           "default": 1,
           "title": "The meshGateway.replicas schema",
           "description": "The number of Mesh Gateway deployment replicas"
@@ -2735,7 +2809,8 @@
           "description": "meshGateway.service parameters"
         },
         "hostNetwork": {
-          "type": "boolean",
+          "type": ["boolean", "string"],
+          "pattern": "^(true|false)$",
           "default": false,
           "title": "The meshGateway.hostNetwork schema",
           "description": "Whether gateway Pods is to run on the host network"
@@ -2943,7 +3018,8 @@
       "type": "object",
       "properties": {
         "enabled": {
-          "type": "boolean",
+          "type": ["boolean", "string"],
+          "pattern": "^(true|false)$",
           "default": true,
           "title": "The podScheduler.enabled schema",
           "description": "Whether custom Kubernetes pod scheduler pod is to be deployed to assign Consul pods to nodes with `hostPath` persistent volumes"
@@ -3031,13 +3107,15 @@
       "type": "object",
       "properties": {
         "enabled": {
-          "type": "boolean",
+          "type": ["boolean", "string"],
+          "pattern": "^(true|false)$",
           "default": true,
           "title": "The monitoring.enabled schema",
           "description": "Whether the installation of Consul monitoring is to be enabled"
         },
         "installDashboard": {
-          "type": "boolean",
+          "type": ["boolean", "string"],
+          "pattern": "^(true|false)$",
           "default": true,
           "title": "The monitoring.installDashboard schema",
           "description": "Whether the installation of Consul Grafana dashboard is to be enabled"
@@ -3050,7 +3128,8 @@
       "type": "object",
       "properties": {
         "enabled": {
-          "type": "boolean",
+          "type": ["boolean", "string"],
+          "pattern": "^(true|false)$",
           "default": false,
           "title": "The backupDaemon.enabled schema",
           "description": "Whether the installation of Consul backup daemon is to be enabled"
@@ -3065,7 +3144,8 @@
           "type": "object",
           "properties": {
             "enabled": {
-              "type": "boolean",
+              "type": ["boolean", "string"],
+              "pattern": "^(true|false)$",
               "default": true,
               "title": "The backupDaemon.tls.enabled schema",
               "description": "Whether TLS is to be enabled for Consul backup daemon"
@@ -3152,13 +3232,15 @@
           "type": "object",
           "properties": {
             "enabled": {
-              "type": "boolean",
+              "type": ["boolean", "string"],
+              "pattern": "^(true|false)$",
               "default": false,
               "title": "The backupDaemon.s3.enabled schema",
               "description": "Whether Consul backups are to be stored in S3 storage"
             },
             "sslVerify": {
-              "type": "boolean",
+              "type": ["boolean", "string"],
+              "pattern": "^(true|false)$",
               "default": true,
               "title": "The backupDaemon.s3.sslVerify schema",
               "description": "This parameter specifies whether or not to verify SSL certificates for S3 connections"
@@ -3325,7 +3407,8 @@
       "type": "object",
       "properties": {
         "enabled": {
-          "type": "boolean",
+          "type": ["boolean", "string"],
+          "pattern": "^(true|false)$",
           "default": true,
           "title": "The consulAclConfigurator.enabled schema",
           "description": "Whether Consul ACL Configurator is to be installed"
@@ -3388,7 +3471,8 @@
           "description": "consulAclConfigurator.resources parameters"
         },
         "reconcilePeriod": {
-          "type": "integer",
+          "type": ["integer", "string"],
+          "pattern": "^[0-9]+$",
           "default": 100,
           "title": "The consulAclConfigurator.reconcilePeriod schema",
           "description": "The delay period for repeated a Custom Resource reconciliation in seconds"
@@ -3465,19 +3549,22 @@
           "description": "The image for Deployment Status Provisioner pod"
         },
         "lifetimeAfterCompletion": {
-          "type": "integer",
+          "type": ["integer", "string"],
+          "pattern": "^[0-9]+$",
           "default": 600,
           "title": "The statusProvisioner.lifetimeAfterCompletion schema",
           "description": "The number of seconds that the job remains alive after its completion"
         },
         "podReadinessTimeout": {
-          "type": "integer",
+          "type": ["integer", "string"],
+          "pattern": "^[0-9]+$",
           "default": 300,
           "title": "The statusProvisioner.podReadinessTimeout schema",
           "description": "The timeout in seconds that the job waits for the monitored resources to be ready or completed"
         },
         "integrationTestsTimeout": {
-          "type": "integer",
+          "type": ["integer", "string"],
+          "pattern": "^[0-9]+$",
           "default": 300,
           "title": "The statusProvisioner.integrationTestsTimeout schema",
           "description": "The timeout in seconds that the job waits for the integration tests to complete"
@@ -3534,7 +3621,8 @@
           "description": "The pod-level security attributes and common container settings for the Status Provisioner pod"
         },
         "cleanupEnabled": {
-          "type": "boolean",
+          "type": ["boolean", "string"],
+          "pattern": "^(true|false)$",
           "title": "The statusProvisioner.cleanupEnabled schema",
           "description": "Whether forced cleanup of previous Status Provisioner job is enabled"
         }
@@ -3604,7 +3692,8 @@
       "type": "object",
       "properties": {
         "enabled": {
-          "type": "boolean",
+          "type": ["boolean", "string"],
+          "pattern": "^(true|false)$",
           "default": false,
           "title": "The integrationTests.enabled schema",
           "description": "Whether the installation of Consul integration tests is to be enabled"
@@ -3677,13 +3766,15 @@
           "description": "The tags combined with `AND`, `OR` and `NOT` operators that select test cases to run"
         },
         "statusWritingEnabled": {
-          "type": "boolean",
+          "type": ["boolean", "string"],
+          "pattern": "^(true|false)$",
           "default": true,
           "title": "The integrationTests.statusWritingEnabled schema",
           "description": "Whether the status of Consul integration tests execution is to be written to deployment"
         },
         "isShortStatusMessage": {
-          "type": "boolean",
+          "type": ["boolean", "string"],
+          "pattern": "^(true|false)$",
           "default": true,
           "title": "The integrationTests.isShortStatusMessage schema",
           "description": "Whether the status message is to contain only first line of `result"
@@ -3764,7 +3855,8 @@
           "type": "object",
           "properties": {
             "enabled": {
-              "type": "boolean",
+              "type": ["boolean", "string"],
+              "pattern": "^(true|false)$",
               "default": false,
               "title": "The integrationTests.atpReport.enabled schema",
               "description": "Opt-in for ATP report upload"
@@ -3844,7 +3936,8 @@
       "description": "integrationTests parameters"
     },
     "MONITORING_ENABLED": {
-      "type": "boolean",
+      "type": ["boolean", "string"],
+      "pattern": "^(true|false)$",
       "title": "The MONITORING_ENABLED schema",
       "description": "Specifies whether Consul Monitoring component is to be deployed or not"
     },
@@ -3854,17 +3947,20 @@
       "description": "Storage class name used to dynamically provide volumes"
     },
     "INFRA_CONSUL_FS_GROUP": {
-      "type": "integer",
+      "type": ["integer", "string"],
+      "pattern": "^[0-9]+$",
       "title": "The INFRA_CONSUL_FS_GROUP schema",
       "description": "Specifies group ID used inside Consul pods"
     },
     "INFRA_CONSUL_REPLICAS": {
-      "type": "integer",
+      "type": ["integer", "string"],
+      "pattern": "^[0-9]+$",
       "title": "The INFRA_CONSUL_REPLICAS schema",
       "description": "Specifies Consul replicas count"
     },
     "INFRA_CONSUL_RESTRICTED_ENVIRONMENT": {
-      "type": "boolean",
+      "type": ["boolean", "string"],
+      "pattern": "^(true|false)$",
       "title": "The INFRA_CONSUL_RESTRICTED_ENVIRONMENT schema",
       "description": "Specifies whether the Consul service is to be deployed in restricted environment"
     }
