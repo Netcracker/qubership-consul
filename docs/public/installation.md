@@ -927,13 +927,25 @@ The section lists the configurable parameters of the Consul chart and their defa
 
 ## Cloud Integration Parameters
 
-| Parameter                           | Type    | Mandatory | Default value | Description                                                                       |
-|-------------------------------------|---------|-----------|---------------|-----------------------------------------------------------------------------------|
-| MONITORING_ENABLED                  | boolean | no        | `false`       | Specifies whether Consul Monitoring component is to be deployed or not.           |
-| STORAGE_RWO_CLASS                   | string  | yes       | `""`          | Storage class name used to dynamically provide volumes.                           |
-| INFRA_CONSUL_FS_GROUP               | integer | no        |               | Specifies group ID used inside Consul pods.                                       |
-| INFRA_CONSUL_REPLICAS               | integer | no        |               | Specifies Consul replicas count.                                                  |
-| INFRA_CONSUL_RESTRICTED_ENVIRONMENT | boolean | no        | `false`       | Specifies whether the Consul service is to be deployed in restricted environment. |
+| Parameter                           | Type    | Mandatory | Default value      | Description                                                                       |
+|-------------------------------------|---------|-----------|--------------------|-----------------------------------------------------------------------------------|
+| MONITORING_ENABLED                  | boolean | no        | `false`            | Specifies whether Consul Monitoring component is to be deployed or not.           |
+| STORAGE_RWO_CLASS                   | string  | yes       | `""`               | Storage class name used to dynamically provide volumes.                           |
+| INFRA_CONSUL_FS_GROUP               | integer | no        |                    | Specifies group ID used inside Consul pods.                                       |
+| INFRA_CONSUL_REPLICAS               | integer | no        |                    | Specifies Consul replicas count.                                                  |
+| INFRA_CONSUL_RESTRICTED_ENVIRONMENT | boolean | no        | `false`            | Specifies whether the Consul service is to be deployed in restricted environment. |
+| GATEWAY_SYSTEM_TYPE                 | string  | no        | `"legacy-ingress"` | Identifies whether to deploy HTTPRoute or Ingress resources, or both.             |
+
+**Note**: The `GATEWAY_SYSTEM_TYPE` parameter is not defined in the `values.yaml` of the `consul-service` chart, because it is
+passed by the deployment tooling at deploy time. If it is not set, `legacy-ingress` is used by default, so only `Ingress`
+resources are created. The parameter defines which resources are created for external access to the Consul UI:
+
+| `GATEWAY_SYSTEM_TYPE` value           | Created resources                                                                                                                                                                                           |
+|---------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Not set (default) or `legacy-ingress` | Only `Ingress`. The `HTTPRoute` resource is not created even if `ui.envoyGateway.enabled` is `true`.                                                                                                        |
+| `gateway-api-default`                 | Only Gateway API `HTTPRoute`. The `Ingress` resource is not created even if `ui.ingress.enabled` is `true`.                                                                                                 |
+| `legacy-ingress,gateway-api-default`  | Both `Ingress` and `HTTPRoute`. The `Ingress` gets the `gateway-api-converter.netcracker.com/ignore: "true"` annotation, so the Gateway API converter skips it because a native `HTTPRoute` already exists. |
+| Any other value                       | Neither `Ingress` nor `HTTPRoute` is created.                                                                                                                                                               |
 
 ## Global
 
