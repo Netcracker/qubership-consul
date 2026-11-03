@@ -309,7 +309,7 @@
     "comment": "null is the default value in hashicorp/consul",
     "add": {
       "type": [
-        "string",
+        "integer",
         "null"
       ]
     }
@@ -318,7 +318,7 @@
     "comment": "null is the default value in hashicorp/consul",
     "add": {
       "type": [
-        "string",
+        "integer",
         "null"
       ]
     }
@@ -489,7 +489,7 @@
     "comment": "null is the default value in hashicorp/consul",
     "add": {
       "type": [
-        "string",
+        "integer",
         "null"
       ]
     }
@@ -507,7 +507,7 @@
     "comment": "null is the default value in hashicorp/consul",
     "add": {
       "type": [
-        "string",
+        "integer",
         "null"
       ]
     }
