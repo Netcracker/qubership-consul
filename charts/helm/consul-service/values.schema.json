@@ -2044,22 +2044,26 @@
                                 "http": {
                                     "type": [
                                         "integer",
+                                        "string",
                                         "null"
                                     ],
                                     "default": null,
                                     "$id": "#/properties/ui/properties/service/properties/nodePort/properties/http",
                                     "title": "The ui.service.nodePort.http schema",
-                                    "description": "The HTTP node port of the UI service if a `NodePort` service is used"
+                                    "description": "The HTTP node port of the UI service if a `NodePort` service is used",
+                                    "pattern": "^[0-9]+$"
                                 },
                                 "https": {
                                     "type": [
                                         "integer",
+                                        "string",
                                         "null"
                                     ],
                                     "default": null,
                                     "$id": "#/properties/ui/properties/service/properties/nodePort/properties/https",
                                     "title": "The ui.service.nodePort.https schema",
-                                    "description": "The HTTPS node port of the UI service if a `NodePort` service is used"
+                                    "description": "The HTTPS node port of the UI service if a `NodePort` service is used",
+                                    "pattern": "^[0-9]+$"
                                 }
                             },
                             "$id": "#/properties/ui/properties/service/properties/nodePort",
@@ -3104,12 +3108,14 @@
                         "nodePort": {
                             "type": [
                                 "integer",
+                                "string",
                                 "null"
                             ],
                             "default": null,
                             "$id": "#/properties/meshGateway/properties/service/properties/nodePort",
                             "title": "The meshGateway.service.nodePort schema",
-                            "description": "The port of the node that the service is exposed on"
+                            "description": "The port of the node that the service is exposed on",
+                            "pattern": "^[0-9]+$"
                         },
                         "annotations": {
                             "type": "object",
@@ -3167,12 +3173,14 @@
                 "hostPort": {
                     "type": [
                         "integer",
+                        "string",
                         "null"
                     ],
                     "default": null,
                     "$id": "#/properties/meshGateway/properties/hostPort",
                     "title": "The meshGateway.hostPort schema",
-                    "description": "The optional `hostPort` for the gateway to be exposed on"
+                    "description": "The optional `hostPort` for the gateway to be exposed on",
+                    "pattern": "^[0-9]+$"
                 },
                 "serviceAccount": {
                     "type": "object",

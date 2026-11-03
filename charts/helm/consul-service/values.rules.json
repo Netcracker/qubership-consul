@@ -306,21 +306,25 @@
     }
   },
   "^ui\\.service\\.nodePort\\.http$": {
-    "comment": "null is the default value in hashicorp/consul",
+    "comment": "null is the default value in hashicorp/consul, a number can be passed as a string",
     "add": {
       "type": [
         "integer",
+        "string",
         "null"
-      ]
+      ],
+      "pattern": "^[0-9]+$"
     }
   },
   "^ui\\.service\\.nodePort\\.https$": {
-    "comment": "null is the default value in hashicorp/consul",
+    "comment": "null is the default value in hashicorp/consul, a number can be passed as a string",
     "add": {
       "type": [
         "integer",
+        "string",
         "null"
-      ]
+      ],
+      "pattern": "^[0-9]+$"
     }
   },
   "^ui\\.ingress\\.annotations$": {
@@ -486,12 +490,14 @@
     }
   },
   "^meshGateway\\.service\\.nodePort$": {
-    "comment": "null is the default value in hashicorp/consul",
+    "comment": "null is the default value in hashicorp/consul, a number can be passed as a string",
     "add": {
       "type": [
         "integer",
+        "string",
         "null"
-      ]
+      ],
+      "pattern": "^[0-9]+$"
     }
   },
   "^meshGateway\\.dnsPolicy$": {
@@ -504,12 +510,14 @@
     }
   },
   "^meshGateway\\.hostPort$": {
-    "comment": "null is the default value in hashicorp/consul",
+    "comment": "null is the default value in hashicorp/consul, a number can be passed as a string",
     "add": {
       "type": [
         "integer",
+        "string",
         "null"
-      ]
+      ],
+      "pattern": "^[0-9]+$"
     }
   }
 }
