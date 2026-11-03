@@ -170,9 +170,9 @@ global:
     # ```
     caCert:
       # The name of the Kubernetes secret.
-      secretName: ""
+      secretName: null
       # The key of the Kubernetes secret.
-      secretKey: ""
+      secretKey: null
 
     # A Kubernetes secret containing the private key of the CA to use for
     # TLS communication within the Consul cluster. If you have generated the CA yourself
@@ -190,9 +190,9 @@ global:
     # certificates.
     caKey:
       # The name of the Kubernetes secret.
-      secretName: ""
+      secretName: null
       # The key of the Kubernetes secret.
-      secretKey: ""
+      secretKey: null
 
     init:
       resources:
@@ -234,9 +234,9 @@ global:
     # Requires consul-k8s >= 0.14.0.
     bootstrapToken:
       # The name of the Kubernetes secret.
-      secretName: ""
+      secretName: null
       # The key of the Kubernetes secret.
-      secretKey: ""
+      secretKey: null
 
     # If true, an ACL token will be created that can be used in secondary
     # datacenters for replication. This should only be set to true in the
@@ -254,9 +254,9 @@ global:
     # Requires consul-k8s >= 0.13.0.
     replicationToken:
       # The name of the Kubernetes secret.
-      secretName: ""
+      secretName: null
       # The key of the Kubernetes secret.
-      secretKey: ""
+      secretKey: null
 
     # Resource settings for 'acls-init' initContainer.
     init:
@@ -313,7 +313,7 @@ global:
     # ```
     #
     # @type: string
-    k8sAuthMethodHost: ""
+    k8sAuthMethodHost: null
 
     securityContext: {}
 
@@ -489,7 +489,7 @@ server:
   # were joined into the same datacenter and each cluster ran a certain number
   # of servers.
   # @type: int
-  bootstrapExpect: 0
+  bootstrapExpect: null
 
   # [Enterprise Only] This value refers to a Kubernetes secret that you have created
   # that contains your enterprise license. It is required if you are using an
@@ -547,7 +547,7 @@ server:
   # A `null` value will use the Kubernetes cluster's default StorageClass. If a default
   # StorageClass does not exist, you will need to create one.
   # @type: string
-  storageClass: ""
+  storageClass: null
 
   # The List of predefined Persistent Volumes for the Consul server. Should be specified as yaml list.
   # Consul nodes take name of these Persistent Volumes by order.
@@ -571,7 +571,7 @@ server:
     # }
     #
     # @type: string
-    annotations: {}
+    annotations: null
 
   # Resource requests, limits, etc. for the server cluster placement. This
   # should map directly to the value of the resources field for a PodSpec,
@@ -641,7 +641,7 @@ server:
     # --set 'server.disruptionBudget.maxUnavailable=0'` flag to the helm chart installation
     # command because of a limitation in the Helm templating language.
     # @type: integer
-    maxUnavailable: 0
+    maxUnavailable: null
 
   # extraConfig is a raw string of extra configuration to set with the
   # server. This should be JSON.
@@ -769,7 +769,7 @@ server:
   # ```
   #
   # @type: map
-  extraLabels: {}
+  extraLabels: null
 
   # Extra annotations to attach to the server pods
   # This should be a JSON string mapping directly to the a map of
@@ -875,7 +875,7 @@ externalServers:
 
   # The server name to use as the SNI host header when connecting with HTTPS.
   # @type: string
-  tlsServerName: ""
+  tlsServerName: null
 
   # If true, consul-k8s components will ignore the CA set in
   # `global.tls.caCert` when making HTTPS calls to Consul servers and
@@ -900,7 +900,7 @@ externalServers:
   # ```
   #
   # @type: string
-  k8sAuthMethodHost: ""
+  k8sAuthMethodHost: null
 
   # If true, setting this prevents the consul-dataplane and consul-k8s components from watching the Consul servers for changes. This is
   # useful for situations where Consul servers are behind a load balancer.
@@ -936,7 +936,7 @@ client:
   # join that cluster. If `server.enabled` is not true, then a value must be
   # specified so the clients can join a valid cluster.
   # @type: array<string>
-  join: []
+  join: null
 
   # Predefined pod security policy for consul client. If this value is specified, Helm does not create
   # pod security policy during installation.
@@ -959,7 +959,7 @@ client:
   # mounting the same host path and gaining access to all of Consul's data.
   # Consul's data is not encrypted at rest.
   # @type: string
-  dataDirectoryHostPath: ""
+  dataDirectoryHostPath: null
 
   # If true, agents will enable their GRPC listener on
   # port 8502 and expose it to the host. This will use slightly more resources, but is
@@ -1131,7 +1131,7 @@ client:
   # ```
   #
   # @type: map
-  extraLabels: {}
+  extraLabels: null
 
   # A list of extra environment variables to set within the stateful set.
   # These could be used to include proxy settings required for cloud auto-join
@@ -1146,7 +1146,7 @@ client:
   # This value defines the Pod DNS policy (https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-s-dns-policy)
   # for client pods to use.
   # @type: string
-  dnsPolicy: ""
+  dnsPolicy: null
 
   # hostNetwork defines whether or not we use host networking instead of hostPort in the event
   # that a CNI plugin doesn't support `hostPort`. This has security implications and is not recommended
@@ -1249,7 +1249,7 @@ dns:
   # Useful if you need to reference the DNS service's IP
   # address in CoreDNS config.
   # @type: string
-  clusterIP: ""
+  clusterIP: null
 
   # Extra annotations to attach to the dns service
   # This should be a JSON string of
@@ -1264,7 +1264,7 @@ dns:
   # This should be a multi-line string mapping directly to a Kubernetes
   # ServiceSpec object.
   # @type: string
-  additionalSpec: ""
+  additionalSpec: null
 
 # Values that configure the Consul UI.
 ui:
@@ -1290,7 +1290,7 @@ ui:
 
     # The service type to register.
     # @type: string
-    type: ""
+    type: null
 
     # Optionally set the nodePort value of the ui service if using a NodePort service.
     # If not set and using a NodePort service, Kubernetes will automatically assign
@@ -1299,11 +1299,11 @@ ui:
 
       # HTTP node port
       # @type: integer
-      http: ""
+      http: null
 
       # HTTPS node port
       # @type: integer
-      https: ""
+      https: null
 
     # This should be a JSON string mapping directly to the a map of
     # the annotations to apply to the UI service
@@ -1366,7 +1366,7 @@ ui:
     #   'annotation-key': annotation-value
     # ```
     # @type: string
-    annotations: {}
+    annotations: null
 
   envoyGateway:
     enabled: true
@@ -1430,7 +1430,7 @@ syncCatalog:
   # with Kubernetes. For example "consul-" will register all services
   # prepended with "consul-". (Consul -> Kubernetes sync)
   # @type: string
-  k8sPrefix: ""
+  k8sPrefix: null
 
   # List of k8s namespaces to sync the k8s services from.
   # If a k8s namespace is not included in this list or is listed in `k8sDenyNamespaces`,
@@ -1466,7 +1466,7 @@ syncCatalog:
   # changes and sync to Consul. If this is not set then it will default
   # to all namespaces.
   # @type: string
-  k8sSourceNamespace: ""
+  k8sSourceNamespace: null
 
   # [Enterprise Only] These settings manage the catalog sync's interaction with
   # Consul namespaces (requires consul-ent v1.7+ and consul-k8s v0.12+).
@@ -1508,13 +1508,13 @@ syncCatalog:
   # NOTE: Updating this property to a non-null value for an existing installation will result in deregistering
   # of existing services in Consul and registering them with a new name.
   # @type: string
-  consulPrefix: ""
+  consulPrefix: null
 
   # Optional tag that is applied to all of the Kubernetes services
   # that are synced into Consul. If nothing is set, defaults to "k8s".
   # (Kubernetes -> Consul sync)
   # @type: string
-  k8sTag: ""
+  k8sTag: null
 
   # Defines the Consul synthetic node that all services
   # will be registered to.
@@ -1543,9 +1543,9 @@ syncCatalog:
   # permissions. This is only needed if ACLs are enabled on the Consul cluster.
   aclSyncToken:
     # The name of the Kubernetes secret.
-    secretName: ""
+    secretName: null
     # The key of the Kubernetes secret.
-    secretKey: ""
+    secretKey: null
 
   # This value defines `nodeSelector` (https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#nodeselector)
   # labels for catalog sync pod assignment, formatted as a multi-line string.
@@ -1558,7 +1558,7 @@ syncCatalog:
   # ```
   #
   # @type: string
-  nodeSelector: {}
+  nodeSelector: null
 
   # Affinity Settings
   # This should be a JSON string matching the affinity object
@@ -1588,7 +1588,7 @@ syncCatalog:
     # ```
     #
     # @type: string
-    annotations: {}
+    annotations: null
 
   # Resource settings for sync catalog pods.
   # @recurse: false
@@ -1606,7 +1606,7 @@ syncCatalog:
 
   # Override the default interval to perform syncing operations creating Consul services.
   # @type: string
-  consulWriteInterval: ""
+  consulWriteInterval: null
 
   # Extra labels to attach to the sync catalog pods. This should be a YAML map.
   #
@@ -1617,7 +1617,7 @@ syncCatalog:
   #   labelKey: label-value
   #   anotherLabelKey: another-label-value
   # ```
-  extraLabels: {}
+  extraLabels: null
 
 # Configures the automatic Connect sidecar injector.
 connectInject:
@@ -1667,12 +1667,12 @@ connectInject:
     # --set 'connectInject.disruptionBudget.maxUnavailable=0'` flag to the helm chart installation
     # command because of a limitation in the Helm templating language.
     # @type: integer
-    maxUnavailable: 0
+    maxUnavailable: null
 
     # The minimum number of available pods.
     # Takes precedence over maxUnavailable if set.
     # @type: integer
-    minAvailable: 0
+    minAvailable: null
 
   # Configures metrics for Consul Connect services. All values are overridable
   # via annotations on a per-pod basis.
@@ -1839,7 +1839,7 @@ connectInject:
   # }
   # ```
   # @type: string
-  nodeSelector: {}
+  nodeSelector: null
 
   # Affinity Settings
   # This should be a JSON string matching the affinity object
@@ -1885,10 +1885,10 @@ connectInject:
   aclInjectToken:
     # The name of the Kubernetes secret.
     # @type: string
-    secretName: ""
+    secretName: null
     # The key of the Kubernetes secret.
     # @type: string
-    secretKey: ""
+    secretKey: null
 
   sidecarProxy:
     # Set default resources for sidecar proxy. If null, that resource won't
@@ -1904,14 +1904,14 @@ connectInject:
       requests:
         # Recommended default: 100Mi
         # @type: string
-        memory: ""
+        memory: null
         # Recommended default: 100m
         # @type: string
         cpu: null
       limits:
         # Recommended default: 100Mi
         # @type: string
-        memory: ""
+        memory: null
         # Recommended default: 100m
         # @type: string
         cpu: null
@@ -1996,7 +1996,7 @@ meshGateway:
     # If not set and using a NodePort service, Kubernetes will automatically assign
     # a port.
     # @type: integer
-    nodePort: ""
+    nodePort: null
 
     # Optional JSON string for additional annotations.
     # Example:
@@ -2017,7 +2017,7 @@ meshGateway:
 
   # dnsPolicy to use.
   # @type: string
-  dnsPolicy: ""
+  dnsPolicy: null
 
   # Consul service name for the mesh gateways.
   # Cannot be set to anything other than "mesh-gateway" if
@@ -2036,7 +2036,7 @@ meshGateway:
   # NOTE: Cannot set to 8500 or 8502 because those are reserved for the Consul
   # agent.
   # @type: integer
-  hostPort: ""
+  hostPort: null
 
   serviceAccount:
     # This value defines additional annotations for the mesh gateways' service account.

@@ -188,11 +188,11 @@ spec:
                 {{- end }}
                 -tls-cert-dir=/etc/connect-injector/certs \
                 {{- $resources := .Values.connectInject.sidecarProxy.resources }}
-                {{- /* kindIs is used here to differentiate between null and 0, an empty string means not set */}}
-                {{- if not (or (kindIs "invalid" $resources.limits.memory) (eq (toString $resources.limits.memory) "")) }}
+                {{- /* kindIs is used here to differentiate between null and 0 */}}
+                {{- if not (kindIs "invalid" $resources.limits.memory) }}
                 -default-sidecar-proxy-memory-limit={{ $resources.limits.memory }} \
                 {{- end }}
-                {{- if not (or (kindIs "invalid" $resources.requests.memory) (eq (toString $resources.requests.memory) "")) }}
+                {{- if not (kindIs "invalid" $resources.requests.memory) }}
                 -default-sidecar-proxy-memory-request={{ $resources.requests.memory }} \
                 {{- end }}
                 {{- if not (kindIs "invalid" $resources.limits.cpu) }}
