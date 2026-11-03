@@ -519,5 +519,75 @@
       ],
       "pattern": "^[0-9]+$"
     }
+  },
+  "^server\\.ports\\.serflan\\.port$": {
+    "comment": "numeric port by default, a number can be passed as a string",
+    "add": {
+      "type": [
+        "integer",
+        "string"
+      ],
+      "pattern": "^[0-9]+$"
+    }
+  },
+  "^externalServers\\.httpsPort$": {
+    "comment": "numeric port by default, a number can be passed as a string",
+    "add": {
+      "type": [
+        "integer",
+        "string"
+      ],
+      "pattern": "^[0-9]+$"
+    }
+  },
+  "^connectInject\\.metrics\\.defaultMergedMetricsPort$": {
+    "comment": "numeric port by default, a number can be passed as a string",
+    "add": {
+      "type": [
+        "integer",
+        "string"
+      ],
+      "pattern": "^[0-9]+$"
+    }
+  },
+  "^connectInject\\.metrics\\.defaultPrometheusScrapePort$": {
+    "comment": "numeric port by default, a number can be passed as a string",
+    "add": {
+      "type": [
+        "integer",
+        "string"
+      ],
+      "pattern": "^[0-9]+$"
+    }
+  },
+  "^meshGateway\\.wanAddress\\.port$": {
+    "comment": "numeric port by default, a number can be passed as a string",
+    "add": {
+      "type": [
+        "integer",
+        "string"
+      ],
+      "pattern": "^[0-9]+$"
+    }
+  },
+  "^meshGateway\\.service\\.port$": {
+    "comment": "numeric port by default, a number can be passed as a string",
+    "add": {
+      "type": [
+        "integer",
+        "string"
+      ],
+      "pattern": "^[0-9]+$"
+    }
+  },
+  "^meshGateway\\.containerPort$": {
+    "comment": "numeric port by default, a number can be passed as a string",
+    "add": {
+      "type": [
+        "integer",
+        "string"
+      ],
+      "pattern": "^[0-9]+$"
+    }
   }
 }

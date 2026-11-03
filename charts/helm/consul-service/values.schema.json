@@ -1105,11 +1105,15 @@
                             "type": "object",
                             "properties": {
                                 "port": {
-                                    "type": "integer",
+                                    "type": [
+                                        "integer",
+                                        "string"
+                                    ],
                                     "default": 8301,
                                     "$id": "#/properties/server/properties/ports/properties/serflan/properties/port",
                                     "title": "The server.ports.serflan.port schema",
-                                    "description": "The LAN gossip port for the Consul servers"
+                                    "description": "The LAN gossip port for the Consul servers",
+                                    "pattern": "^[0-9]+$"
                                 }
                             },
                             "$id": "#/properties/server/properties/ports/properties/serflan",
@@ -1559,11 +1563,15 @@
                     "description": "The list of external Consul server hosts that are used to make HTTPS connections from the components in this Helm chart"
                 },
                 "httpsPort": {
-                    "type": "integer",
+                    "type": [
+                        "integer",
+                        "string"
+                    ],
                     "default": 8501,
                     "$id": "#/properties/externalServers/properties/httpsPort",
                     "title": "The externalServers.httpsPort schema",
-                    "description": "The HTTPS port of the Consul servers"
+                    "description": "The HTTPS port of the Consul servers",
+                    "pattern": "^[0-9]+$"
                 },
                 "tlsServerName": {
                     "type": [
@@ -2660,18 +2668,26 @@
                             "description": "Whether the Consul sidecar is to run a merged metrics server to combine and serve both Consul DataPlane and Connect service metrics"
                         },
                         "defaultMergedMetricsPort": {
-                            "type": "integer",
+                            "type": [
+                                "integer",
+                                "string"
+                            ],
                             "default": 20100,
                             "$id": "#/properties/connectInject/properties/metrics/properties/defaultMergedMetricsPort",
                             "title": "The connectInject.metrics.defaultMergedMetricsPort schema",
-                            "description": "The port at which the Consul sidecar listens on to return combined metrics"
+                            "description": "The port at which the Consul sidecar listens on to return combined metrics",
+                            "pattern": "^[0-9]+$"
                         },
                         "defaultPrometheusScrapePort": {
-                            "type": "integer",
+                            "type": [
+                                "integer",
+                                "string"
+                            ],
                             "default": 20200,
                             "$id": "#/properties/connectInject/properties/metrics/properties/defaultPrometheusScrapePort",
                             "title": "The connectInject.metrics.defaultPrometheusScrapePort schema",
-                            "description": "The port Prometheus scrapes metrics from, by configuring the pod annotation `prometheus"
+                            "description": "The port Prometheus scrapes metrics from, by configuring the pod annotation `prometheus",
+                            "pattern": "^[0-9]+$"
                         },
                         "defaultPrometheusScrapePath": {
                             "type": "string",
@@ -3070,11 +3086,15 @@
                             "description": "The source where the WAN address (and possibly port) for the mesh gateway is retrieved from"
                         },
                         "port": {
-                            "type": "integer",
+                            "type": [
+                                "integer",
+                                "string"
+                            ],
                             "default": 443,
                             "$id": "#/properties/meshGateway/properties/wanAddress/properties/port",
                             "title": "The meshGateway.wanAddress.port schema",
-                            "description": "The port that gets registered for WAN traffic"
+                            "description": "The port that gets registered for WAN traffic",
+                            "pattern": "^[0-9]+$"
                         },
                         "static": {
                             "type": "string",
@@ -3099,11 +3119,15 @@
                             "description": "The type of Mesh Gateway service"
                         },
                         "port": {
-                            "type": "integer",
+                            "type": [
+                                "integer",
+                                "string"
+                            ],
                             "default": 443,
                             "$id": "#/properties/meshGateway/properties/service/properties/port",
                             "title": "The meshGateway.service.port schema",
-                            "description": "The port that the service is exposed on"
+                            "description": "The port that the service is exposed on",
+                            "pattern": "^[0-9]+$"
                         },
                         "nodePort": {
                             "type": [
@@ -3164,11 +3188,15 @@
                     "description": "The Consul service name for the mesh gateways"
                 },
                 "containerPort": {
-                    "type": "integer",
+                    "type": [
+                        "integer",
+                        "string"
+                    ],
                     "default": 8443,
                     "$id": "#/properties/meshGateway/properties/containerPort",
                     "title": "The meshGateway.containerPort schema",
-                    "description": "The port that the gateway runs on inside the container"
+                    "description": "The port that the gateway runs on inside the container",
+                    "pattern": "^[0-9]+$"
                 },
                 "hostPort": {
                     "type": [
