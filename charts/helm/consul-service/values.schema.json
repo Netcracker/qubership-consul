@@ -241,14 +241,20 @@
                             "type": "object",
                             "properties": {
                                 "secretName": {
-                                    "type": "string",
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ],
                                     "default": "",
                                     "$id": "#/properties/global/properties/tls/properties/caCert/properties/secretName",
                                     "title": "The global.tls.caCert.secretName schema",
                                     "description": "The name of the Kubernetes secret containing the certificate of the CA to use for TLS communication within the Consul cluster"
                                 },
                                 "secretKey": {
-                                    "type": "string",
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ],
                                     "default": "",
                                     "$id": "#/properties/global/properties/tls/properties/caCert/properties/secretKey",
                                     "title": "The global.tls.caCert.secretKey schema",
@@ -263,14 +269,20 @@
                             "type": "object",
                             "properties": {
                                 "secretName": {
-                                    "type": "string",
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ],
                                     "default": "",
                                     "$id": "#/properties/global/properties/tls/properties/caKey/properties/secretName",
                                     "title": "The global.tls.caKey.secretName schema",
                                     "description": "The name of the Kubernetes secret containing the private key of the CA to use for TLS communication within the Consul cluster"
                                 },
                                 "secretKey": {
-                                    "type": "string",
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ],
                                     "default": "",
                                     "$id": "#/properties/global/properties/tls/properties/caKey/properties/secretKey",
                                     "title": "The global.tls.caKey.secretKey schema",
@@ -350,21 +362,30 @@
                     "type": "object",
                     "properties": {
                         "https": {
-                            "type": "string",
+                            "type": [
+                                "string",
+                                "integer"
+                            ],
                             "default": "",
                             "$id": "#/properties/global/properties/ports/properties/https",
                             "title": "The global.ports.https schema",
                             "description": "This parameter specifies custom global https port providing the ability to deploy two Consul instances with enabled Clients to one cluster"
                         },
                         "http": {
-                            "type": "string",
+                            "type": [
+                                "string",
+                                "integer"
+                            ],
                             "default": "",
                             "$id": "#/properties/global/properties/ports/properties/http",
                             "title": "The global.ports.http schema",
                             "description": "This parameter specifies custom global http port providing the ability to deploy two Consul instances with enabled Clients to one cluster"
                         },
                         "grpc": {
-                            "type": "string",
+                            "type": [
+                                "string",
+                                "integer"
+                            ],
                             "default": "",
                             "$id": "#/properties/global/properties/ports/properties/grpc",
                             "title": "The global.ports.grpc schema",
@@ -402,14 +423,20 @@
                             "type": "object",
                             "properties": {
                                 "secretName": {
-                                    "type": "string",
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ],
                                     "default": "",
                                     "$id": "#/properties/global/properties/acls/properties/bootstrapToken/properties/secretName",
                                     "title": "The global.acls.bootstrapToken.secretName schema",
                                     "description": "The name of the Kubernetes secret containing the bootstrap token to use for creating policies and tokens for all Consul and `consul-k8s` components"
                                 },
                                 "secretKey": {
-                                    "type": "string",
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ],
                                     "default": "",
                                     "$id": "#/properties/global/properties/acls/properties/bootstrapToken/properties/secretKey",
                                     "title": "The global.acls.bootstrapToken.secretKey schema",
@@ -434,14 +461,20 @@
                             "type": "object",
                             "properties": {
                                 "secretName": {
-                                    "type": "string",
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ],
                                     "default": "",
                                     "$id": "#/properties/global/properties/acls/properties/replicationToken/properties/secretName",
                                     "title": "The global.acls.replicationToken.secretName schema",
                                     "description": "The name of the Kubernetes secret containing the replication ACL token"
                                 },
                                 "secretKey": {
-                                    "type": "string",
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ],
                                     "default": "",
                                     "$id": "#/properties/global/properties/acls/properties/replicationToken/properties/secretKey",
                                     "title": "The global.acls.replicationToken.secretKey schema",
@@ -558,7 +591,10 @@
                             "description": "The list of addresses of the primary mesh gateways in the form `<ip>:<port>`"
                         },
                         "k8sAuthMethodHost": {
-                            "type": "string",
+                            "type": [
+                                "string",
+                                "null"
+                            ],
                             "default": "",
                             "$id": "#/properties/global/properties/federation/properties/k8sAuthMethodHost",
                             "title": "The global.federation.k8sAuthMethodHost schema",
@@ -1043,7 +1079,10 @@
                     "description": "The number of Consul server nodes"
                 },
                 "bootstrapExpect": {
-                    "type": "integer",
+                    "type": [
+                        "integer",
+                        "null"
+                    ],
                     "default": 0,
                     "$id": "#/properties/server/properties/bootstrapExpect",
                     "title": "The server.bootstrapExpect schema",
@@ -1078,21 +1117,30 @@
                             "description": "server.ports.serflan parameters"
                         },
                         "https": {
-                            "type": "string",
+                            "type": [
+                                "string",
+                                "integer"
+                            ],
                             "default": "",
                             "$id": "#/properties/server/properties/ports/properties/https",
                             "title": "The server.ports.https schema",
                             "description": "Customize the server's https consul port providing the ability to deploy two Consul instances with enabled Clients to one cluster"
                         },
                         "http": {
-                            "type": "string",
+                            "type": [
+                                "string",
+                                "integer"
+                            ],
                             "default": "",
                             "$id": "#/properties/server/properties/ports/properties/http",
                             "title": "The server.ports.http schema",
                             "description": "Customize the server's http consul port providing the ability to deploy two Consul instances with enabled Clients to one cluster"
                         },
                         "grpc": {
-                            "type": "string",
+                            "type": [
+                                "string",
+                                "integer"
+                            ],
                             "default": "",
                             "$id": "#/properties/server/properties/ports/properties/grpc",
                             "title": "The server.ports.grpc schema",
@@ -1111,7 +1159,10 @@
                     "description": "The disk size for configuring the servers' StatefulSet storage"
                 },
                 "storageClass": {
-                    "type": "string",
+                    "type": [
+                        "string",
+                        "null"
+                    ],
                     "default": "",
                     "$id": "#/properties/server/properties/storageClass",
                     "title": "The server.storageClass schema",
@@ -1145,7 +1196,10 @@
                     "type": "object",
                     "properties": {
                         "annotations": {
-                            "type": "object",
+                            "type": [
+                                "object",
+                                "null"
+                            ],
                             "default": {},
                             "$id": "#/properties/server/properties/serviceAccount/properties/annotations",
                             "title": "The server.serviceAccount.annotations schema",
@@ -1241,7 +1295,10 @@
                             "description": "Whether the creation of a `PodDisruptionBudget` to prevent voluntary degrading of the Consul server cluster is to be created"
                         },
                         "maxUnavailable": {
-                            "type": "integer",
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
                             "default": 0,
                             "$id": "#/properties/server/properties/disruptionBudget/properties/maxUnavailable",
                             "title": "The server.disruptionBudget.maxUnavailable schema",
@@ -1324,7 +1381,10 @@
                     "description": "The priority class to be used to assign priority to Consul server pods"
                 },
                 "extraLabels": {
-                    "type": "object",
+                    "type": [
+                        "object",
+                        "null"
+                    ],
                     "default": {},
                     "$id": "#/properties/server/properties/extraLabels",
                     "title": "The server.extraLabels schema",
@@ -1506,7 +1566,10 @@
                     "description": "The HTTPS port of the Consul servers"
                 },
                 "tlsServerName": {
-                    "type": "string",
+                    "type": [
+                        "string",
+                        "null"
+                    ],
                     "default": "",
                     "$id": "#/properties/externalServers/properties/tlsServerName",
                     "title": "The externalServers.tlsServerName schema",
@@ -1523,7 +1586,10 @@
                     "description": "Whether `consul-k8s` components are to ignore the CA set in `global"
                 },
                 "k8sAuthMethodHost": {
-                    "type": "string",
+                    "type": [
+                        "string",
+                        "null"
+                    ],
                     "default": "",
                     "$id": "#/properties/externalServers/properties/k8sAuthMethodHost",
                     "title": "The externalServers.k8sAuthMethodHost schema",
@@ -1561,21 +1627,30 @@
                     "type": "object",
                     "properties": {
                         "https": {
-                            "type": "string",
+                            "type": [
+                                "string",
+                                "integer"
+                            ],
                             "default": "",
                             "$id": "#/properties/client/properties/ports/properties/https",
                             "title": "The client.ports.https schema",
                             "description": "Customize the client's https consul port providing the ability to deploy two Consul instances to one cluster"
                         },
                         "http": {
-                            "type": "string",
+                            "type": [
+                                "string",
+                                "integer"
+                            ],
                             "default": "",
                             "$id": "#/properties/client/properties/ports/properties/http",
                             "title": "The client.ports.http schema",
                             "description": "Customize the client's http consul port providing the ability to deploy two Consul instances to one cluster"
                         },
                         "grpc": {
-                            "type": "string",
+                            "type": [
+                                "string",
+                                "integer"
+                            ],
                             "default": "",
                             "$id": "#/properties/client/properties/ports/properties/grpc",
                             "title": "The client.ports.grpc schema",
@@ -1594,7 +1669,10 @@
                     "description": "Enables The log verbosity level"
                 },
                 "join": {
-                    "type": "array",
+                    "type": [
+                        "array",
+                        "null"
+                    ],
                     "default": [],
                     "$id": "#/properties/client/properties/join",
                     "title": "The client.join schema",
@@ -1615,7 +1693,10 @@
                     "description": "The predefined security context constraint for Consul client"
                 },
                 "dataDirectoryHostPath": {
-                    "type": "string",
+                    "type": [
+                        "string",
+                        "null"
+                    ],
                     "default": "",
                     "$id": "#/properties/client/properties/dataDirectoryHostPath",
                     "title": "The client.dataDirectoryHostPath schema",
@@ -1821,7 +1902,10 @@
                     "description": "The list of extra annotations to set to the Consul daemon set"
                 },
                 "extraLabels": {
-                    "type": "object",
+                    "type": [
+                        "object",
+                        "null"
+                    ],
                     "default": {},
                     "$id": "#/properties/client/properties/extraLabels",
                     "title": "The client.extraLabels schema",
@@ -1835,7 +1919,10 @@
                     "description": "The list of extra environment variables to set to the Consul daemon set"
                 },
                 "dnsPolicy": {
-                    "type": "string",
+                    "type": [
+                        "string",
+                        "null"
+                    ],
                     "default": "",
                     "$id": "#/properties/client/properties/dnsPolicy",
                     "title": "The client.dnsPolicy schema",
@@ -1884,7 +1971,10 @@
                     "description": "The type of service created"
                 },
                 "clusterIP": {
-                    "type": "string",
+                    "type": [
+                        "string",
+                        "null"
+                    ],
                     "default": "",
                     "$id": "#/properties/dns/properties/clusterIP",
                     "title": "The dns.clusterIP schema",
@@ -1898,7 +1988,10 @@
                     "description": "The extra annotations to attach to the DNS service"
                 },
                 "additionalSpec": {
-                    "type": "string",
+                    "type": [
+                        "string",
+                        "null"
+                    ],
                     "default": "",
                     "$id": "#/properties/dns/properties/additionalSpec",
                     "title": "The dns.additionalSpec schema",
@@ -1936,7 +2029,10 @@
                             "description": "Whether the service entry for the Consul UI is to be created"
                         },
                         "type": {
-                            "type": "string",
+                            "type": [
+                                "string",
+                                "null"
+                            ],
                             "default": "",
                             "$id": "#/properties/ui/properties/service/properties/type",
                             "title": "The ui.service.type schema",
@@ -1946,14 +2042,20 @@
                             "type": "object",
                             "properties": {
                                 "http": {
-                                    "type": "string",
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ],
                                     "default": "",
                                     "$id": "#/properties/ui/properties/service/properties/nodePort/properties/http",
                                     "title": "The ui.service.nodePort.http schema",
                                     "description": "The HTTP node port of the UI service if a `NodePort` service is used"
                                 },
                                 "https": {
-                                    "type": "string",
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ],
                                     "default": "",
                                     "$id": "#/properties/ui/properties/service/properties/nodePort/properties/https",
                                     "title": "The ui.service.nodePort.https schema",
@@ -2011,7 +2113,10 @@
                             "description": "The list of hosts and secret name in an Ingress which tells the Ingress controller to secure the channel"
                         },
                         "annotations": {
-                            "type": "object",
+                            "type": [
+                                "object",
+                                "null"
+                            ],
                             "default": {},
                             "$id": "#/properties/ui/properties/ingress/properties/annotations",
                             "title": "The ui.ingress.annotations schema",
@@ -2165,7 +2270,10 @@
                     "description": "Whether syncing is to be enabled to K8S as a destination"
                 },
                 "k8sPrefix": {
-                    "type": "string",
+                    "type": [
+                        "string",
+                        "null"
+                    ],
                     "default": "",
                     "$id": "#/properties/syncCatalog/properties/k8sPrefix",
                     "title": "The syncCatalog.k8sPrefix schema",
@@ -2197,7 +2305,10 @@
                     "description": "The list of Kubernetes namespaces that should not have their services synced"
                 },
                 "k8sSourceNamespace": {
-                    "type": "string",
+                    "type": [
+                        "string",
+                        "null"
+                    ],
                     "default": "",
                     "$id": "#/properties/syncCatalog/properties/k8sSourceNamespace",
                     "title": "The syncCatalog.k8sSourceNamespace schema",
@@ -2214,14 +2325,20 @@
                     "description": "Whether sync catalog is to append Kubernetes namespace suffix to each service name synced to Consul, separated by a dash"
                 },
                 "consulPrefix": {
-                    "type": "string",
+                    "type": [
+                        "string",
+                        "null"
+                    ],
                     "default": "",
                     "$id": "#/properties/syncCatalog/properties/consulPrefix",
                     "title": "The syncCatalog.consulPrefix schema",
                     "description": "The service prefix which prepends itself to Kubernetes services registered within Consul"
                 },
                 "k8sTag": {
-                    "type": "string",
+                    "type": [
+                        "string",
+                        "null"
+                    ],
                     "default": "",
                     "$id": "#/properties/syncCatalog/properties/k8sTag",
                     "title": "The syncCatalog.k8sTag schema",
@@ -2255,14 +2372,20 @@
                     "type": "object",
                     "properties": {
                         "secretName": {
-                            "type": "string",
+                            "type": [
+                                "string",
+                                "null"
+                            ],
                             "default": "",
                             "$id": "#/properties/syncCatalog/properties/aclSyncToken/properties/secretName",
                             "title": "The syncCatalog.aclSyncToken.secretName schema",
                             "description": "The name of Kubernetes secret that contains an ACL token for your Consul cluster which allows the sync to process the correct permissions"
                         },
                         "secretKey": {
-                            "type": "string",
+                            "type": [
+                                "string",
+                                "null"
+                            ],
                             "default": "",
                             "$id": "#/properties/syncCatalog/properties/aclSyncToken/properties/secretKey",
                             "title": "The syncCatalog.aclSyncToken.secretKey schema",
@@ -2274,7 +2397,10 @@
                     "description": "syncCatalog.aclSyncToken parameters"
                 },
                 "nodeSelector": {
-                    "type": "object",
+                    "type": [
+                        "object",
+                        "null"
+                    ],
                     "default": {},
                     "$id": "#/properties/syncCatalog/properties/nodeSelector",
                     "title": "The syncCatalog.nodeSelector schema",
@@ -2305,7 +2431,10 @@
                     "type": "object",
                     "properties": {
                         "annotations": {
-                            "type": "object",
+                            "type": [
+                                "object",
+                                "null"
+                            ],
                             "default": {},
                             "$id": "#/properties/syncCatalog/properties/serviceAccount/properties/annotations",
                             "title": "The syncCatalog.serviceAccount.annotations schema",
@@ -2376,14 +2505,20 @@
                     "description": "The log verbosity level"
                 },
                 "consulWriteInterval": {
-                    "type": "string",
+                    "type": [
+                        "string",
+                        "null"
+                    ],
                     "default": "",
                     "$id": "#/properties/syncCatalog/properties/consulWriteInterval",
                     "title": "The syncCatalog.consulWriteInterval schema",
                     "description": "The interval to perform syncing operations creating Consul services"
                 },
                 "extraLabels": {
-                    "type": "object",
+                    "type": [
+                        "object",
+                        "null"
+                    ],
                     "default": {},
                     "$id": "#/properties/syncCatalog/properties/extraLabels",
                     "title": "The syncCatalog.extraLabels schema",
@@ -2473,14 +2608,20 @@
                             "description": "Whether the creation of a `PodDisruptionBudget` to prevent voluntary degrading of the Connect inject pods is to be created"
                         },
                         "maxUnavailable": {
-                            "type": "integer",
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
                             "default": 0,
                             "$id": "#/properties/connectInject/properties/disruptionBudget/properties/maxUnavailable",
                             "title": "The connectInject.disruptionBudget.maxUnavailable schema",
                             "description": "The maximum number of unavailable pods"
                         },
                         "minAvailable": {
-                            "type": "integer",
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
                             "default": 0,
                             "$id": "#/properties/connectInject/properties/disruptionBudget/properties/minAvailable",
                             "title": "The connectInject.disruptionBudget.minAvailable schema",
@@ -2684,7 +2825,10 @@
                     "description": "connectInject.certs parameters"
                 },
                 "nodeSelector": {
-                    "type": "object",
+                    "type": [
+                        "object",
+                        "null"
+                    ],
                     "default": {},
                     "$id": "#/properties/connectInject/properties/nodeSelector",
                     "title": "The connectInject.nodeSelector schema",
@@ -2729,14 +2873,20 @@
                     "type": "object",
                     "properties": {
                         "secretName": {
-                            "type": "string",
+                            "type": [
+                                "string",
+                                "null"
+                            ],
                             "default": "",
                             "$id": "#/properties/connectInject/properties/aclInjectToken/properties/secretName",
                             "title": "The connectInject.aclInjectToken.secretName schema",
                             "description": "The name of the Kubernetes secret that contains an ACL token for your Consul cluster which allows the Connect injector the correct permissions"
                         },
                         "secretKey": {
-                            "type": "string",
+                            "type": [
+                                "string",
+                                "null"
+                            ],
                             "default": "",
                             "$id": "#/properties/connectInject/properties/aclInjectToken/properties/secretKey",
                             "title": "The connectInject.aclInjectToken.secretKey schema",
@@ -2757,7 +2907,10 @@
                                     "type": "object",
                                     "properties": {
                                         "memory": {
-                                            "type": "string",
+                                            "type": [
+                                                "string",
+                                                "null"
+                                            ],
                                             "default": "",
                                             "$id": "#/properties/connectInject/properties/sidecarProxy/properties/resources/properties/requests/properties/memory",
                                             "title": "The connectInject.sidecarProxy.resources.requests.memory schema",
@@ -2779,7 +2932,10 @@
                                     "type": "object",
                                     "properties": {
                                         "memory": {
-                                            "type": "string",
+                                            "type": [
+                                                "string",
+                                                "null"
+                                            ],
                                             "default": "",
                                             "$id": "#/properties/connectInject/properties/sidecarProxy/properties/resources/properties/limits/properties/memory",
                                             "title": "The connectInject.sidecarProxy.resources.limits.memory schema",
@@ -2946,7 +3102,10 @@
                             "description": "The port that the service is exposed on"
                         },
                         "nodePort": {
-                            "type": "string",
+                            "type": [
+                                "string",
+                                "null"
+                            ],
                             "default": "",
                             "$id": "#/properties/meshGateway/properties/service/properties/nodePort",
                             "title": "The meshGateway.service.nodePort schema",
@@ -2982,7 +3141,10 @@
                     "description": "Whether gateway Pods is to run on the host network"
                 },
                 "dnsPolicy": {
-                    "type": "string",
+                    "type": [
+                        "string",
+                        "null"
+                    ],
                     "default": "",
                     "$id": "#/properties/meshGateway/properties/dnsPolicy",
                     "title": "The meshGateway.dnsPolicy schema",
@@ -3003,7 +3165,10 @@
                     "description": "The port that the gateway runs on inside the container"
                 },
                 "hostPort": {
-                    "type": "string",
+                    "type": [
+                        "string",
+                        "null"
+                    ],
                     "default": "",
                     "$id": "#/properties/meshGateway/properties/hostPort",
                     "title": "The meshGateway.hostPort schema",
