@@ -3395,7 +3395,7 @@
         },
         "namespaces": {
           "type": "string",
-          "default": "",
+          "default": "*",
           "title": "The consulAclConfigurator.namespaces schema",
           "description": "The list of Kubernetes namespaces which watched by Consul ACL Configurator operator"
         },
