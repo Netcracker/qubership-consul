@@ -132,12 +132,7 @@ spec:
             - name: BOUND_AUDIENCES
               value: {{ join "," (default (list) .Values.consulAclConfigurator.boundAudiences) | quote }}
             - name: WATCH_NAMESPACE
-              {{- $watchNamespaces := default "" .Values.consulAclConfigurator.namespaces }}
-              {{- /* Without the ClusterRole a cluster-wide watch is forbidden. */}}
-              {{- if and (eq (include "consul.restrictedEnvironment" .) "true") (eq (trim $watchNamespaces) "*") }}
-              {{- $watchNamespaces = "" }}
-              {{- end }}
-              value: {{ $watchNamespaces | quote }}
+              value: {{ default "" .Values.consulAclConfigurator.namespaces | quote }}
             - name: STRICT_NAMESPACE_VALIDATION
               value: {{ default false .Values.consulAclConfigurator.strictNamespaceValidation | quote }}
             - name: NAMESPACE
