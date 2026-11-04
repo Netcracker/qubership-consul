@@ -942,13 +942,13 @@ client:
   # pod security policy during installation.
   # It can be useful when `enablePodSecurityPolicies` is `true` and there are no rights to create pod security policy by installation user.
   # For example, consul-service-consul-client
-  podSecurityPolicy: ""
+  podSecurityPolicy: null
 
   # Predefined security context constraint for consul client. If this value is specified, Helm does not create
   # security context constraint during installation.
   # It can be useful when `openshift.enabled` is `true` and there are no rights to create security context constraint by installation user.
   # For example, consul-service-consul-client
-  securityContextConstraint: ""
+  securityContextConstraint: null
 
   # An absolute path to a directory on the host machine to use as the Consul
   # client data directory. If set to the empty string or null, the Consul agent
@@ -1816,7 +1816,7 @@ connectInject:
     # private key to serve the injector webhook. If this is null, then the
     # injector will default to its automatic management mode that will assign
     # a service account to the injector to generate its own certificates.
-    secretName: ""
+    secretName: null
 
     # caBundle is a base64-encoded PEM-encoded certificate bundle for the
     # CA that signed the TLS certificate that the webhook serves. This must
@@ -2165,10 +2165,10 @@ backupDaemon:
   # to null (the Kube cluster will pick the default).
   # If storageClass and persistentVolume are not specified the Consul Backup Daemon is deployed with emptyDir.
   storage: 1Gi
-  storageClass: ""
+  storageClass: null
 
   # The predefined Persistent Volume for the Consul Backup Daemon.
-  persistentVolume: ""
+  persistentVolume: null
 
   s3:
     enabled: false

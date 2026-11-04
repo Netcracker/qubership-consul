@@ -13,6 +13,7 @@
                     ],
                     "default": false,
                     "$id": "#/properties/global/properties/cloudIntegrationEnabled",
+                    "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                     "title": "The global.cloudIntegrationEnabled schema",
                     "description": "This parameter specifies whether to apply [Cloud Integration Parameters](#cloud-integration-parameters) instead of parameters described in Consul"
                 },
@@ -23,6 +24,7 @@
                     ],
                     "default": true,
                     "$id": "#/properties/global/properties/enabled",
+                    "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                     "title": "The global.enabled schema",
                     "description": "Whether all the components within this chart are to be enabled by default"
                 },
@@ -54,6 +56,7 @@
                     ],
                     "default": false,
                     "$id": "#/properties/global/properties/ipv6",
+                    "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                     "title": "The global.ipv6 schema",
                     "description": "Whether the Consul services REST API is to be started on `IPv6` interface"
                 },
@@ -64,6 +67,7 @@
                     ],
                     "default": false,
                     "$id": "#/properties/global/properties/restrictedEnvironment",
+                    "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                     "title": "The global.restrictedEnvironment schema",
                     "description": "Whether the Consul service is to be deployed in restricted environment"
                 },
@@ -109,6 +113,7 @@
                     ],
                     "default": false,
                     "$id": "#/properties/global/properties/enablePodSecurityPolicies",
+                    "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                     "title": "The global.enablePodSecurityPolicies schema",
                     "description": "Whether pod security policies are to be created for the Consul components created by the chart"
                 },
@@ -151,6 +156,7 @@
                             ],
                             "default": false,
                             "$id": "#/properties/global/properties/tls/properties/enabled",
+                            "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                             "title": "The global.tls.enabled schema",
                             "description": "Whether TLS is to be enabled for all Consul components"
                         },
@@ -161,6 +167,7 @@
                             ],
                             "default": false,
                             "$id": "#/properties/global/properties/tls/properties/enableAutoEncrypt",
+                            "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                             "title": "The global.tls.enableAutoEncrypt schema",
                             "description": "Whether the `auto-encrypt` feature is to enabled on clients and servers"
                         },
@@ -181,6 +188,7 @@
                                     ],
                                     "default": false,
                                     "$id": "#/properties/global/properties/tls/properties/certManager/properties/enabled",
+                                    "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                                     "title": "The global.tls.certManager.enabled schema",
                                     "description": "Whether TLS certificates are to be generated and managed by Cert Manager"
                                 },
@@ -224,6 +232,7 @@
                             ],
                             "default": true,
                             "$id": "#/properties/global/properties/tls/properties/verify",
+                            "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                             "title": "The global.tls.verify schema",
                             "description": "Whether servers and client configuration is to be verified"
                         },
@@ -234,6 +243,7 @@
                             ],
                             "default": false,
                             "$id": "#/properties/global/properties/tls/properties/httpsOnly",
+                            "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                             "title": "The global.tls.httpsOnly schema",
                             "description": "Whether the HTTP port on both clients and servers is to be disabled and only HTTPS connections are to be accepted"
                         },
@@ -406,6 +416,7 @@
                             ],
                             "default": true,
                             "$id": "#/properties/global/properties/acls/properties/manageSystemACLs",
+                            "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                             "title": "The global.acls.manageSystemACLs schema",
                             "description": "Whether ACL tokens and policies for all Consul and `consul-k8s` components are to be managed"
                         },
@@ -416,6 +427,7 @@
                             ],
                             "default": true,
                             "$id": "#/properties/global/properties/acls/properties/createAuthMethod",
+                            "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                             "title": "The global.acls.createAuthMethod schema",
                             "description": "Whether Consul authentication method is to be created"
                         },
@@ -454,6 +466,7 @@
                             ],
                             "default": false,
                             "$id": "#/properties/global/properties/acls/properties/createReplicationToken",
+                            "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                             "title": "The global.acls.createReplicationToken schema",
                             "description": "Whether ACL token that can be used in secondary datacenters for replication is to be created"
                         },
@@ -560,6 +573,7 @@
                             ],
                             "default": false,
                             "$id": "#/properties/global/properties/federation/properties/enabled",
+                            "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                             "title": "The global.federation.enabled schema",
                             "description": "Whether the datacenter is to be federation-capable"
                         },
@@ -570,6 +584,7 @@
                             ],
                             "default": false,
                             "$id": "#/properties/global/properties/federation/properties/createFederationSecret",
+                            "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                             "title": "The global.federation.createFederationSecret schema",
                             "description": "Whether the Kubernetes secret that can be imported into secondary datacenters, so they can federate with this datacenter, is to be created"
                         },
@@ -622,6 +637,7 @@
                             ],
                             "default": true,
                             "$id": "#/properties/global/properties/metrics/properties/enabled",
+                            "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                             "title": "The global.metrics.enabled schema",
                             "description": "Whether the components to expose Prometheus metrics for the Consul service mesh are to be configured"
                         },
@@ -632,6 +648,7 @@
                             ],
                             "default": true,
                             "$id": "#/properties/global/properties/metrics/properties/enableAgentMetrics",
+                            "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                             "title": "The global.metrics.enableAgentMetrics schema",
                             "description": "Whether the metrics for Consul agent are to be configured"
                         },
@@ -649,6 +666,7 @@
                             ],
                             "default": true,
                             "$id": "#/properties/global/properties/metrics/properties/enableGatewayMetrics",
+                            "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                             "title": "The global.metrics.enableGatewayMetrics schema",
                             "description": "Whether the `mesh`, `terminating`, and `ingress` gateways are to expose their Consul DataPlane metrics on port `20200` at the `/metrics` path and all gateway pods are to have Prometheus scrape annotations"
                         },
@@ -659,6 +677,7 @@
                             ],
                             "default": true,
                             "$id": "#/properties/global/properties/metrics/properties/disableHostname",
+                            "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                             "title": "The global.metrics.disableHostname schema",
                             "description": "Whether the runtime telemetry with the machine hostname is to be prepended"
                         }
@@ -681,6 +700,7 @@
                     ],
                     "default": false,
                     "$id": "#/properties/global/properties/logJSON",
+                    "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                     "title": "The global.logJSON schema",
                     "description": "Whether the output in JSON format for all component logs is to be enabled"
                 },
@@ -704,6 +724,7 @@
                                     ],
                                     "default": true,
                                     "$id": "#/properties/global/properties/disasterRecovery/properties/tls/properties/enabled",
+                                    "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                                     "title": "The global.disasterRecovery.tls.enabled schema",
                                     "description": "Whether TLS is to be enabled for Disaster Recovery Daemon"
                                 },
@@ -787,6 +808,7 @@
                                     ],
                                     "default": false,
                                     "$id": "#/properties/global/properties/disasterRecovery/properties/httpAuth/properties/enabled",
+                                    "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                                     "title": "The global.disasterRecovery.httpAuth.enabled schema",
                                     "description": "Whether site manager authentication is to be enabled"
                                 },
@@ -797,6 +819,7 @@
                                     ],
                                     "default": false,
                                     "$id": "#/properties/global/properties/disasterRecovery/properties/httpAuth/properties/smSecureAuth",
+                                    "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                                     "title": "The global.disasterRecovery.httpAuth.smSecureAuth schema",
                                     "description": "Whether the `smSecureAuth` mode is enabled for Site Manager or not"
                                 },
@@ -847,6 +870,7 @@
                             ],
                             "default": true,
                             "$id": "#/properties/global/properties/disasterRecovery/properties/siteManagerEnabled",
+                            "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                             "title": "The global.disasterRecovery.siteManagerEnabled schema",
                             "description": "Whether creation of a Kubernetes Custom Resource for `SiteManager` is to be enabled"
                         },
@@ -959,6 +983,7 @@
                             ],
                             "default": false,
                             "$id": "#/properties/global/properties/openshift/properties/enabled",
+                            "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                             "title": "The global.openshift.enabled schema",
                             "description": "Whether the necessary configuration for running Consul components on OpenShift is to be created"
                         }
@@ -991,6 +1016,7 @@
                             ],
                             "default": true,
                             "$id": "#/properties/global/properties/velero/properties/postHookRestoreEnabled",
+                            "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                             "title": "The global.velero.postHookRestoreEnabled schema",
                             "description": "Whether Velero restore post-hook with Auth Method restore command is to be enabled"
                         }
@@ -1014,6 +1040,7 @@
                     ],
                     "default": "-",
                     "$id": "#/properties/server/properties/enabled",
+                    "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                     "title": "The server.enabled schema",
                     "description": "Whether the servers are to be configured to run"
                 },
@@ -1031,6 +1058,7 @@
                     ],
                     "default": false,
                     "$id": "#/properties/server/properties/enableAgentDebug",
+                    "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                     "title": "The server.enableAgentDebug schema",
                     "description": "Enables Consul to report additional debugging information, including runtime profiling (pprof) data"
                 },
@@ -1095,6 +1123,7 @@
                     ],
                     "default": false,
                     "$id": "#/properties/server/properties/exposeGossipAndRPCPorts",
+                    "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                     "title": "The server.exposeGossipAndRPCPorts schema",
                     "description": "Whether the servers' gossip and RPC ports as hostPorts are to be exposed"
                 },
@@ -1193,6 +1222,7 @@
                     ],
                     "default": true,
                     "$id": "#/properties/server/properties/connect",
+                    "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                     "title": "The server.connect schema",
                     "description": "Whether `connect` on all the servers is to be enabled, initializing a CA for Connect-related connections"
                 },
@@ -1295,6 +1325,7 @@
                             ],
                             "default": true,
                             "$id": "#/properties/server/properties/disruptionBudget/properties/enabled",
+                            "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                             "title": "The server.disruptionBudget.enabled schema",
                             "description": "Whether the creation of a `PodDisruptionBudget` to prevent voluntary degrading of the Consul server cluster is to be created"
                         },
@@ -1527,6 +1558,7 @@
                     ],
                     "default": false,
                     "$id": "#/properties/server/properties/serverLocalityEnabled",
+                    "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                     "title": "The server.serverLocalityEnabled schema",
                     "description": "Enables Consul server to set locality From its topology region label"
                 },
@@ -1552,6 +1584,7 @@
                     ],
                     "default": false,
                     "$id": "#/properties/externalServers/properties/enabled",
+                    "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                     "title": "The externalServers.enabled schema",
                     "description": "Whether the Helm chart is to be configured to talk to the external servers"
                 },
@@ -1590,6 +1623,7 @@
                     ],
                     "default": false,
                     "$id": "#/properties/externalServers/properties/useSystemRoots",
+                    "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                     "title": "The externalServers.useSystemRoots schema",
                     "description": "Whether `consul-k8s` components are to ignore the CA set in `global"
                 },
@@ -1610,6 +1644,7 @@
                     ],
                     "default": false,
                     "$id": "#/properties/externalServers/properties/skipServerWatch",
+                    "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                     "title": "The externalServers.skipServerWatch schema",
                     "description": "Whether the `consul-dataplane` and `consul-k8s` components are to watch the Consul servers for changes"
                 }
@@ -1628,6 +1663,7 @@
                     ],
                     "default": false,
                     "$id": "#/properties/client/properties/enabled",
+                    "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                     "title": "The client.enabled schema",
                     "description": "Whether Consul clients are to be run on every node within the Kubernetes cluster"
                 },
@@ -1687,15 +1723,21 @@
                     "description": "The list of valid `-retry-join` values"
                 },
                 "podSecurityPolicy": {
-                    "type": "string",
-                    "default": "",
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "default": null,
                     "$id": "#/properties/client/properties/podSecurityPolicy",
                     "title": "The client.podSecurityPolicy schema",
                     "description": "The predefined pod security policy for Consul clients"
                 },
                 "securityContextConstraint": {
-                    "type": "string",
-                    "default": "",
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "default": null,
                     "$id": "#/properties/client/properties/securityContextConstraint",
                     "title": "The client.securityContextConstraint schema",
                     "description": "The predefined security context constraint for Consul client"
@@ -1717,6 +1759,7 @@
                     ],
                     "default": true,
                     "$id": "#/properties/client/properties/grpc",
+                    "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                     "title": "The client.grpc schema",
                     "description": "Whether the gRPC listener is to be enabled"
                 },
@@ -1738,6 +1781,7 @@
                     ],
                     "default": false,
                     "$id": "#/properties/client/properties/exposeGossipPorts",
+                    "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                     "title": "The client.exposeGossipPorts schema",
                     "description": "Whether the clients' gossip ports as `hostPorts` are to be exposed"
                 },
@@ -1943,6 +1987,7 @@
                     ],
                     "default": false,
                     "$id": "#/properties/client/properties/hostNetwork",
+                    "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                     "title": "The client.hostNetwork schema",
                     "description": "Whether host networking is to be used instead of hostPort in the event that a CNI plugin doesn't support hostPort"
                 },
@@ -1968,6 +2013,7 @@
                     ],
                     "default": "-",
                     "$id": "#/properties/dns/properties/enabled",
+                    "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                     "title": "The dns.enabled schema",
                     "description": "Whether the service that routes to all agents is to be created"
                 },
@@ -2020,6 +2066,7 @@
                     ],
                     "default": false,
                     "$id": "#/properties/ui/properties/enabled",
+                    "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                     "title": "The ui.enabled schema",
                     "description": "Whether Consul UI is to be enabled"
                 },
@@ -2033,6 +2080,7 @@
                             ],
                             "default": true,
                             "$id": "#/properties/ui/properties/service/properties/enabled",
+                            "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                             "title": "The ui.service.enabled schema",
                             "description": "Whether the service entry for the Consul UI is to be created"
                         },
@@ -2107,6 +2155,7 @@
                             ],
                             "default": false,
                             "$id": "#/properties/ui/properties/ingress/properties/enabled",
+                            "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                             "title": "The ui.ingress.enabled schema",
                             "description": "Whether `Ingress` resource to access Consul UI outside the cloud is to be created"
                         },
@@ -2149,6 +2198,7 @@
                             ],
                             "default": true,
                             "$id": "#/properties/ui/properties/envoyGateway/properties/enabled",
+                            "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                             "title": "The ui.envoyGateway.enabled schema",
                             "description": "Enables creation of a Gateway API HTTPRoute resource to expose the Consul UI via Envoy Gateway"
                         },
@@ -2205,6 +2255,7 @@
                             ],
                             "default": "-",
                             "$id": "#/properties/ui/properties/metrics/properties/enabled",
+                            "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                             "title": "The ui.metrics.enabled schema",
                             "description": "Whether metrics are to be displayed in the UI"
                         },
@@ -2241,6 +2292,7 @@
                     ],
                     "default": false,
                     "$id": "#/properties/syncCatalog/properties/enabled",
+                    "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                     "title": "The syncCatalog.enabled schema",
                     "description": "Whether the catalog sync process to sync K8S with Consul services is to be enabled"
                 },
@@ -2251,6 +2303,7 @@
                     ],
                     "default": true,
                     "$id": "#/properties/syncCatalog/properties/default",
+                    "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                     "title": "The syncCatalog.default schema",
                     "description": "Whether the sync is enabled by default, otherwise it requires annotation"
                 },
@@ -2268,6 +2321,7 @@
                     ],
                     "default": true,
                     "$id": "#/properties/syncCatalog/properties/toConsul",
+                    "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                     "title": "The syncCatalog.toConsul schema",
                     "description": "Whether syncing is to be enabled to Consul as a destination"
                 },
@@ -2278,6 +2332,7 @@
                     ],
                     "default": true,
                     "$id": "#/properties/syncCatalog/properties/toK8S",
+                    "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                     "title": "The syncCatalog.toK8S schema",
                     "description": "Whether syncing is to be enabled to K8S as a destination"
                 },
@@ -2333,6 +2388,7 @@
                     ],
                     "default": true,
                     "$id": "#/properties/syncCatalog/properties/addK8SNamespaceSuffix",
+                    "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                     "title": "The syncCatalog.addK8SNamespaceSuffix schema",
                     "description": "Whether sync catalog is to append Kubernetes namespace suffix to each service name synced to Consul, separated by a dash"
                 },
@@ -2370,6 +2426,7 @@
                     ],
                     "default": true,
                     "$id": "#/properties/syncCatalog/properties/syncClusterIPServices",
+                    "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                     "title": "The syncCatalog.syncClusterIPServices schema",
                     "description": "Whether services of the ClusterIP type are to be synced"
                 },
@@ -2551,6 +2608,7 @@
                     ],
                     "default": false,
                     "$id": "#/properties/connectInject/properties/enabled",
+                    "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                     "title": "The connectInject.enabled schema",
                     "description": "Whether the automatic Connect sidecar injector is to be enabled"
                 },
@@ -2575,6 +2633,7 @@
                     ],
                     "default": false,
                     "$id": "#/properties/connectInject/properties/default",
+                    "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                     "title": "The connectInject.default schema",
                     "description": "Whether the inject is enabled by default, otherwise it requires annotation"
                 },
@@ -2588,6 +2647,7 @@
                             ],
                             "default": true,
                             "$id": "#/properties/connectInject/properties/transparentProxy/properties/defaultEnabled",
+                            "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                             "title": "The connectInject.transparentProxy.defaultEnabled schema",
                             "description": "Whether all Consul Service mesh are to run with transparent proxy enabled by default, i"
                         },
@@ -2598,6 +2658,7 @@
                             ],
                             "default": true,
                             "$id": "#/properties/connectInject/properties/transparentProxy/properties/defaultOverwriteProbes",
+                            "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                             "title": "The connectInject.transparentProxy.defaultOverwriteProbes schema",
                             "description": "Whether Kubernetes HTTP probes of the pod are to be overridden to point to the Consul DataPlane proxy instead"
                         }
@@ -2616,6 +2677,7 @@
                             ],
                             "default": true,
                             "$id": "#/properties/connectInject/properties/disruptionBudget/properties/enabled",
+                            "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                             "title": "The connectInject.disruptionBudget.enabled schema",
                             "description": "Whether the creation of a `PodDisruptionBudget` to prevent voluntary degrading of the Connect inject pods is to be created"
                         },
@@ -2654,6 +2716,7 @@
                             ],
                             "default": "-",
                             "$id": "#/properties/connectInject/properties/metrics/properties/defaultEnabled",
+                            "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                             "title": "The connectInject.metrics.defaultEnabled schema",
                             "description": "Whether connect-injector is to add prometheus annotations to connect-injected pods automatically"
                         },
@@ -2664,6 +2727,7 @@
                             ],
                             "default": false,
                             "$id": "#/properties/connectInject/properties/metrics/properties/defaultEnableMerging",
+                            "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                             "title": "The connectInject.metrics.defaultEnableMerging schema",
                             "description": "Whether the Consul sidecar is to run a merged metrics server to combine and serve both Consul DataPlane and Connect service metrics"
                         },
@@ -2812,8 +2876,11 @@
                     "type": "object",
                     "properties": {
                         "secretName": {
-                            "type": "string",
-                            "default": "",
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "default": null,
                             "$id": "#/properties/connectInject/properties/certs/properties/secretName",
                             "title": "The connectInject.certs.secretName schema",
                             "description": "The name of the secret that has the TLS certificate and private key to serve the injector webhook"
@@ -3058,6 +3125,7 @@
                     ],
                     "default": false,
                     "$id": "#/properties/meshGateway/properties/enabled",
+                    "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                     "title": "The meshGateway.enabled schema",
                     "description": "Whether Consul service mesh is to be configured to use gateways"
                 },
@@ -3167,6 +3235,7 @@
                     ],
                     "default": false,
                     "$id": "#/properties/meshGateway/properties/hostNetwork",
+                    "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                     "title": "The meshGateway.hostNetwork schema",
                     "description": "Whether gateway Pods is to run on the host network"
                 },
@@ -3410,6 +3479,7 @@
                     ],
                     "default": true,
                     "$id": "#/properties/podScheduler/properties/enabled",
+                    "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                     "title": "The podScheduler.enabled schema",
                     "description": "Whether custom Kubernetes pod scheduler pod is to be deployed to assign Consul pods to nodes with `hostPath` persistent volumes"
                 },
@@ -3515,6 +3585,7 @@
                     ],
                     "default": true,
                     "$id": "#/properties/monitoring/properties/enabled",
+                    "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                     "title": "The monitoring.enabled schema",
                     "description": "Whether the installation of Consul monitoring is to be enabled"
                 },
@@ -3525,6 +3596,7 @@
                     ],
                     "default": true,
                     "$id": "#/properties/monitoring/properties/installDashboard",
+                    "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                     "title": "The monitoring.installDashboard schema",
                     "description": "Whether the installation of Consul Grafana dashboard is to be enabled"
                 }
@@ -3543,6 +3615,7 @@
                     ],
                     "default": false,
                     "$id": "#/properties/backupDaemon/properties/enabled",
+                    "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                     "title": "The backupDaemon.enabled schema",
                     "description": "Whether the installation of Consul backup daemon is to be enabled"
                 },
@@ -3563,6 +3636,7 @@
                             ],
                             "default": true,
                             "$id": "#/properties/backupDaemon/properties/tls/properties/enabled",
+                            "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                             "title": "The backupDaemon.tls.enabled schema",
                             "description": "Whether TLS is to be enabled for Consul backup daemon"
                         },
@@ -3637,15 +3711,21 @@
                     "description": "The disk size of the attached volume for the Consul backup daemon"
                 },
                 "storageClass": {
-                    "type": "string",
-                    "default": "",
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "default": null,
                     "$id": "#/properties/backupDaemon/properties/storageClass",
                     "title": "The backupDaemon.storageClass schema",
                     "description": "The name of storage class for the Consul backup daemon"
                 },
                 "persistentVolume": {
-                    "type": "string",
-                    "default": "",
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "default": null,
                     "$id": "#/properties/backupDaemon/properties/persistentVolume",
                     "title": "The backupDaemon.persistentVolume schema",
                     "description": "The predefined persistent volume for the Consul backup daemon"
@@ -3660,6 +3740,7 @@
                             ],
                             "default": false,
                             "$id": "#/properties/backupDaemon/properties/s3/properties/enabled",
+                            "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                             "title": "The backupDaemon.s3.enabled schema",
                             "description": "Whether Consul backups are to be stored in S3 storage"
                         },
@@ -3670,6 +3751,7 @@
                             ],
                             "default": true,
                             "$id": "#/properties/backupDaemon/properties/s3/properties/sslVerify",
+                            "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                             "title": "The backupDaemon.s3.sslVerify schema",
                             "description": "This parameter specifies whether or not to verify SSL certificates for S3 connections"
                         },
@@ -3867,6 +3949,7 @@
                     ],
                     "default": true,
                     "$id": "#/properties/consulAclConfigurator/properties/enabled",
+                    "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                     "title": "The consulAclConfigurator.enabled schema",
                     "description": "Whether Consul ACL Configurator is to be installed"
                 },
@@ -3957,6 +4040,7 @@
                     ],
                     "default": false,
                     "$id": "#/properties/consulAclConfigurator/properties/strictNamespaceValidation",
+                    "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                     "title": "The consulAclConfigurator.strictNamespaceValidation schema",
                     "description": "Defines which custom resources without `operatorNamespace` the operator processes"
                 },
@@ -4117,6 +4201,7 @@
                                     ],
                                     "default": true,
                                     "$id": "#/properties/consulAclConfigurator/properties/jwksProxy/properties/disruptionBudget/properties/enabled",
+                                    "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                                     "title": "The consulAclConfigurator.jwksProxy.disruptionBudget.enabled schema",
                                     "description": "Whether a PodDisruptionBudget is created for JWKS proxy pods"
                                 },
@@ -4142,6 +4227,7 @@
                                     ],
                                     "default": false,
                                     "$id": "#/properties/consulAclConfigurator/properties/jwksProxy/properties/networkPolicy/properties/enabled",
+                                    "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                                     "title": "The consulAclConfigurator.jwksProxy.networkPolicy.enabled schema",
                                     "description": "Whether a NetworkPolicy is created that allows ingress to JWKS proxy pods only from Consul server pods of this release and from the Consul ACL Configurator operator"
                                 }
@@ -4256,6 +4342,7 @@
                         "boolean",
                         "string"
                     ],
+                    "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                     "title": "The statusProvisioner.cleanupEnabled schema",
                     "description": "Whether forced cleanup of previous Status Provisioner job is enabled"
                 }
@@ -4341,6 +4428,7 @@
                     ],
                     "default": false,
                     "$id": "#/properties/integrationTests/properties/enabled",
+                    "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                     "title": "The integrationTests.enabled schema",
                     "description": "Whether the installation of Consul integration tests is to be enabled"
                 },
@@ -4425,6 +4513,7 @@
                     ],
                     "default": true,
                     "$id": "#/properties/integrationTests/properties/statusWritingEnabled",
+                    "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                     "title": "The integrationTests.statusWritingEnabled schema",
                     "description": "Whether the status of Consul integration tests execution is to be written to deployment"
                 },
@@ -4435,6 +4524,7 @@
                     ],
                     "default": true,
                     "$id": "#/properties/integrationTests/properties/isShortStatusMessage",
+                    "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                     "title": "The integrationTests.isShortStatusMessage schema",
                     "description": "Whether the status message is to contain only first line of `result"
                 },
@@ -4528,6 +4618,7 @@
                             ],
                             "default": false,
                             "$id": "#/properties/integrationTests/properties/atpReport/properties/enabled",
+                            "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                             "title": "The integrationTests.atpReport.enabled schema",
                             "description": "Opt-in for ATP report upload"
                         },
@@ -4651,6 +4742,7 @@
                     ],
                     "default": true,
                     "$id": "#/properties/resourceMigration/properties/enabled",
+                    "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
                     "title": "The resourceMigration.enabled schema",
                     "description": "When set to `true`, a pre-upgrade `resource-migrator` Job runs before every `helm upgrade` to reconcile annotations on the existing consul-server PVCs (which are owned by the StatefulSet, not by Helm): new keys are added and stale keys (removed from `pvc"
                 },
@@ -4724,6 +4816,7 @@
                 "boolean",
                 "string"
             ],
+            "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
             "title": "The MONITORING_ENABLED schema",
             "description": "Specifies whether Consul Monitoring component is to be deployed or not"
         },
@@ -4751,6 +4844,7 @@
                 "boolean",
                 "string"
             ],
+            "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
             "title": "The INFRA_CONSUL_RESTRICTED_ENVIRONMENT schema",
             "description": "Specifies whether the Consul service is to be deployed in restricted environment"
         },

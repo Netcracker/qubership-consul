@@ -8,15 +8,6 @@
       "type"
     ]
   },
-  "^global\\.federation\\.primaryDatacenter$": {
-    "comment": "null is kept as default: the server config checksum depends on it",
-    "add": {
-      "type": [
-        "string",
-        "null"
-      ]
-    }
-  },
   "^global\\.ports\\.http$": {
     "comment": "empty string by default (standard port is used), a number can be passed",
     "add": {
@@ -98,101 +89,11 @@
       ]
     }
   },
-  "^global\\.tls\\.caCert\\.secretName$": {
-    "comment": "null is the default value in hashicorp/consul",
-    "add": {
-      "type": [
-        "string",
-        "null"
-      ]
-    }
-  },
-  "^global\\.tls\\.caCert\\.secretKey$": {
-    "comment": "null is the default value in hashicorp/consul",
-    "add": {
-      "type": [
-        "string",
-        "null"
-      ]
-    }
-  },
-  "^global\\.tls\\.caKey\\.secretName$": {
-    "comment": "null is the default value in hashicorp/consul",
-    "add": {
-      "type": [
-        "string",
-        "null"
-      ]
-    }
-  },
-  "^global\\.tls\\.caKey\\.secretKey$": {
-    "comment": "null is the default value in hashicorp/consul",
-    "add": {
-      "type": [
-        "string",
-        "null"
-      ]
-    }
-  },
-  "^global\\.acls\\.bootstrapToken\\.secretName$": {
-    "comment": "null is the default value in hashicorp/consul",
-    "add": {
-      "type": [
-        "string",
-        "null"
-      ]
-    }
-  },
-  "^global\\.acls\\.bootstrapToken\\.secretKey$": {
-    "comment": "null is the default value in hashicorp/consul",
-    "add": {
-      "type": [
-        "string",
-        "null"
-      ]
-    }
-  },
-  "^global\\.acls\\.replicationToken\\.secretName$": {
-    "comment": "null is the default value in hashicorp/consul",
-    "add": {
-      "type": [
-        "string",
-        "null"
-      ]
-    }
-  },
-  "^global\\.acls\\.replicationToken\\.secretKey$": {
-    "comment": "null is the default value in hashicorp/consul",
-    "add": {
-      "type": [
-        "string",
-        "null"
-      ]
-    }
-  },
-  "^global\\.federation\\.k8sAuthMethodHost$": {
-    "comment": "null is the default value in hashicorp/consul",
-    "add": {
-      "type": [
-        "string",
-        "null"
-      ]
-    }
-  },
   "^server\\.bootstrapExpect$": {
     "comment": "null is the default value in hashicorp/consul",
     "add": {
       "type": [
         "integer",
-        "null"
-      ]
-    }
-  },
-  "^server\\.storageClass$": {
-    "comment": "null is the default value in hashicorp/consul",
-    "add": {
-      "type": [
-        "string",
         "null"
       ]
     }
@@ -224,24 +125,6 @@
       ]
     }
   },
-  "^externalServers\\.tlsServerName$": {
-    "comment": "null is the default value in hashicorp/consul",
-    "add": {
-      "type": [
-        "string",
-        "null"
-      ]
-    }
-  },
-  "^externalServers\\.k8sAuthMethodHost$": {
-    "comment": "null is the default value in hashicorp/consul",
-    "add": {
-      "type": [
-        "string",
-        "null"
-      ]
-    }
-  },
   "^client\\.join$": {
     "comment": "null is the default value in hashicorp/consul",
     "add": {
@@ -251,56 +134,11 @@
       ]
     }
   },
-  "^client\\.dataDirectoryHostPath$": {
-    "comment": "null is the default value in hashicorp/consul",
-    "add": {
-      "type": [
-        "string",
-        "null"
-      ]
-    }
-  },
   "^client\\.extraLabels$": {
     "comment": "null is the default value in hashicorp/consul",
     "add": {
       "type": [
         "object",
-        "null"
-      ]
-    }
-  },
-  "^client\\.dnsPolicy$": {
-    "comment": "null is the default value in hashicorp/consul",
-    "add": {
-      "type": [
-        "string",
-        "null"
-      ]
-    }
-  },
-  "^dns\\.clusterIP$": {
-    "comment": "null is the default value in hashicorp/consul",
-    "add": {
-      "type": [
-        "string",
-        "null"
-      ]
-    }
-  },
-  "^dns\\.additionalSpec$": {
-    "comment": "null is the default value in hashicorp/consul",
-    "add": {
-      "type": [
-        "string",
-        "null"
-      ]
-    }
-  },
-  "^ui\\.service\\.type$": {
-    "comment": "null is the default value in hashicorp/consul",
-    "add": {
-      "type": [
-        "string",
         "null"
       ]
     }
@@ -336,60 +174,6 @@
       ]
     }
   },
-  "^syncCatalog\\.k8sPrefix$": {
-    "comment": "null is the default value in hashicorp/consul",
-    "add": {
-      "type": [
-        "string",
-        "null"
-      ]
-    }
-  },
-  "^syncCatalog\\.k8sSourceNamespace$": {
-    "comment": "null is the default value in hashicorp/consul",
-    "add": {
-      "type": [
-        "string",
-        "null"
-      ]
-    }
-  },
-  "^syncCatalog\\.consulPrefix$": {
-    "comment": "null is the default value in hashicorp/consul",
-    "add": {
-      "type": [
-        "string",
-        "null"
-      ]
-    }
-  },
-  "^syncCatalog\\.k8sTag$": {
-    "comment": "null is the default value in hashicorp/consul",
-    "add": {
-      "type": [
-        "string",
-        "null"
-      ]
-    }
-  },
-  "^syncCatalog\\.aclSyncToken\\.secretName$": {
-    "comment": "null is the default value in hashicorp/consul",
-    "add": {
-      "type": [
-        "string",
-        "null"
-      ]
-    }
-  },
-  "^syncCatalog\\.aclSyncToken\\.secretKey$": {
-    "comment": "null is the default value in hashicorp/consul",
-    "add": {
-      "type": [
-        "string",
-        "null"
-      ]
-    }
-  },
   "^syncCatalog\\.nodeSelector$": {
     "comment": "null is the default value in hashicorp/consul",
     "add": {
@@ -404,15 +188,6 @@
     "add": {
       "type": [
         "object",
-        "null"
-      ]
-    }
-  },
-  "^syncCatalog\\.consulWriteInterval$": {
-    "comment": "null is the default value in hashicorp/consul",
-    "add": {
-      "type": [
-        "string",
         "null"
       ]
     }
@@ -453,42 +228,6 @@
       ]
     }
   },
-  "^connectInject\\.aclInjectToken\\.secretName$": {
-    "comment": "null is the default value in hashicorp/consul",
-    "add": {
-      "type": [
-        "string",
-        "null"
-      ]
-    }
-  },
-  "^connectInject\\.aclInjectToken\\.secretKey$": {
-    "comment": "null is the default value in hashicorp/consul",
-    "add": {
-      "type": [
-        "string",
-        "null"
-      ]
-    }
-  },
-  "^connectInject\\.sidecarProxy\\.resources\\.requests\\.memory$": {
-    "comment": "null is the default value in hashicorp/consul",
-    "add": {
-      "type": [
-        "string",
-        "null"
-      ]
-    }
-  },
-  "^connectInject\\.sidecarProxy\\.resources\\.limits\\.memory$": {
-    "comment": "null is the default value in hashicorp/consul",
-    "add": {
-      "type": [
-        "string",
-        "null"
-      ]
-    }
-  },
   "^meshGateway\\.service\\.nodePort$": {
     "comment": "null is the default value in hashicorp/consul, a number can be passed as a string",
     "add": {
@@ -498,15 +237,6 @@
         "null"
       ],
       "pattern": "^[0-9]+$"
-    }
-  },
-  "^meshGateway\\.dnsPolicy$": {
-    "comment": "null is the default value in hashicorp/consul",
-    "add": {
-      "type": [
-        "string",
-        "null"
-      ]
     }
   },
   "^meshGateway\\.hostPort$": {
