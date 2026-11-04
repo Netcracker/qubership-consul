@@ -1280,7 +1280,8 @@ func boundIssuerAndAudiences(jwksURL string) (string, []string, error) {
 // authMethodUpToDate reports whether the existing auth method already has the desired type,
 // description and config values. Config keys that are not set by the operator are ignored.
 func authMethodUpToDate(existing, desired *consulApi.ACLAuthMethod) bool {
-	if existing.Type != desired.Type || existing.Description != desired.Description {
+	if existing.Type != desired.Type || existing.Description != desired.Description ||
+		existing.MaxTokenTTL != desired.MaxTokenTTL {
 		return false
 	}
 	for key, value := range desired.Config {
@@ -1295,6 +1296,9 @@ func authMethodUpToDate(existing, desired *consulApi.ACLAuthMethod) bool {
 	}
 	return true
 }
+
+// applicationsTokenTTL is the MaxTokenTTL of the applications-k8s-m2m auth method.
+const applicationsTokenTTL = 30 * time.Minute
 
 // EnsureApplicationsAuthMethod creates or updates the applications-k8s-m2m auth method in Consul.
 func EnsureApplicationsAuthMethod() error {
@@ -1317,6 +1321,7 @@ func EnsureApplicationsAuthMethod() error {
 		Name:        amName,
 		Type:        "jwt",
 		Description: "Auth method for application M2M authentication",
+		MaxTokenTTL: applicationsTokenTTL,
 		Config: map[string]interface{}{
 			"JWKSURL":        jwksURL,
 			"BoundIssuer":    issuer,
