@@ -1,1 +1,9 @@
 openspec/**/*.md
+
+# Generated agent workflows and APM packages
+.cursor/skills/
+.cursor/commands/
+.claude/skills/
+.claude/commands/
+.agents/
+agent-packages/
