@@ -4,6 +4,320 @@
     "add": {
       "comment": "don't use type field, because it breaks backward compatibility"
     },
-    "remove": ["type"]
+    "remove": [
+      "type"
+    ]
+  },
+  "^global\\.ports\\.http$": {
+    "comment": "empty string by default (standard port is used), a number can be passed",
+    "add": {
+      "type": [
+        "string",
+        "integer"
+      ]
+    }
+  },
+  "^global\\.ports\\.https$": {
+    "comment": "empty string by default (standard port is used), a number can be passed",
+    "add": {
+      "type": [
+        "string",
+        "integer"
+      ]
+    }
+  },
+  "^global\\.ports\\.grpc$": {
+    "comment": "empty string by default (standard port is used), a number can be passed",
+    "add": {
+      "type": [
+        "string",
+        "integer"
+      ]
+    }
+  },
+  "^server\\.ports\\.http$": {
+    "comment": "empty string by default (standard port is used), a number can be passed",
+    "add": {
+      "type": [
+        "string",
+        "integer"
+      ]
+    }
+  },
+  "^server\\.ports\\.https$": {
+    "comment": "empty string by default (standard port is used), a number can be passed",
+    "add": {
+      "type": [
+        "string",
+        "integer"
+      ]
+    }
+  },
+  "^server\\.ports\\.grpc$": {
+    "comment": "empty string by default (standard port is used), a number can be passed",
+    "add": {
+      "type": [
+        "string",
+        "integer"
+      ]
+    }
+  },
+  "^client\\.ports\\.http$": {
+    "comment": "empty string by default (standard port is used), a number can be passed",
+    "add": {
+      "type": [
+        "string",
+        "integer"
+      ]
+    }
+  },
+  "^client\\.ports\\.https$": {
+    "comment": "empty string by default (standard port is used), a number can be passed",
+    "add": {
+      "type": [
+        "string",
+        "integer"
+      ]
+    }
+  },
+  "^client\\.ports\\.grpc$": {
+    "comment": "empty string by default (standard port is used), a number can be passed",
+    "add": {
+      "type": [
+        "string",
+        "integer"
+      ]
+    }
+  },
+  "^server\\.bootstrapExpect$": {
+    "comment": "null is the default value in hashicorp/consul",
+    "add": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    }
+  },
+  "^server\\.serviceAccount\\.annotations$": {
+    "comment": "null is the default value in hashicorp/consul",
+    "add": {
+      "type": [
+        "object",
+        "null"
+      ]
+    }
+  },
+  "^server\\.disruptionBudget\\.maxUnavailable$": {
+    "comment": "null is the default value in hashicorp/consul",
+    "add": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    }
+  },
+  "^server\\.extraLabels$": {
+    "comment": "null is the default value in hashicorp/consul",
+    "add": {
+      "type": [
+        "object",
+        "null"
+      ]
+    }
+  },
+  "^client\\.join$": {
+    "comment": "null is the default value in hashicorp/consul",
+    "add": {
+      "type": [
+        "array",
+        "null"
+      ]
+    }
+  },
+  "^client\\.extraLabels$": {
+    "comment": "null is the default value in hashicorp/consul",
+    "add": {
+      "type": [
+        "object",
+        "null"
+      ]
+    }
+  },
+  "^ui\\.service\\.nodePort\\.http$": {
+    "comment": "null is the default value in hashicorp/consul, a number can be passed as a string",
+    "add": {
+      "type": [
+        "integer",
+        "string",
+        "null"
+      ],
+      "pattern": "^[0-9]+$"
+    }
+  },
+  "^ui\\.service\\.nodePort\\.https$": {
+    "comment": "null is the default value in hashicorp/consul, a number can be passed as a string",
+    "add": {
+      "type": [
+        "integer",
+        "string",
+        "null"
+      ],
+      "pattern": "^[0-9]+$"
+    }
+  },
+  "^ui\\.ingress\\.annotations$": {
+    "comment": "null is the default value in hashicorp/consul",
+    "add": {
+      "type": [
+        "object",
+        "null"
+      ]
+    }
+  },
+  "^syncCatalog\\.nodeSelector$": {
+    "comment": "null is the default value in hashicorp/consul",
+    "add": {
+      "type": [
+        "object",
+        "null"
+      ]
+    }
+  },
+  "^syncCatalog\\.serviceAccount\\.annotations$": {
+    "comment": "null is the default value in hashicorp/consul",
+    "add": {
+      "type": [
+        "object",
+        "null"
+      ]
+    }
+  },
+  "^syncCatalog\\.extraLabels$": {
+    "comment": "null is the default value in hashicorp/consul",
+    "add": {
+      "type": [
+        "object",
+        "null"
+      ]
+    }
+  },
+  "^connectInject\\.disruptionBudget\\.maxUnavailable$": {
+    "comment": "null is the default value in hashicorp/consul",
+    "add": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    }
+  },
+  "^connectInject\\.disruptionBudget\\.minAvailable$": {
+    "comment": "null is the default value in hashicorp/consul",
+    "add": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    }
+  },
+  "^connectInject\\.nodeSelector$": {
+    "comment": "null is the default value in hashicorp/consul",
+    "add": {
+      "type": [
+        "object",
+        "null"
+      ]
+    }
+  },
+  "^meshGateway\\.service\\.nodePort$": {
+    "comment": "null is the default value in hashicorp/consul, a number can be passed as a string",
+    "add": {
+      "type": [
+        "integer",
+        "string",
+        "null"
+      ],
+      "pattern": "^[0-9]+$"
+    }
+  },
+  "^meshGateway\\.hostPort$": {
+    "comment": "null is the default value in hashicorp/consul, a number can be passed as a string",
+    "add": {
+      "type": [
+        "integer",
+        "string",
+        "null"
+      ],
+      "pattern": "^[0-9]+$"
+    }
+  },
+  "^server\\.ports\\.serflan\\.port$": {
+    "comment": "numeric port by default, a number can be passed as a string",
+    "add": {
+      "type": [
+        "integer",
+        "string"
+      ],
+      "pattern": "^[0-9]+$"
+    }
+  },
+  "^externalServers\\.httpsPort$": {
+    "comment": "numeric port by default, a number can be passed as a string",
+    "add": {
+      "type": [
+        "integer",
+        "string"
+      ],
+      "pattern": "^[0-9]+$"
+    }
+  },
+  "^connectInject\\.metrics\\.defaultMergedMetricsPort$": {
+    "comment": "numeric port by default, a number can be passed as a string",
+    "add": {
+      "type": [
+        "integer",
+        "string"
+      ],
+      "pattern": "^[0-9]+$"
+    }
+  },
+  "^connectInject\\.metrics\\.defaultPrometheusScrapePort$": {
+    "comment": "numeric port by default, a number can be passed as a string",
+    "add": {
+      "type": [
+        "integer",
+        "string"
+      ],
+      "pattern": "^[0-9]+$"
+    }
+  },
+  "^meshGateway\\.wanAddress\\.port$": {
+    "comment": "numeric port by default, a number can be passed as a string",
+    "add": {
+      "type": [
+        "integer",
+        "string"
+      ],
+      "pattern": "^[0-9]+$"
+    }
+  },
+  "^meshGateway\\.service\\.port$": {
+    "comment": "numeric port by default, a number can be passed as a string",
+    "add": {
+      "type": [
+        "integer",
+        "string"
+      ],
+      "pattern": "^[0-9]+$"
+    }
+  },
+  "^meshGateway\\.containerPort$": {
+    "comment": "numeric port by default, a number can be passed as a string",
+    "add": {
+      "type": [
+        "integer",
+        "string"
+      ],
+      "pattern": "^[0-9]+$"
+    }
   }
 }
