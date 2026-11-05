@@ -9,4 +9,4 @@ if [[ $result != 0 ]] ; then
 fi
 
 echo "Sleep ${SLEEP_AFTER_COMPLETION} after script completion"
-sleep ${SLEEP_AFTER_COMPLETION}
+sleep "${SLEEP_AFTER_COMPLETION}"
