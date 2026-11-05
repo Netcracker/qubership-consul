@@ -4028,7 +4028,7 @@
                 },
                 "namespaces": {
                     "type": "string",
-                    "default": "",
+                    "default": "*",
                     "$id": "#/properties/consulAclConfigurator/properties/namespaces",
                     "title": "The consulAclConfigurator.namespaces schema",
                     "description": "The comma-separated list of Kubernetes namespaces watched by Consul ACL Configurator operator, in addition to its own namespace"
