@@ -49,8 +49,6 @@ spec:
               value: {{ .Values.crdInit.sleepAfterCompletion | toString | default "1" | quote }}
             - name: CRDS_TO_CREATE
               value: "consul_acl_configurator_crd.yaml,consulkv_crd.yaml"
-            - name: API_GROUP
-              value: {{ .Values.consulAclConfigurator.apiGroup | quote }}
           resources:
             requests:
               memory: 128Mi

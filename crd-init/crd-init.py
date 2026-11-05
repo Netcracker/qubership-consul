@@ -41,8 +41,6 @@ crd_api = dynamic_client.resources.get(
     api_version="apiextensions.k8s.io/v1", kind="CustomResourceDefinition"
 )
 
-api_group = os.getenv("API_GROUP", "netcracker.com")
-
 
 class CRD:
     def __init__(self, path_to_crd_file, crd_dict):
@@ -106,8 +104,7 @@ def _process_crd(file_path) -> bool:
         * False if the CRD was not changed.
     """
     with open(file_path, "r") as file:
-        content = file.read()
-    local_crd = CRD(file_path, yaml.safe_load(content.replace("netcracker.com", api_group)))
+        local_crd = CRD(file_path, yaml.safe_load(file))
     print(f"Processing local '{local_crd.get_name()}' CRD, version={local_crd.get_version()} ...")
 
     loaded_crd = _load_crd(local_crd.get_name())
