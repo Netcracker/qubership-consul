@@ -40,7 +40,7 @@ global:
   # image: "consul:1.10.0"
   # # Consul Enterprise 1.10.0
   # image: "hashicorp/consul-enterprise:1.10.0-ent"
-  image: "hashicorp/consul:2.0.4"
+  image: "hashicorp/consul:2.0.4@sha256:1c59f007df8ea1c21b2558dc73ef8d99047bc895d9e52e635d1e745e35fe9a54"
 
   # Array of objects containing image pull secret names that will be applied to each service account.
   # This can be used to reference image pull secrets if using a custom consul or consul-k8s Docker image.
@@ -357,7 +357,7 @@ global:
   logJSON: false
 
   disasterRecovery:
-    image: ghcr.io/netcracker/qubership-consul-disaster-recovery:main
+    image: ghcr.io/netcracker/qubership-consul-disaster-recovery:main@sha256:c8da017f4d76ad1805f136411f0308946ca6068fef402e0e8e9ea0e50e230701
     tls:
       enabled: true
       certificates:
@@ -2123,7 +2123,7 @@ meshGateway:
 
 podScheduler:
   enabled: true
-  dockerImage: ghcr.io/netcracker/qubership-docker-kubectl:main
+  dockerImage: ghcr.io/netcracker/qubership-docker-kubectl:main@sha256:571eda404de2a3b302e86a57fd1efbf08f94b52b885488bdf0d42ab29bf191a0
   affinity: {}
   nodeSelector: {}
   resources:
@@ -2146,7 +2146,7 @@ monitoring:
 backupDaemon:
   # Enable Consul Backup Daemon installation.
   enabled: false
-  image: "ghcr.io/netcracker/qubership-consul-backup-daemon:main"
+  image: "ghcr.io/netcracker/qubership-consul-backup-daemon:main@sha256:41b5106120e28935baeae36d3a3d5ae25c2be0e80d6ce68a61a1a48acfbd5278"
 
   tls:
     enabled: true
@@ -2278,9 +2278,9 @@ consulAclConfigurator:
   enabled: true
   apiGroup: "netcracker.com"
   # The image of Consul ACL Configurator Kubernetes operator which implements collecting processing Consul ACL configuration custom resources.
-  operatorImage: "ghcr.io/netcracker/qubership-consul-acl-configurator:main"
+  operatorImage: "ghcr.io/netcracker/qubership-consul-acl-configurator:main@sha256:f26b3742fdee5943260635cda8172963e4a728d4ff98b6a03aaf3ed11e9d56c9"
   # The image of Consul ACL Configurator HTTP server which allows execute common reconcile for Consul ACL configuration custom resources by HTTP request from any Kubernetes service account.
-  restServerImage: "ghcr.io/netcracker/qubership-consul-rest-acl-configurator:main"
+  restServerImage: "ghcr.io/netcracker/qubership-consul-rest-acl-configurator:main@sha256:fcec3b59d7ecdf0e9d0dbfb4fc564dcae48190f0e98c5a6764a171ae2c5c6ba8"
   resources:
     requests:
       memory: 128Mi
@@ -2403,7 +2403,7 @@ consulAclConfigurator:
 
   removeTokens:
     enabled: true
-    dockerImage: ghcr.io/netcracker/qubership-consul-remove-tokens:main
+    dockerImage: ghcr.io/netcracker/qubership-consul-remove-tokens:main@sha256:19324dcf17e101bb927940dd6af68ddeedfb209a5756a618df6aff1755f2c30d
     resources:
       requests:
         memory: "75Mi"
@@ -2416,7 +2416,7 @@ consulAclConfigurator:
 
 statusProvisioner:
   enabled: true
-  dockerImage: ghcr.io/netcracker/qubership-deployment-status-provisioner:main
+  dockerImage: ghcr.io/netcracker/qubership-deployment-status-provisioner:main@sha256:ef8fd9fbc2f1c6efa44f3199800bdfb83911ff9dc3c5e98a43a4ac2e00bdfc84
   lifetimeAfterCompletion: 600
   podReadinessTimeout: 300
   integrationTestsTimeout: 300
@@ -2447,7 +2447,7 @@ tests:
 
 integrationTests:
   enabled: false
-  image: ghcr.io/netcracker/qubership-consul-integration-tests:main
+  image: ghcr.io/netcracker/qubership-consul-integration-tests:main@sha256:9bf6f75da7b2f4e352cd792b40d48eecadcf477b376ee1b7ebb69f452318248a
   secret:
     aclToken: ""
     prometheus:
