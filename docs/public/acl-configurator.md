@@ -202,8 +202,9 @@ example `consul login -method=applications-k8s-m2m -bearer-token-file=/var/run/s
 ### BoundIssuer and BoundAudiences
 
 By default the operator reads the `issuer` field of `/.well-known/openid-configuration` served by the JWKS proxy,
-that is the `--service-account-issuer` of the cluster, and uses it as `BoundIssuer`. `BoundAudiences` defaults to the
-same value, because the default `--api-audiences` of the API server is equal to the issuer.
+that is the `--service-account-issuer` of the cluster, and uses it as `BoundIssuer`. `BoundAudiences` defaults to
+`["netcracker"]` in the chart. If `consulAclConfigurator.boundAudiences` is set to an empty list, the issuer is used,
+because the default `--api-audiences` of the API server is equal to the issuer.
 
 When the audience of service account tokens differs from the issuer, or the issuer must be fixed, set
 `consulAclConfigurator.boundIssuer` and `consulAclConfigurator.boundAudiences` in the deployment parameters.

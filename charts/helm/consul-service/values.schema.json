@@ -4124,7 +4124,7 @@
                 },
                 "boundAudiences": {
                     "type": "array",
-                    "default": [],
+                    "default": ["netcracker"],
                     "$id": "#/properties/consulAclConfigurator/properties/boundAudiences",
                     "title": "The consulAclConfigurator.boundAudiences schema",
                     "description": "The `BoundAudiences` of the `applications-k8s-m2m` JWT auth method, for example `[\"https://kubernetes"
