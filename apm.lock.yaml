@@ -22,13 +22,13 @@ dependencies:
   - .cursor/rules/troubleshoot-consul.mdc
   - .github/instructions/troubleshoot-consul.instructions.md
   deployed_file_hashes:
-    .agents/skills/troubleshoot-consul/SKILL.md: sha256:b06dd5f93560de078d79a66e6629cc030ae9e2d1143b44a84af4f549c4598d1d
+    .agents/skills/troubleshoot-consul/SKILL.md: sha256:da3cf263737b53ce1848546212ef7b223cfc9eac3903f19c2be6bc1e9a98d2c2
     .agents/skills/troubleshoot-consul/references/cpu_overload.md: sha256:15f3a418404d1af3792f90f2c9dc7d17897ee98bcb15d53f49b2320afba39a78
     .agents/skills/troubleshoot-consul/references/disk_filled_on_all_nodes.md: sha256:7d06557a05101f553ae91058546c46428adb17f4af9f1d1f0a24c7c9541ebe81
     .agents/skills/troubleshoot-consul/references/memory_limit.md: sha256:8bbdd140f94d9baa55d9719b6980ba9994f59dd6053775529c78b115833c4533
     .agents/skills/troubleshoot-consul/references/troubleshooting.md: sha256:b9938dbb111ac1e1f2182696a4588a9d01d7df2ed7ffa032f06641514c41ba28
     .claude/rules/troubleshoot-consul.md: sha256:3f070432087669b7e48ccee11e1198d5f1c22c06cca836c4cc16313f98ac58cd
-    .claude/skills/troubleshoot-consul/SKILL.md: sha256:b06dd5f93560de078d79a66e6629cc030ae9e2d1143b44a84af4f549c4598d1d
+    .claude/skills/troubleshoot-consul/SKILL.md: sha256:da3cf263737b53ce1848546212ef7b223cfc9eac3903f19c2be6bc1e9a98d2c2
     .claude/skills/troubleshoot-consul/references/cpu_overload.md: sha256:15f3a418404d1af3792f90f2c9dc7d17897ee98bcb15d53f49b2320afba39a78
     .claude/skills/troubleshoot-consul/references/disk_filled_on_all_nodes.md: sha256:7d06557a05101f553ae91058546c46428adb17f4af9f1d1f0a24c7c9541ebe81
     .claude/skills/troubleshoot-consul/references/memory_limit.md: sha256:8bbdd140f94d9baa55d9719b6980ba9994f59dd6053775529c78b115833c4533
@@ -37,7 +37,7 @@ dependencies:
     .github/instructions/troubleshoot-consul.instructions.md: sha256:e7d836d8445defa21ca5f5defc28405f3b8a5fd66d2feeff853de5e18b874d39
   source: local
   local_path: ./agent-packages/troubleshoot-consul/
-  content_hash: sha256:9d1eee6402eb5261069a4e804a240adca4c0cd9bcecd396bfe2c267481eaf110
+  content_hash: sha256:7373bf1108088d30a9e8632fcb825c0f25c59cd17538438626bbfc3ac911f259
   is_dev: true
 deployments:
 - kind: project-relative
@@ -66,7 +66,7 @@ deployments:
   owners:
   - ./agent-packages/troubleshoot-consul/
   active_owner: ./agent-packages/troubleshoot-consul/
-  content_hash: sha256:b06dd5f93560de078d79a66e6629cc030ae9e2d1143b44a84af4f549c4598d1d
+  content_hash: sha256:da3cf263737b53ce1848546212ef7b223cfc9eac3903f19c2be6bc1e9a98d2c2
 - kind: project-relative
   target: claude
   value: .claude/skills/troubleshoot-consul/references/cpu_overload.md
@@ -120,7 +120,7 @@ deployments:
   owners:
   - ./agent-packages/troubleshoot-consul/
   active_owner: ./agent-packages/troubleshoot-consul/
-  content_hash: sha256:b06dd5f93560de078d79a66e6629cc030ae9e2d1143b44a84af4f549c4598d1d
+  content_hash: sha256:da3cf263737b53ce1848546212ef7b223cfc9eac3903f19c2be6bc1e9a98d2c2
 - kind: project-relative
   target: copilot
   value: .agents/skills/troubleshoot-consul/references/cpu_overload.md

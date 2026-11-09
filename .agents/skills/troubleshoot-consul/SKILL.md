@@ -139,7 +139,7 @@ Never recommend these — the operator reverts them or they risk data loss:
 - `consul acl token delete` — may silently break all services that depend on the token.
 - Manual cluster scaling via the `replicas` field — use the Rolling Update job instead.
 - Editing StatefulSet replicas during ACL initialization — breaks bootstrap.
-- `rm /consul/data/raft.db` without first verifying a valid backup exists.
+- `rm /consul/data/raft.db` — never use this command.
 - Deploying Consul on NFS storage — incompatible with Consul's file locking requirements.
 
 ## Common Failure Modes
