@@ -172,14 +172,13 @@ Guide section: `## No Cluster Leader - Election Timeout Reached`.
 **Fix** (in order):
 
 1. Check backup daemon status — verify a recent successful backup exists before proceeding.
-2. Remove `raft.db` from the affected pod or directly from the PV if pods are not running.
-3. Restart Consul server pods — Consul will rebuild Raft state from peers.
-4. Restore from last backup via backup daemon if data loss is unacceptable.
-5. After recovery, verify business app authentication (e.g., key-manager, config-server) using credentials from `consul-acl-bootstrap-secret`; restart affected services.
+2. Restore from last backup via backup daemon.
+3. After recovery, verify business app authentication (e.g., key-manager, config-server) using credentials from `consul-acl-bootstrap-secret`; restart affected services.
+4. If no successful backup exists or the restore fails, escalate — see `## When to Escalate`.
 
 **Note**: Some data loss is expected.
 
-Guide section: `## Failed to get log`.
+Guide section: `## Failed to get log`. Skip its `raft.db` removal steps — see `### Forbidden actions`.
 
 ---
 
@@ -409,7 +408,7 @@ kubectl exec -n <namespace> deployment/<consul-fullname>-backup-daemon -- curl -
 
 ## Safety
 
-Commands in this file and in the references are recommendations for an authorized operator, not permission to run them. Before scaling the server StatefulSet to `0`, removing `raft.db` or snapshots, resetting ACL, removing `/data/node-id`, or creating auth methods after a Velero restore, get explicit user approval and confirm the namespace, the affected pods, and that a valid backup exists.
+Commands in this file and in the references are recommendations for an authorized operator, not permission to run them. Before scaling the server StatefulSet to `0`, removing snapshots, restoring from a backup, resetting ACL, removing `/data/node-id`, or creating auth methods after a Velero restore, get explicit user approval and confirm the namespace, the affected pods, and that a valid backup exists.
 
 ## Assessment
 
@@ -426,7 +425,7 @@ Report the matched failure mode or section header, the evidence that selected it
 Escalate to component maintainers when:
 
 - The Consul cluster is still unavailable after the StatefulSet reset in `## No Cluster Leader - Election Timeout Reached`.
-- `failed to get log` remains after `raft.db` is removed, or the backup daemon cannot restore the last backup.
+- `failed to get log` appears and no successful backup exists, or the backup daemon cannot restore the last backup.
 - ACL problems remain after `## Reset ACL`.
 - Consul still does not work after the steps in `## Consul Does Not Work After Restore From Velero Backup`.
 
