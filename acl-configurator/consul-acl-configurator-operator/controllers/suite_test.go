@@ -26,7 +26,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	qubershiporgv1 "github.com/Netcracker/consul-acl-configurator/consul-acl-configurator-operator/api/v1alpha1"
+	qubershiporgv1 "github.com/Netcracker/consul-acl-configurator/consul-acl-configurator-operator/api/v1"
 	//+kubebuilder:scaffold:imports
 )
 

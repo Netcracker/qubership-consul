@@ -21,7 +21,7 @@ import (
 	"strings"
 	"testing"
 
-	consulacl "github.com/Netcracker/consul-acl-configurator/consul-acl-configurator-operator/api/v1alpha1"
+	consulacl "github.com/Netcracker/consul-acl-configurator/consul-acl-configurator-operator/api/v1"
 	"github.com/Netcracker/consul-acl-configurator/consul-acl-configurator-operator/util"
 	consulApi "github.com/hashicorp/consul/api"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -141,7 +141,7 @@ func TestReconcile_PurgeOnDelete_RemovesTreeAndFinalizer(t *testing.T) {
 
 	now := metav1.Now()
 	cr := newConsulKV("test-kv", "default", []string{consulKVFinalizer}, []consulacl.ConsulKVEntry{{Key: "config/app"}})
-	cr.Spec.KV.PurgeOnDelete = true
+	cr.Spec.PurgeOnDelete = true
 	cr.DeletionTimestamp = &now
 	cr.Status.Entries = []consulacl.ConsulKVEntryStatus{{Key: "config/app", Status: "synced", Owned: true}}
 	fakeClient := fake.NewClientBuilder().WithScheme(kvScheme()).WithObjects(cr).Build()

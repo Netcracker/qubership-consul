@@ -47,7 +47,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
-	consulacl "github.com/Netcracker/consul-acl-configurator/consul-acl-configurator-operator/api/v1alpha1"
+	consulacl "github.com/Netcracker/consul-acl-configurator/consul-acl-configurator-operator/api/v1"
 )
 
 const errNotFound = "ACL not found"
@@ -92,6 +92,9 @@ type ConsulACLReconciler struct {
 	Scheme           *runtime.Scheme
 	ResourceVersions map[string]string
 	OwnNamespace     string
+	// StrictNamespaceValidation limits the operator to the resources that name its namespace in
+	// operatorNamespace and to the resources of its own namespace without operatorNamespace.
+	StrictNamespaceValidation bool
 }
 
 //+kubebuilder:rbac:groups=netcracker.com,resources=consulacls,verbs=get;list;watch;create;update;patch;delete
@@ -215,10 +218,7 @@ func (r *ConsulACLReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 // isManaged reports whether the given ConsulACL resource is reconciled by this operator instance.
 func (r *ConsulACLReconciler) isManaged(cr *consulacl.ConsulACL) bool {
-	if cr.Spec.ACL != nil && cr.Spec.ACL.OperatorNamespace != "" {
-		return cr.Spec.ACL.OperatorNamespace == r.OwnNamespace
-	}
-	return cr.GetNamespace() == r.OwnNamespace
+	return isOwnedByOperator(cr.Spec.OperatorNamespace, cr.GetNamespace(), r.OwnNamespace, r.StrictNamespaceValidation)
 }
 
 // siblingEntities collects the Consul names of entities declared by the other ConsulACL
@@ -1280,7 +1280,8 @@ func boundIssuerAndAudiences(jwksURL string) (string, []string, error) {
 // authMethodUpToDate reports whether the existing auth method already has the desired type,
 // description and config values. Config keys that are not set by the operator are ignored.
 func authMethodUpToDate(existing, desired *consulApi.ACLAuthMethod) bool {
-	if existing.Type != desired.Type || existing.Description != desired.Description {
+	if existing.Type != desired.Type || existing.Description != desired.Description ||
+		existing.MaxTokenTTL != desired.MaxTokenTTL {
 		return false
 	}
 	for key, value := range desired.Config {
@@ -1295,6 +1296,9 @@ func authMethodUpToDate(existing, desired *consulApi.ACLAuthMethod) bool {
 	}
 	return true
 }
+
+// applicationsTokenTTL is the MaxTokenTTL of the applications-k8s-m2m auth method.
+const applicationsTokenTTL = 30 * time.Minute
 
 // EnsureApplicationsAuthMethod creates or updates the applications-k8s-m2m auth method in Consul.
 func EnsureApplicationsAuthMethod() error {
@@ -1317,6 +1321,7 @@ func EnsureApplicationsAuthMethod() error {
 		Name:        amName,
 		Type:        "jwt",
 		Description: "Auth method for application M2M authentication",
+		MaxTokenTTL: applicationsTokenTTL,
 		Config: map[string]interface{}{
 			"JWKSURL":        jwksURL,
 			"BoundIssuer":    issuer,

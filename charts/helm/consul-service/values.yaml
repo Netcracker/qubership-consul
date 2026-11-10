@@ -2292,7 +2292,14 @@ consulAclConfigurator:
   reconcilePeriod: 100
 
   # The parameter specifies the list of Kubernetes namespaces watched by the Consul ACL Configurator operator. Use "*" to watch all namespaces.
-  namespaces: ""
+  namespaces: "*"
+
+  # The parameter defines which custom resources without `spec.operatorNamespace` the operator processes.
+  # If `false`, the operator processes the resources that name its namespace in `spec.operatorNamespace`
+  # and all resources without `spec.operatorNamespace` in the watched namespaces.
+  # If `true`, the operator processes only the resources that name its namespace in `spec.operatorNamespace`
+  # and the resources of its own namespace without `spec.operatorNamespace`.
+  strictNamespaceValidation: false
 
   # The name of Kubernetes service for Consul ACL Configurator HTTP server.
   serviceName: "consul-acl-configurator-reconcile"
@@ -2365,9 +2372,9 @@ consulAclConfigurator:
   # BoundIssuer of the applications-k8s-m2m JWT auth method. When empty, the operator reads the issuer
   # from /.well-known/openid-configuration served by the JWKS proxy (the --service-account-issuer of the cluster).
   boundIssuer: ""
-  # BoundAudiences of the applications-k8s-m2m JWT auth method, a list of strings. When empty, the issuer is used
+  # BoundAudiences of the applications-k8s-m2m JWT auth method, a list of strings. When set to [], the issuer is used
   # (the default --api-audiences of the cluster).
-  boundAudiences: []
+  boundAudiences: ["netcracker"]
 
   # The proxy that exposes /openid/v1/jwks and /.well-known/openid-configuration of the Kubernetes API server
   # to Consul servers and to the operator.

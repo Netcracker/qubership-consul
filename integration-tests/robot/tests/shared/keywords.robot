@@ -4,6 +4,8 @@ ${CONSUL_HOST}                      %{CONSUL_HOST}
 ${CONSUL_PORT}                      %{CONSUL_PORT}
 ${CONSUL_SCHEME}                    %{CONSUL_SCHEME}
 ${MANAGED_BY_OPERATOR}              true
+${CONSUL_API_RETRY_TIMEOUT}          1 min
+${CONSUL_API_RETRY_INTERVAL}         5 s
 
 
 *** Settings ***
@@ -20,20 +22,24 @@ Library  lib/ConsulLibrary.py  consul_namespace=${CONSUL_NAMESPACE}
 *** Keywords ***
 Add Test Data To Consul
     [Arguments]  ${key}  ${value}
-    ${response} =  Put Data  ${key}  ${value}
+    ${response} =  Wait Until Keyword Succeeds  ${CONSUL_API_RETRY_TIMEOUT}  ${CONSUL_API_RETRY_INTERVAL}
+    ...  Put Data  ${key}  ${value}
     Should Be True  ${response}
 
 Get And Check Test Data From Consul
     [Arguments]  ${key}  ${value}
-    ${response} =  Get Data  ${key}
+    ${response} =  Wait Until Keyword Succeeds  ${CONSUL_API_RETRY_TIMEOUT}  ${CONSUL_API_RETRY_INTERVAL}
+    ...  Get Data  ${key}
     Should Be Equal As Strings  ${response}  ${value}
 
 Update Test Data In Consul
     [Arguments]  ${key}  ${value}
-    ${response} =  Put Data  ${key}  ${value}
+    ${response} =  Wait Until Keyword Succeeds  ${CONSUL_API_RETRY_TIMEOUT}  ${CONSUL_API_RETRY_INTERVAL}
+    ...  Put Data  ${key}  ${value}
     Should Be True  ${response}
 
 Delete Test Data From Consul
     [Arguments]  ${key}
-    ${response} =  Delete Data  ${key}
+    ${response} =  Wait Until Keyword Succeeds  ${CONSUL_API_RETRY_TIMEOUT}  ${CONSUL_API_RETRY_INTERVAL}
+    ...  Delete Data  ${key}
     Should Be True  ${response}

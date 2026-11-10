@@ -21,7 +21,7 @@ import (
 	"testing"
 	"time"
 
-	consulacl "github.com/Netcracker/consul-acl-configurator/consul-acl-configurator-operator/api/v1alpha1"
+	consulacl "github.com/Netcracker/consul-acl-configurator/consul-acl-configurator-operator/api/v1"
 	consulApi "github.com/hashicorp/consul/api"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -442,7 +442,7 @@ func TestSiblingEntities_SameNamespaceOnly(t *testing.T) {
 	deleting.DeletionTimestamp = &now
 	deleting.Finalizers = []string{consulAclFinalizer}
 	foreignOperator := newConsulACL("foreign", "ns1", `{"roles":[{"Name":"foreign-role"}]}`, true)
-	foreignOperator.Spec.ACL.OperatorNamespace = "another-consul"
+	foreignOperator.Spec.OperatorNamespace = "another-consul"
 
 	r := &ConsulACLReconciler{
 		Client:       fake.NewClientBuilder().WithScheme(kvScheme()).WithObjects(self, explicit, prefixed, otherNs, deleting, foreignOperator).Build(),

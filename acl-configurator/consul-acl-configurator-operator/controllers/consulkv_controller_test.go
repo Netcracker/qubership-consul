@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"testing"
 
-	consulacl "github.com/Netcracker/consul-acl-configurator/consul-acl-configurator-operator/api/v1alpha1"
+	consulacl "github.com/Netcracker/consul-acl-configurator/consul-acl-configurator-operator/api/v1"
 	"github.com/Netcracker/consul-acl-configurator/consul-acl-configurator-operator/util"
 	consulApi "github.com/hashicorp/consul/api"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -45,7 +45,7 @@ func newConsulKV(name, namespace string, finalizers []string, entries []consulac
 			Finalizers: finalizers,
 		},
 		Spec: consulacl.ConsulKVSpec{
-			KV: consulacl.ConsulKVConfig{Entries: entries},
+			KV: entries,
 		},
 	}
 }
