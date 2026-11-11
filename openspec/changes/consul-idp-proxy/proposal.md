@@ -11,7 +11,9 @@ Regulated customers require IdP-authenticated access before Consul can go to pro
   - It keeps the JWT → Consul token mapping in an in-memory cache and evicts an entry when the JWT or the Consul token expires.
   - It injects `X-Consul-Token` before forwarding and drops any token sent by the client.
   - It returns HTTP 401 for requests without a JWT or with an invalid or expired JWT. Such requests are never forwarded to Consul.
-- Add the Helm section `proxy` (opt-in, `proxy.enabled: false` by default) with the IdP settings (JWKS URL, issuer, audiences, claim mappings, token TTL) and a role/user declaration that follows the Kafka AKHQ LDAP proxy approach (qubership-kafka): roles with Consul policies, and the IdP groups and users bound to each role.
+- Add the Helm section `proxy` (opt-in, `proxy.enabled: false` by default).
+  - IdP settings in the style of Kafka OAuth: external issuer and optional internal URL (as `kafka.idpWhitelist`), audiences, `clockSkew`, the claim path of the roles (as `kafka.tokenRolesPath`), and the token TTL.
+  - A role declaration that follows the AKHQ model of qubership-kafka: named `roles` with Consul ACL rules, `usersconfig.groups` / `usersconfig.users` that map IdP groups and users to these roles (as `akhq.ldap.usersconfig`), and `defaultRole` (as AKHQ `default-group`).
 - Provision a Consul JWT auth method for the IdP during `helm install`/`helm upgrade`, together with the policies, roles and binding rules generated from the Helm role mappings, as a `ConsulACL` resource reconciled by the ACL Configurator operator. No manual Consul API calls are needed. How the auth method itself is declared is an open question (see design.md, Open Questions).
 - Build and publish the proxy image in CI, and document the feature.
 

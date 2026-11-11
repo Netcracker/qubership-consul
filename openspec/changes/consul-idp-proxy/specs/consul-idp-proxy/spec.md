@@ -37,7 +37,7 @@ The IdP proxy SHALL respond with HTTP 401 to any request that has no `Authorizat
 
 ### Requirement: Reject Invalid or Expired JWTs
 
-The IdP proxy SHALL validate the IdP JWT before any call to Consul: the signature against the IdP JWKS, the signing algorithm against the configured allowlist, `exp` and `nbf` (with the configured clock-skew leeway), `iss` against `proxy.idp.issuer`, and `aud` against `proxy.idp.audiences`. When validation fails, the proxy SHALL respond with HTTP 401 and SHALL NOT call `/v1/acl/login` or forward the request.
+The IdP proxy SHALL validate the IdP JWT before any call to Consul: the signature against the IdP JWKS, the signing algorithm against the configured allowlist, `exp` and `nbf` (with the leeway `proxy.idp.clockSkew`), `iss` against the external `proxy.idp.issuer`, and `aud` against `proxy.idp.audiences`. When `proxy.idp.internalUrl` is set, the JWKS SHALL be fetched through it, while `iss` is still checked against the external issuer. When validation fails, the proxy SHALL respond with HTTP 401 and SHALL NOT call `/v1/acl/login` or forward the request.
 
 #### Scenario: Expired JWT
 
@@ -54,6 +54,11 @@ The IdP proxy SHALL validate the IdP JWT before any call to Consul: the signatur
 
 - **WHEN** a client sends a correctly signed, unexpired JWT whose `iss` differs from `proxy.idp.issuer`, or whose `aud` contains none of `proxy.idp.audiences`
 - **THEN** the proxy SHALL respond with HTTP 401 and SHALL NOT send any request to Consul
+
+#### Scenario: Internal IdP address
+
+- **WHEN** `proxy.idp.issuer` is `https://idp.example.com`, `proxy.idp.internalUrl` is `http://idp.security:8080`, and a client sends a valid JWT with `iss: https://idp.example.com`
+- **THEN** the proxy SHALL fetch the JWKS from `http://idp.security:8080` and SHALL accept the JWT
 
 #### Scenario: Unsupported algorithm
 
@@ -80,7 +85,7 @@ When a valid IdP JWT has no entry in the token cache, the IdP proxy SHALL call C
 
 #### Scenario: Valid JWT without a mapped role
 
-- **WHEN** a valid IdP JWT does not match any binding rule of the IdP auth method, and Consul login is denied
+- **WHEN** `proxy.defaultRole` is empty, a valid IdP JWT does not match any binding rule of the IdP auth method, and Consul login is denied
 - **THEN** the proxy SHALL respond with HTTP 403, SHALL NOT forward the request, and SHALL NOT create a cache entry
 
 #### Scenario: Consul unavailable during login
@@ -165,19 +170,40 @@ For authorized requests, the IdP proxy SHALL forward the method, path, query (wi
 
 ### Requirement: Automatic Provisioning of the IdP Auth Method and Role Mappings
 
-When `proxy.enabled: true`, the Helm chart SHALL provision, without manual Consul API calls, the IdP auth method from `proxy.idp` (JWKS URL, issuer, audiences, algorithms, claim mappings, `tokenTTL` as `MaxTokenTTL`), and a `ConsulACL` resource reconciled by the ACL Configurator operator. For each entry of `proxy.roles`, the resource SHALL contain a policy with the entry rules, a role referencing that policy, and one binding rule under the IdP auth method per listed group and per listed user.
+When `proxy.enabled: true`, the Helm chart SHALL provision, without manual Consul API calls, the IdP auth method from `proxy.idp`, and a `ConsulACL` resource reconciled by the ACL Configurator operator. The auth method SHALL get the JWKS URL (resolved from `jwksUrl`, `internalUrl` or `issuer`), `BoundIssuer` (`issuer`), `BoundAudiences`, `JWTSupportedAlgs`, `ClockSkewLeeway` (`clockSkew`), `MaxTokenTTL` (`tokenTTL`), `ClaimMappings` (`usernameClaim` → `username`) and `ListClaimMappings` (`groupsClaimPath` as a JSON pointer → `groups`). The roles follow the AKHQ declaration model of qubership-kafka:
+
+- each entry of `proxy.roles` SHALL produce a policy `idp_<name>` with the entry rules and a Consul role `idp_<name>` that references it;
+- each role listed for a group in `proxy.usersconfig.groups` SHALL produce a binding rule `BindName: idp_<role>`, `Selector: "<group>" in list.groups`;
+- each role listed for a user in `proxy.usersconfig.users` SHALL produce a binding rule `BindName: idp_<role>`, `Selector: value.username == "<user>"`;
+- a non-empty `proxy.defaultRole` SHALL produce a binding rule `BindName: idp_<defaultRole>` with an empty selector;
+- all binding rules SHALL use the IdP auth method and `BindType: role`.
 
 > **Open:** the mechanism that creates the auth method itself (a `ConsulACL` entry or an operator-managed global method) is decided in design.md, Open Questions, item 1.
 
 #### Scenario: Install with the proxy enabled
 
-- **WHEN** the chart is installed with `proxy.enabled: true` and `proxy.roles` contains `consul-kv-reader` with `groups: ["consul-readers"]` and `users: ["alice"]`
-- **THEN** after reconciliation Consul SHALL contain the IdP auth method of type `jwt`, the policy and role for `consul-kv-reader`, a binding rule with selector `"consul-readers" in list.groups`, and a binding rule with selector `value.username == "alice"`, both with `BindType: role`
+- **WHEN** the chart is installed with `proxy.enabled: true`, `proxy.roles` declares `kv-reader` and `catalog-admin`, `usersconfig.groups` maps `consul-readers` to `[kv-reader]`, and `usersconfig.users` maps `alice` to `[kv-reader, catalog-admin]`
+- **THEN** after reconciliation Consul SHALL contain the IdP auth method of type `jwt`, the policies and roles `idp_kv-reader` and `idp_catalog-admin`, one binding rule with selector `"consul-readers" in list.groups` bound to `idp_kv-reader`, and two binding rules with selector `value.username == "alice"` bound to `idp_kv-reader` and `idp_catalog-admin`
+
+#### Scenario: Roles from the platform IdP token
+
+- **WHEN** `groupsClaimPath` is `resource_access.account.roles` and a JWT contains `"resource_access": {"account": {"roles": ["consul-readers"]}}`
+- **THEN** a login with that JWT SHALL get the role `idp_kv-reader`
+
+#### Scenario: Default role
+
+- **WHEN** `proxy.defaultRole` is `kv-reader` and a valid JWT matches no group and no user of `usersconfig`
+- **THEN** a login with that JWT SHALL get the role `idp_kv-reader`
+
+#### Scenario: Reference to an undeclared role
+
+- **WHEN** `usersconfig.groups` or `usersconfig.users` or `defaultRole` references a role that is not declared in `proxy.roles`
+- **THEN** `helm install` and `helm upgrade` SHALL fail with an error that names the missing role
 
 #### Scenario: Role mapping changed on upgrade
 
-- **WHEN** a group is removed from a role in `proxy.roles` and `helm upgrade` is run
-- **THEN** the operator SHALL delete the binding rule of that group, and new logins of members of that group only SHALL NOT get the role
+- **WHEN** a role is removed from a group in `proxy.usersconfig.groups` and `helm upgrade` is run
+- **THEN** the operator SHALL delete the corresponding binding rule, and new logins of members of that group only SHALL NOT get the role
 
 #### Scenario: Proxy disabled after being enabled
 

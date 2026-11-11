@@ -57,9 +57,10 @@
 
 - [ ] 6.1 Add the `proxy` section to `values.yaml` (`enabled: false`, image, replicas, resources, affinity, tolerations, nodeSelector, priorityClassName, extraLabels, securityContext, `idp.*`, `cache.*`, `roles`, `service`, `ingress`, `disruptionBudget`, `networkPolicy`) and to `values.schema.json`
 - [ ] 6.2 Add templates `idp-proxy-deployment.yaml`, `idp-proxy-service.yaml`, `idp-proxy-serviceaccount.yaml`, `idp-proxy-disruptionbudget.yaml`, the optional NetworkPolicy and Ingress/Route, all guarded by `proxy.enabled`
-- [ ] 6.3 Add `idp-proxy-consulacl.yaml`: render `proxy.roles` into a `ConsulACL` resource with `explicitName: true`, policies `idp_<name>`, roles `idp_<name>`, and binding rules with `AuthMethod: <authMethodName>`, `BindType: role`, and selectors `"<group>" in list.groups` / `value.username == "<user>"`
-- [ ] 6.4 Align the `proxy.roles` format with the AKHQ LDAP proxy values of qubership-kafka
-- [ ] 6.5 Helm template tests: default render has no proxy resources; enabled render contains the expected Deployment/Service/ConsulACL; the selectors are escaped correctly
+- [ ] 6.3 Add `idp-proxy-consulacl.yaml` (AKHQ model, design.md decision 8): `proxy.roles` → policies and roles `idp_<name>`; each `(group, role)` pair of `proxy.usersconfig.groups` → a binding rule with `"<group>" in list.groups`; each `(user, role)` pair of `proxy.usersconfig.users` → a binding rule with `value.username == "<user>"`; `proxy.defaultRole` → a binding rule with an empty selector; all with `AuthMethod: <authMethodName>`, `BindType: role`, and `explicitName: true`
+- [ ] 6.4 Resolve the IdP addresses in a helper, as `kafka.idpWhitelist`: external `issuer` for `BoundIssuer`, and `jwksUrl`, or else `internalUrl`, or else `issuer` for the JWKS URL. Convert `groupsClaimPath` (`resource_access.account.roles`) to a JSON pointer for `ListClaimMappings`
+- [ ] 6.5 Fail the template on a role that `usersconfig` or `defaultRole` references but `roles` does not declare, and on names or values that break Consul naming or selector quoting
+- [ ] 6.6 Helm template tests: default render has no proxy resources; enabled render contains the expected Deployment/Service/ConsulACL; a group with two roles gives two binding rules; the selectors are escaped correctly; an undeclared role fails the render
 
 > Covers: Opt-in Deployment, Separate Deployment, Automatic Provisioning of the IdP Auth Method and Role Mappings
 
@@ -67,9 +68,10 @@
 
 ## 7. Integration tests
 
-- [ ] 7.1 Add a mock IdP to the integration-tests image (JWKS endpoint, JWT signing helper)
-- [ ] 7.2 Robot tests: no header → 401; expired/invalid JWT → 401 and no Consul request; valid JWT → scoped response; read-only role cannot write; JWT expiry → entry evicted and request rejected; role mapping change applied after upgrade
-- [ ] 7.3 Regression: with `proxy.enabled: false`, the existing ACL and auth-method tests pass unchanged
+- [ ] 7.1 Use the real IdP as the Kafka ACL tests do (`OAuthLibrary`: register a client with `registrationToken`, `client_credentials` grant). Add `global.secrets.integrationTests.idp.{username,password,registrationToken}` and `IDENTITY_PROVIDER_URL` to the integration-tests secret and Deployment, and exclude the proxy tests through `tags_exclusion.py` when they are not set
+- [ ] 7.2 Add a local JWT signing helper (own key pair and JWKS) for the negative cases that the real IdP cannot produce: wrong key, `alg: none`, wrong `iss`/`aud`, short `exp`
+- [ ] 7.3 Robot tests: no header → 401; expired/invalid JWT → 401 and no Consul request; valid JWT → scoped response; read-only role cannot write; JWT expiry → entry evicted and request rejected; role mapping change applied after upgrade
+- [ ] 7.4 Regression: with `proxy.enabled: false`, the existing ACL and auth-method tests pass unchanged
 
 > Covers: all requirements
 

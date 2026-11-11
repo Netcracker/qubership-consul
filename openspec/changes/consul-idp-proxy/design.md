@@ -70,10 +70,12 @@ See proposal.md: UI SSO, LDAP bind, replacing existing auth methods, shared cach
 
 **Decision:** The proxy validates the JWT locally before it calls Consul:
 
-- signature against the IdP JWKS (`proxy.idp.jwksUrl`), cached in memory, refreshed periodically and on an unknown `kid`;
+- signature against the IdP JWKS, cached in memory, refreshed periodically and on an unknown `kid`;
 - an algorithm allowlist (default `RS256`, `ES256`), never `none`;
-- `exp` and `nbf` with a small clock-skew tolerance;
+- `exp` and `nbf` with the leeway `proxy.idp.clockSkew` (seconds, same meaning as `kafka.oauth.clockSkew`; also set as `ClockSkewLeeway` of the auth method);
 - `iss` == `proxy.idp.issuer`, and `aud` containing one of `proxy.idp.audiences`.
+
+**IdP addresses (as in Kafka `idpWhitelist`):** `proxy.idp.issuer` is the external URL and must equal the `iss` claim. `proxy.idp.internalUrl` is optional. When it is set, the proxy and Consul use it for network calls to the IdP (`<internalUrl>/.well-known/openid-configuration` → `jwks_uri`, with the host replaced by the internal one), while `iss` is still checked against the external issuer. `proxy.idp.jwksUrl` overrides discovery entirely. `proxy.idp.caCert` gives the CA for HTTPS calls to the IdP (`JWKSCACert` of the auth method). Consul gets the resolved `JWKSURL`, not `OIDCDiscoveryURL`, because discovery in Consul checks the issuer against the discovery URL and fails when the internal and external URLs differ.
 
 A validation failure returns 401 with `WWW-Authenticate: Bearer error="invalid_token"` and calls neither `/v1/acl/login` nor any other Consul endpoint.
 
@@ -118,39 +120,68 @@ Concurrent requests with the same uncached JWT share one login (`singleflight`).
 
 ### 8. Helm role declaration (AKHQ-like)
 
-**Decision:** Roles are declared in values and rendered into one `ConsulACL` resource with `spec.acl.explicitName: true`:
+**Reference:** qubership-kafka has no separate proxy: AKHQ authenticates LDAP users itself (Micronaut). What this change takes from it is the declaration model of `kafka-service` values and of the AKHQ security configuration (`docs/public/security/akhq.md`):
+
+- permission sets are declared once, by name (AKHQ `roles` / `groups`);
+- external identities are mapped to them in `akhq.ldap.usersconfig`: `groups[].name` (LDAP group) → `groups[]` (AKHQ groups), and `users[].username` → `groups[]`;
+- `default-group` applies to every authenticated user.
+
+From Kafka broker OAuth it also takes `kafka.tokenRolesPath` (default `resource_access.account.roles`, where the platform IdP puts the roles), `kafka.oauth.clockSkew`, and the external/internal issuer pair of `kafka.idpWhitelist`.
+
+**Decision:** The same model, with Consul policies as the permission sets. The values are rendered into one `ConsulACL` resource with `spec.acl.explicitName: true`:
 
 ```yaml
 proxy:
   enabled: false
   replicas: 2
   idp:
-    jwksUrl: ""             # https://idp.example.com/.well-known/jwks.json
-    issuer: ""
+    issuer: ""                 # external IdP URL, must equal the iss claim
+    internalUrl: ""            # optional internal IdP URL for JWKS calls (as the internal URL of kafka.idpWhitelist)
+    jwksUrl: ""                # optional, overrides discovery
+    caCert: ""                 # optional CA of the IdP HTTPS endpoint
     audiences: []
     algorithms: ["RS256", "ES256"]
-    tokenTTL: 1h            # MaxTokenTTL of the auth method
+    clockSkew: 10              # seconds, as kafka.oauth.clockSkew
+    tokenTTL: 1h               # MaxTokenTTL of the auth method
     authMethodName: platform-idp
-    claimMappings:          # claim -> value.<name> for binding-rule selectors
-      preferred_username: username
-    listClaimMappings:      # claim -> list.<name>
-      groups: groups
+    usernameClaim: preferred_username       # -> value.username
+    groupsClaimPath: resource_access.account.roles  # -> list.groups, as kafka.tokenRolesPath
   cache:
     maxEntries: 10000
+  # Consul permission sets, as AKHQ roles/groups: name -> Consul ACL rules
   roles:
-    - name: consul-kv-reader
+    kv-reader:
       description: "Read access to KV"
       rules: |
         key_prefix "" { policy = "read" }
-      groups: ["consul-readers"]
-      users: ["alice"]
+    catalog-admin:
+      rules: |
+        service_prefix "" { policy = "write" }
+        node_prefix "" { policy = "read" }
+  # Role for every valid IdP identity, as AKHQ default-group. Empty: identities without a mapping get 403.
+  defaultRole: ""
+  # IdP identities -> Consul roles, as akhq.ldap.usersconfig
+  usersconfig:
+    groups:
+      - name: consul-readers   # a value of the groupsClaimPath claim
+        roles: [kv-reader]
+    users:
+      - username: alice        # a value of the usernameClaim claim
+        roles: [kv-reader, catalog-admin]
 ```
 
 Rendering:
 
-- each role produces a policy `idp_<name>` (`Rules`), a role `idp_<name>` (`policy_names`), and one binding rule per group (`Selector: "\"<group>\" in list.groups"`) and per user (`Selector: "value.username == \"<user>\""`), all with `AuthMethod: <authMethodName>` and `BindType: role`;
-- explicit selectors are already passed to Consul verbatim (`convertBindRuleAdapterToBindRule`), so the operator needs no change for the bind rules;
-- the format of `roles` must be aligned with the AKHQ LDAP proxy values of qubership-kafka before implementation (see Open Questions).
+- each entry of `roles` produces a policy `idp_<name>` (`Rules`) and a Consul role `idp_<name>` (`policy_names: [idp_<name>]`);
+- each `(group, role)` pair of `usersconfig.groups` produces a binding rule with `BindName: idp_<role>` and `Selector: "<group>" in list.groups`. A Consul binding rule binds one role, so a group with N roles gives N rules;
+- each `(user, role)` pair of `usersconfig.users` produces a binding rule with `Selector: value.username == "<user>"`;
+- `defaultRole` produces a binding rule with an empty selector, which matches every login;
+- all rules use `AuthMethod: <authMethodName>` and `BindType: role`;
+- the auth method maps `usernameClaim` in `ClaimMappings` to `username`, and maps `groupsClaimPath`, converted to a JSON pointer (`/resource_access/account/roles`), in `ListClaimMappings` to `groups`;
+- the template fails when `usersconfig` or `defaultRole` references a role that is not declared in `roles`, or when a name breaks Consul naming or selector quoting;
+- explicit selectors are already passed to Consul verbatim (`convertBindRuleAdapterToBindRule`), so the operator needs no change for the binding rules.
+
+**Difference from AKHQ:** AKHQ reads LDAP groups through a manager bind. Here the groups come only from the JWT claims issued by the IdP, so the proxy has no LDAP connection and no LDAP credentials. The LDAP/AD integration stays on the IdP side.
 
 ### 9. Provisioning of the IdP JWT auth method
 
@@ -167,7 +198,7 @@ The way the auth method is declared is **not decided yet**. See Open Questions, 
 - **JWKS endpoint unavailable.** New JWTs cannot be validated (401), while cached tokens keep working until they expire. The last good JWKS stays in memory.
 - **Login token accumulation** if logout fails. Bounded by `MaxTokenTTL`.
 - **Memory.** Bounded by `cache.maxEntries`.
-- **Clock skew** between the IdP, the proxy and Consul. A configurable leeway (default 30s).
+- **Clock skew** between the IdP, the proxy and Consul. A configurable leeway `proxy.idp.clockSkew` (default 10s, as in Kafka).
 
 ## Migration Plan
 
@@ -178,7 +209,7 @@ Opt-in. Existing installations are unchanged until `proxy.enabled: true`. Enabli
 1. **How the IdP auth method is declared** (blocking for tasks section 5):
    - **A. Extend `ConsulACL`** with an `auth_methods` entry in `spec.acl.json` (`Name`, `Type: jwt`, `Config`: `JWKSURL`, `JWKSCACert`, `BoundIssuer`, `BoundAudiences`, `ClaimMappings`, `ListClaimMappings`, `JWTSupportedAlgs`; `MaxTokenTTL`). Create, update and delete follow the existing lifecycle and ownership. This matches the ticket wording ("ConsulACL CR for the JWT auth method"), but it needs a delta spec for `consul-acl-auth-method` and RBAC thinking: any namespace that may create `ConsulACL` could then create auth methods, which may need restricting to the operator namespace.
    - **B. Operator-managed second global method.** The operator creates and updates `proxy.idp.authMethodName` at startup from env, the same way it handles `applications-k8s-m2m`. The generated `ConsulACL` carries only policies, roles and binding rules. This is simpler and has no API change, but the method lives outside the CR lifecycle (it is not removed when the proxy is disabled unless the cleanup is handled separately).
-2. Should a valid JWT with no mapped role get 403 (proposed) or 401?
-3. The exact values format of the AKHQ LDAP proxy in qubership-kafka, to keep `proxy.roles` compatible.
+2. Should a valid JWT with no mapped role (and an empty `defaultRole`) get 403 (proposed) or 401?
+3. The default of `groupsClaimPath`: `resource_access.account.roles` (the platform IdP, as `kafka.tokenRolesPath`) or `groups` (a generic OIDC IdP)? Do we need several group claims at once?
 4. TLS on the proxy listener: reuse the chart cert-manager integration (as for the backup daemon), or terminate at Ingress only?
-5. Do the IdP JWKS endpoints need a custom CA (`proxy.idp.caCert`)?
+5. Several trusted issuers, as in the `kafka.idpWhitelist` list? A Consul `jwt` auth method has one `BoundIssuer`, so each issuer would need its own auth method and its own set of binding rules. The proposal is one issuer in this change.
