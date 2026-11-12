@@ -212,6 +212,22 @@ When `proxy.enabled: true`, the Helm chart SHALL provision, without manual Consu
 
 ---
 
+### Requirement: Deployment Preconditions
+
+When `proxy.enabled: true`, the Helm chart SHALL fail `helm install` and `helm upgrade` with an error that names the missing setting if the ACL Configurator is disabled (`consulAclConfigurator.enabled: false`) or Consul ACLs are disabled. Without the ACL Configurator nothing reconciles the generated `ConsulACL`, and without ACLs the injected tokens restrict nothing.
+
+#### Scenario: ACL Configurator disabled
+
+- **WHEN** the chart is installed with `proxy.enabled: true` and `consulAclConfigurator.enabled: false`
+- **THEN** the installation SHALL fail with an error stating that the IdP proxy requires the ACL Configurator
+
+#### Scenario: ACLs disabled
+
+- **WHEN** the chart is installed with `proxy.enabled: true` and Consul ACLs disabled
+- **THEN** the installation SHALL fail with an error stating that the IdP proxy requires Consul ACLs
+
+---
+
 ### Requirement: Opt-in Deployment
 
 The Helm chart SHALL deploy the IdP proxy only when `proxy.enabled: true`. The default SHALL be `false`. When disabled, the rendered chart SHALL contain no proxy resources and no generated `ConsulACL` resource, and the existing auth methods and the Consul server Service SHALL be unaffected.

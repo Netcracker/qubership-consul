@@ -35,7 +35,7 @@ The existing Consul server Service and port 8500/8501 are unchanged. Consul clie
 
 - Browser SSO for the Consul UI (redirect to the IdP, session cookies). The proxy serves API clients that send a Bearer token.
 - LDAP bind authentication. The IdP is the LDAP/OAuth integration point; the proxy accepts only JWTs issued by it.
-- Replacing the bootstrap token or the existing auth methods (`applications-k8s-m2m`, `{fullname}-k8s-auth-method`).
+- Removing the bootstrap token or the existing auth methods (`applications-k8s-m2m`, `{fullname}-k8s-auth-method`). Clients move from the shared bootstrap token to their own scoped tokens; the bootstrap token stays only for system components and administrators.
 - Shared or persistent token cache across proxy replicas.
 - Consul Enterprise features (namespaces, admin partitions, OIDC auth method).
 

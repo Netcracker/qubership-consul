@@ -62,7 +62,9 @@
 - [ ] 6.5 Fail the template on a role that `usersconfig` or `defaultRole` references but `roles` does not declare, and on names or values that break Consul naming or selector quoting
 - [ ] 6.6 Helm template tests: default render has no proxy resources; enabled render contains the expected Deployment/Service/ConsulACL; a group with two roles gives two binding rules; the selectors are escaped correctly; an undeclared role fails the render
 
-> Covers: Opt-in Deployment, Separate Deployment, Automatic Provisioning of the IdP Auth Method and Role Mappings
+- [ ] 6.7 Fail the render when `proxy.enabled: true` and `consulAclConfigurator.enabled: false` or Consul ACLs are disabled, with a test for each case
+
+> Covers: Opt-in Deployment, Separate Deployment, Automatic Provisioning of the IdP Auth Method and Role Mappings, Deployment Preconditions
 
 ---
 
