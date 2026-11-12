@@ -360,30 +360,16 @@ If no row matches, say the reference does not cover it and refer to the [Officia
 
 Run read-only commands only.
 
-### When no logs are provided
-
-If the user did not attach logs, pod status, or events, collect them yourself with the read-only commands below before matching a failure mode. Do not ask the user to collect them unless `kubectl` is unavailable or access is denied.
-
-1. Resolve the namespace. If the user did not name it, find it with `kubectl get pods -A | grep consul`; if several namespaces match, ask which one.
-2. Collect pod state and events:
-   ```bash
-   kubectl get pods,pvc -n <namespace> -o wide
-   kubectl get events -n <namespace> --sort-by=.lastTimestamp | tail -n 50
-   kubectl describe pod -n <namespace> <failing-pod>
-   ```
-3. Collect logs from every Consul server pod and from the pods tied to the symptom (client, ACL init, backup daemon):
-   ```bash
-   kubectl logs -n <namespace> <pod> --all-containers --tail=500
-   # Pod restarted or in CrashLoopBackOff
-   kubectl logs -n <namespace> <pod> --all-containers --previous --tail=500
-   ```
-4. Apply the `grep` filters from the subsections below to the collected output.
-
-If a command fails or returns nothing, state that in the assessment instead of guessing the missing evidence.
+If the user provided logs, search them for the signals below. If logs were not provided, run the `kubectl` commands below yourself — do not ask the user to collect them unless `kubectl` is unavailable or access is denied. If the namespace is unknown, find it with `kubectl get pods -A | grep consul`; if several namespaces match, ask which one. For a restarted pod or one in `CrashLoopBackOff`, add `--previous` to `kubectl logs`. If a command fails or returns nothing, state that in the assessment instead of guessing.
 
 ### Consul server logs
 
 ```bash
+# Pod state and recent events
+kubectl get pods,pvc -n <namespace> -o wide
+kubectl get events -n <namespace> --sort-by=.lastTimestamp | tail -n 50
+kubectl describe pod -n <namespace> <consul-server-pod>
+
 # Quorum and leader election
 kubectl logs -n <namespace> <consul-server-pod> | grep -E "No cluster leader|Election timeout reached"
 
@@ -416,7 +402,7 @@ kubectl exec -n <namespace> deployment/<consul-fullname>-backup-daemon -- curl -
 
 ## Safety
 
-Commands in this file and in the references are recommendations for an authorized operator, not permission to run them. The exception is the read-only collection commands in `### When no logs are provided` (`kubectl get`, `describe`, `logs`, and the `exec` status, `df`, and `listbackups` queries), which you may run without approval. Before scaling the server StatefulSet to `0`, removing snapshots, restoring from a backup, resetting ACL, removing `/data/node-id`, or creating auth methods after a Velero restore, get explicit user approval and confirm the namespace, the affected pods, and that a valid backup exists.
+Commands in this file and in the references are recommendations for an authorized operator, not permission to run them. The exception is the read-only commands in `## Log Analysis Tips`, which you may run without approval when logs were not provided. Before scaling the server StatefulSet to `0`, removing snapshots, restoring from a backup, resetting ACL, removing `/data/node-id`, or creating auth methods after a Velero restore, get explicit user approval and confirm the namespace, the affected pods, and that a valid backup exists.
 
 ## Assessment
 
