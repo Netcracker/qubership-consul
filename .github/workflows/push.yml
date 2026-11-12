@@ -67,6 +67,9 @@ jobs:
           - name: qubership-consul-remove-tokens
             file: remove-tokens/docker/Dockerfile
             context: remove-tokens
+          - name: qubership-consul-crd-init
+            file: crd-init/docker/Dockerfile
+            context: crd-init
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
