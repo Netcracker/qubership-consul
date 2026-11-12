@@ -91,7 +91,7 @@ Before you start the installation and configuration of a Consul cluster, ensure 
 
 * Kubernetes 1.21+ or OpenShift 4.10+
 * `kubectl` 1.21+ or `oc` 4.10+ CLI
-* Helm 3.0+
+* Helm 4.0+
 * All required CRDs are installed
 
 Note the following terms:
