@@ -360,45 +360,8 @@ If no row matches, say the reference does not cover it and refer to the [Officia
 
 Run read-only commands only.
 
-If the user provided logs, search them for the signals below. If logs were not provided, run the `kubectl` commands below yourself — do not ask the user to collect them unless `kubectl` is unavailable or access is denied. If the namespace is unknown, find it with `kubectl get pods -A | grep consul`; if several namespaces match, ask which one. For a restarted pod or one in `CrashLoopBackOff`, add `--previous` to `kubectl logs`. If a command fails or returns nothing, state that in the assessment instead of guessing.
+If the user provided logs, search them for the signals below.
 
-### Consul server logs
-
-```bash
-# Pod state and recent events
-kubectl get pods,pvc -n <namespace> -o wide
-kubectl get events -n <namespace> --sort-by=.lastTimestamp | tail -n 50
-kubectl describe pod -n <namespace> <consul-server-pod>
-
-# Quorum and leader election
-kubectl logs -n <namespace> <consul-server-pod> | grep -E "No cluster leader|Election timeout reached"
-
-# Raft log, disk, and NFS
-kubectl logs -n <namespace> <consul-server-pod> | grep -E "failed to get log|no space left on device|raft.db: invalid argument"
-
-# Current leader (from any Consul node)
-kubectl exec -n <namespace> <consul-server-pod> -- curl -s localhost:8500/v1/status/leader
-
-# Data volume usage
-kubectl exec -n <namespace> <consul-server-pod> -- df -h /consul/data
-```
-
-### Consul client and ACL init logs
-
-```bash
-kubectl logs -n <namespace> <consul-client-pod> | grep "Error while renaming Node ID"
-kubectl logs -n <namespace> <acl-init-pod> | grep "ACLs already bootstrapped"
-```
-
-### Backup daemon
-
-```bash
-kubectl logs -n <namespace> deployment/<consul-fullname>-backup-daemon | grep -E "BusyError|Unable to insert to jobs database|ACL not found"
-
-# Backup list and status
-kubectl exec -n <namespace> deployment/<consul-fullname>-backup-daemon -- curl -s localhost:8080/listbackups
-kubectl exec -n <namespace> deployment/<consul-fullname>-backup-daemon -- curl -s localhost:8080/listbackups/<ID>
-```
 
 ## Safety
 
