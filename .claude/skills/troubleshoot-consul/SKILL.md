@@ -325,57 +325,51 @@ Steps:
 
 ## Failure scenarios
 
-| Symptom in a ticket or pipeline | Signal in logs, monitoring, or alerts | Section header | Scenario |
-| --- | --- | --- | --- |
-| One server crashed; requests fail until a new leader is elected | Current cluster size goes down on the Consul monitoring dashboard | `## Leader Server Failure` | - |
-| All servers failed | `Down` status on monitoring | `## All Servers Failure` | - |
-| Requests slow or failing at the CPU limit | `ConsulCPULoadAlarm` | `## CPU Limit` | [CPU overload](./references/cpu_overload.md) |
-| Requests slow or failing at the memory limit | `ConsulMemoryUsageAlarm` | `## Memory Limit` | [Memory limit](./references/memory_limit.md) |
-| Consul non-operational, disk full | `raft: Failed to commit logs: no space left on device` | `## Data Is Out of Space` | [Disk filled on all nodes](./references/disk_filled_on_all_nodes.md) |
-| Requests to Consul fail; quorum lost | `No cluster leader`, `Election timeout reached, restarting election` | `## No Cluster Leader - Election Timeout Reached` | - |
-| Services cannot register | `Error while renaming Node ID`, `Node name ... is reserved by node ...` | `## Consul Client Failed Renaming Node ID` | - |
-| Applications receive HTTP 429 | Concurrent connections per client IP over `http_max_conns_per_client` | `## Consul Responses with 429 Code` | - |
-| Raft log read error | `agent.server.raft: failed to get log` | `## Failed to get log` | - |
-| Switchover fails on backup timeout | `BusyError: database is locked`, `Unable to insert to jobs database` | `## Backup Daemon SQLite Database Locked` | - |
-| Server pod does not start after deploy | Pod stuck; check its containers | `## Consul Server Pod Does Not Start` | - |
-| Server pod fails on monitoring | Monitoring container logs, `smDbHost` | `### Monitoring` | - |
-| Pods start on incorrect nodes | Predefined PVs with affinity; pods bound to wrong nodes | `### Consul Starts on Incorrect Nodes` | - |
-| Client pod does not start | Port `8502` busy on the node | `### Consul Client Pod does not Start` | - |
-| `connect-inject` pod fails | Errors in the sidecar container | `### Pod Failed with Consul Sidecar Container` | - |
-| Consul pods fail to start on NFS | `Failed to start Raft: open /consul/data/raft/raft.db: invalid argument` | `## Consul and NFS` | - |
-| ACL unresolvable or bootstrap token lost | `ACLs already bootstrapped but the ACL token was not written to a Kubernetes secret` | `## Reset ACL` | - |
-| Full backup fails with several datacenters | `There is problem with getting snapshot from datacenter: dc2, details: ACL not found` | `## Multiple datacenters configuration` | - |
-| Clients or applications cannot work with Consul after restore | Restore from Velero backup without backup daemon | `## Consul Does Not Work After Restore From Velero Backup` | - |
-| No Consul server pods in namespace | `ConsulDoesNotExistAlarm` | `## ConsulDoesNotExistAlarm` | - |
-| At least one server failed, cluster still works | `ConsulIsDegradedAlarm` | `## ConsulIsDegradedAlarm` | - |
-| Cluster down, no available pods | `ConsulIsDownAlarm` | `## ConsulIsDownAlarm` | - |
-| A server pod uses 95% of the CPU limit | `ConsulCPULoadAlarm` | `## ConsulCPULoadAlarm` | [CPU overload](./references/cpu_overload.md) |
-| A server pod uses 95% of the memory limit | `ConsulMemoryUsageAlarm` | `## ConsulMemoryUsageAlarm` | [Memory limit](./references/memory_limit.md) |
+| Symptom in a ticket or pipeline                                 | Signal in logs, monitoring, or alerts                                                 | Section header                                             | Scenario                                                             |
+|-----------------------------------------------------------------|---------------------------------------------------------------------------------------|------------------------------------------------------------|----------------------------------------------------------------------|
+| One server crashed; requests fail until a new leader is elected | Current cluster size goes down on the Consul monitoring dashboard                     | `## Leader Server Failure`                                 | -                                                                    |
+| All servers failed                                              | `Down` status on monitoring                                                           | `## All Servers Failure`                                   | -                                                                    |
+| Requests slow or failing at the CPU limit                       | `ConsulCPULoadAlarm`                                                                  | `## CPU Limit`                                             | [CPU overload](./references/cpu_overload.md)                         |
+| Requests slow or failing at the memory limit                    | `ConsulMemoryUsageAlarm`                                                              | `## Memory Limit`                                          | [Memory limit](./references/memory_limit.md)                         |
+| Consul non-operational, disk full                               | `raft: Failed to commit logs: no space left on device`                                | `## Data Is Out of Space`                                  | [Disk filled on all nodes](./references/disk_filled_on_all_nodes.md) |
+| Requests to Consul fail; quorum lost                            | `No cluster leader`, `Election timeout reached, restarting election`                  | `## No Cluster Leader - Election Timeout Reached`          | -                                                                    |
+| Services cannot register                                        | `Error while renaming Node ID`, `Node name ... is reserved by node ...`               | `## Consul Client Failed Renaming Node ID`                 | -                                                                    |
+| Applications receive HTTP 429                                   | Concurrent connections per client IP over `http_max_conns_per_client`                 | `## Consul Responses with 429 Code`                        | -                                                                    |
+| Raft log read error                                             | `agent.server.raft: failed to get log`                                                | `## Failed to get log`                                     | -                                                                    |
+| Switchover fails on backup timeout                              | `BusyError: database is locked`, `Unable to insert to jobs database`                  | `## Backup Daemon SQLite Database Locked`                  | -                                                                    |
+| Server pod does not start after deploy                          | Pod stuck; check its containers                                                       | `## Consul Server Pod Does Not Start`                      | -                                                                    |
+| Server pod fails on monitoring                                  | Monitoring container logs, `smDbHost`                                                 | `### Monitoring`                                           | -                                                                    |
+| Pods start on incorrect nodes                                   | Predefined PVs with affinity; pods bound to wrong nodes                               | `### Consul Starts on Incorrect Nodes`                     | -                                                                    |
+| Client pod does not start                                       | Port `8502` busy on the node                                                          | `### Consul Client Pod does not Start`                     | -                                                                    |
+| `connect-inject` pod fails                                      | Errors in the sidecar container                                                       | `### Pod Failed with Consul Sidecar Container`             | -                                                                    |
+| Consul pods fail to start on NFS                                | `Failed to start Raft: open /consul/data/raft/raft.db: invalid argument`              | `## Consul and NFS`                                        | -                                                                    |
+| ACL unresolvable or bootstrap token lost                        | `ACLs already bootstrapped but the ACL token was not written to a Kubernetes secret`  | `## Reset ACL`                                             | -                                                                    |
+| Full backup fails with several datacenters                      | `There is problem with getting snapshot from datacenter: dc2, details: ACL not found` | `## Multiple datacenters configuration`                    | -                                                                    |
+| Clients or applications cannot work with Consul after restore   | Restore from Velero backup without backup daemon                                      | `## Consul Does Not Work After Restore From Velero Backup` | -                                                                    |
+| No Consul server pods in namespace                              | `ConsulDoesNotExistAlarm`                                                             | `## ConsulDoesNotExistAlarm`                               | -                                                                    |
+| At least one server failed, cluster still works                 | `ConsulIsDegradedAlarm`                                                               | `## ConsulIsDegradedAlarm`                                 | -                                                                    |
+| Cluster down, no available pods                                 | `ConsulIsDownAlarm`                                                                   | `## ConsulIsDownAlarm`                                     | -                                                                    |
+| A server pod uses 95% of the CPU limit                          | `ConsulCPULoadAlarm`                                                                  | `## ConsulCPULoadAlarm`                                    | [CPU overload](./references/cpu_overload.md)                         |
+| A server pod uses 95% of the memory limit                       | `ConsulMemoryUsageAlarm`                                                              | `## ConsulMemoryUsageAlarm`                                | [Memory limit](./references/memory_limit.md)                         |
 
 If several rows match, prefer the most specific startup failure (`Consul Server Pod Does Not Start`), then disk or memory, then quorum (`No Cluster Leader`), then ACL or backup, and degraded or down last.
 
 If no row matches, say the reference does not cover it and refer to the [Official Troubleshooting Guide](https://developer.hashicorp.com/consul/docs/troubleshoot).
 
-## Common pitfalls
-
-| Symptom                                      | Likely cause                                          | Fix                                                             |
-| -------------------------------------------- | ----------------------------------------------------- | --------------------------------------------------------------- |
-| Leader election loop                         | Clock skew or network partition between servers       | Sync clocks (NTP); check network between server pods            |
-| Service resolves in Consul UI but not in app | App uses wrong DNS port or address                    | Point app DNS to Consul agent on port 8600                      |
-| Health check always critical after deploy    | Check interval too short for slow startup             | Add `deregister_critical_service_after`; increase `interval`    |
-| ACL token works in curl but not in app       | Token not passed in `X-Consul-Token` header           | Verify SDK/library ACL token config                             |
-| Consul agent not joining cluster             | Wrong `retry_join` addresses or firewall on port 8301 | Check serf LAN port reachability between nodes                  |
-| All pods healthy but writes fail             | Quorum lost — majority of servers unavailable         | Restore failed pods; StatefulSet reset if pods will not recover |
-| Switchover fails with timeout                | Backup daemon SQLite lock — see failure mode above    | Restart backup-daemon pod                                       |
-| Pod stuck Pending after deploy               | Node affinity mismatch or port 8502 occupied          | StatefulSet reset or free port on node                          |
-
 ## Log Analysis Tips
 
 Run read-only commands only.
 
+If the user provided logs, search them for the signals below. If logs were not provided, run the `kubectl` commands below yourself — do not ask the user to collect them unless `kubectl` is unavailable or access is denied. If the namespace is unknown, find it with `kubectl get pods -A | grep consul`; if several namespaces match, ask which one. For a restarted pod or one in `CrashLoopBackOff`, add `--previous` to `kubectl logs`. If a command fails or returns nothing, state that in the assessment instead of guessing.
+
 ### Consul server logs
 
 ```bash
+# Pod state and recent events
+kubectl get pods,pvc -n <namespace> -o wide
+kubectl get events -n <namespace> --sort-by=.lastTimestamp | tail -n 50
+kubectl describe pod -n <namespace> <consul-server-pod>
+
 # Quorum and leader election
 kubectl logs -n <namespace> <consul-server-pod> | grep -E "No cluster leader|Election timeout reached"
 
@@ -408,7 +402,7 @@ kubectl exec -n <namespace> deployment/<consul-fullname>-backup-daemon -- curl -
 
 ## Safety
 
-Commands in this file and in the references are recommendations for an authorized operator, not permission to run them. Before scaling the server StatefulSet to `0`, removing snapshots, restoring from a backup, resetting ACL, removing `/data/node-id`, or creating auth methods after a Velero restore, get explicit user approval and confirm the namespace, the affected pods, and that a valid backup exists.
+Commands in this file and in the references are recommendations for an authorized operator, not permission to run them. The exception is the read-only commands in `## Log Analysis Tips`, which you may run without approval when logs were not provided. Before scaling the server StatefulSet to `0`, removing snapshots, restoring from a backup, resetting ACL, removing `/data/node-id`, or creating auth methods after a Velero restore, get explicit user approval and confirm the namespace, the affected pods, and that a valid backup exists.
 
 ## Assessment
 
