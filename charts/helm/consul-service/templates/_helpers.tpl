@@ -466,6 +466,10 @@ Find a Deployment Status Provisioner image in various places.
     {{- printf "%s" .Values.statusProvisioner.dockerImage -}}
 {{- end -}}
 
+{{- define "crd-init.image" -}}
+    {{- printf "%s" .Values.crdInit.dockerImage -}}
+{{- end -}}
+
 {{- define "remove-tokens.image" -}}
     {{- printf "%s" .Values.consulAclConfigurator.removeTokens.dockerImage -}}
 {{- end -}}

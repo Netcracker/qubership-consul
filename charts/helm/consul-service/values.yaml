@@ -2121,6 +2121,12 @@ meshGateway:
 
   securityContext: {}
 
+# The job creates and upgrades Consul ACL Configurator CRDs before the installation or upgrade.
+crdInit:
+  dockerImage: ghcr.io/netcracker/qubership-consul-crd-init:main
+  lifetimeAfterCompletion: 120
+  sleepAfterCompletion: 1
+
 podScheduler:
   enabled: true
   dockerImage: ghcr.io/netcracker/qubership-docker-kubectl:main
@@ -2555,6 +2561,13 @@ resourceMigration:
 SERVICE_NAME: "consul-service"
 # Microservice belonging to a group
 PART_OF: "consul-service"
+# Disables creation and upgrade of Consul ACL Configurator CRDs (ConsulACL, ConsulKV) by the crd-init job.
+# The CRDs are created only if `consulAclConfigurator.enabled` is `true` and `global.restrictedEnvironment` is `false`.
+DISABLE_CRD: false
+# If `true`, a failure to create or upgrade CRDs does not fail the deployment.
+IGNORE_CRD_FAILURE: true
+# Time in seconds to wait after a CRD is created or upgraded.
+CRD_UPGRADE_WAITING_TIME: 30
 # Delimiter for labels
 DELIMITER: "-"
 # Artifact descriptor version which is installed.

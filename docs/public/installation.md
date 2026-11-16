@@ -1953,7 +1953,7 @@ of the target version before the upgrade.
 Custom resource definition `ConsulACL` should be upgraded before the installation if there are any changes.
 <!-- #GFCFilterMarkerStart# -->
 The CRD for this version is stored in
-[consul_acl_configurator_crd.yaml](/charts/helm/consul-service/crds/consul_acl_configurator_crd.yaml) and can be applied
+[consul_acl_configurator_crd.yaml](/crd-init/crds/consul_acl_configurator_crd.yaml) and can be applied
 with the following command:
 
 ```sh
@@ -1967,6 +1967,8 @@ It can be done automatically during the upgrade with [Automatic CRD Upgrade](#au
 
 It is possible to upgrade CRD automatically on the environment to the latest one which is presented with the installing
 version. This feature is enabled by default if the `DISABLE_CRD` parameter is not `true`.
+The `ConsulACL` and `ConsulKV` CRDs are created and upgraded by the `crd-init` job only if
+`consulAclConfigurator.enabled` is `true`. If the Consul ACL Configurator is disabled, the CRDs are not created.
 
 Automatic CRD upgrade requires the following cluster rights for the deployment user:
 
