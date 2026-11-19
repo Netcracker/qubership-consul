@@ -1,0 +1,101 @@
+{
+  "realm": "consul",
+  "enabled": true,
+  "accessTokenLifespan": 60,
+  "ssoSessionIdleTimeout": 1800,
+  "roles": {
+    "realm": [
+      {
+        "name": "consul-readers"
+      },
+      {
+        "name": "consul-writers"
+      }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "consul-proxy",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "redirectUris": [
+        "http://localhost:8080/auth/callback"
+      ],
+      "webOrigins": [
+        "http://localhost:8080"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost:8080/*"
+      },
+      "protocolMappers": [
+        {
+          "name": "audience-netcracker",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.custom.audience": "netcracker",
+            "access.token.claim": "true",
+            "id.token.claim": "false"
+          }
+        }
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "alice",
+      "enabled": true,
+      "email": "alice@example.com",
+      "emailVerified": true,
+      "firstName": "Alice",
+      "lastName": "Reader",
+      "realmRoles": [
+        "consul-readers"
+      ],
+      "credentials": [
+        {
+          "type": "password",
+          "value": "alice",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "bob",
+      "enabled": true,
+      "email": "bob@example.com",
+      "emailVerified": true,
+      "firstName": "Bob",
+      "lastName": "Writer",
+      "realmRoles": [
+        "consul-writers"
+      ],
+      "credentials": [
+        {
+          "type": "password",
+          "value": "bob",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "nobody",
+      "enabled": true,
+      "email": "nobody@example.com",
+      "emailVerified": true,
+      "firstName": "No",
+      "lastName": "Role",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "nobody",
+          "temporary": false
+        }
+      ]
+    }
+  ]
+}

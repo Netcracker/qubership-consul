@@ -1,0 +1,69 @@
+# Local stand for consul-idp-proxy: Keycloak (stand-in for identity-provider) + Consul with ACLs + the proxy.
+#   docker compose up -d --build
+#   Proxy (Consul UI and API): http://localhost:8080          users: alice/alice, bob/bob, nobody/nobody
+#   Keycloak (admin/admin):    http://localhost:8081/auth
+#   Consul directly (token "root"): http://localhost:8500
+# Keycloak runs under /auth like identity-provider, so the issuer has the same shape:
+#   http://localhost:8081/auth/realms/consul
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    command: ["start-dev", "--import-realm", "--http-relative-path=/auth"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      # The browser sees localhost:8081 (this is the iss claim); the proxy and Consul call keycloak:8080.
+      KC_HOSTNAME: http://localhost:8081/auth
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
+    ports:
+      - "8081:8080"
+    volumes:
+      - ./keycloak/realm-consul.json:/opt/keycloak/data/import/realm-consul.json:ro
+
+  consul:
+    image: hashicorp/consul:1.22
+    command: ["agent", "-dev", "-client=0.0.0.0", "-config-file=/consul/config/acl.hcl"]
+    ports:
+      - "8500:8500"
+    volumes:
+      - ./consul/acl.hcl:/consul/config/acl.hcl:ro
+
+  # Creates the JWT auth method, policies, roles and binding rules once Keycloak is up.
+  consul-init:
+    image: hashicorp/consul:1.22
+    entrypoint: ["/bin/sh", "/init.sh"]
+    environment:
+      CONSUL_HTTP_ADDR: http://consul:8500
+      CONSUL_HTTP_TOKEN: root
+    volumes:
+      - ./consul/init.sh:/init.sh:ro
+    depends_on:
+      - consul
+      - keycloak
+    restart: "no"
+
+  proxy:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      args:
+        GOPROXY: ${GOPROXY:-https://proxy.golang.org,direct}
+    environment:
+      PUBLIC_URL: http://localhost:8080
+      OIDC_ISSUER: http://localhost:8081/auth/realms/consul
+      OIDC_INTERNAL_URL: http://keycloak:8080/auth/realms/consul
+      OIDC_CLIENT_ID: consul-proxy
+      OIDC_AUDIENCES: netcracker
+      CONSUL_ADDR: http://consul:8500
+      CONSUL_AUTH_METHOD: platform-idp
+      COOKIE_SECRET: dev-cookie-secret-change-me-0123456789
+      # Short thresholds make the refresh logic visible on the stand (access token 60s, Consul token 5m).
+      CONSUL_TOKEN_REFRESH_BEFORE: 4m
+      REFRESH_TOKEN_REFRESH_BEFORE: 2m
+      LOG_LEVEL: debug
+    ports:
+      - "8080:8080"
+    depends_on:
+      consul-init:
+        condition: service_completed_successfully
+    restart: on-failure
