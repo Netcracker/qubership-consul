@@ -89,7 +89,7 @@ reaches resource limit for particular Consul server.
 
 As a solution, increase CPU requests and limits for Consul server.
 
-For more information, see [Consul CPU Overload](/docs/public/troubleshooting-scenarios/cpu_overload.md).
+For more information, see [Consul CPU Overload](cpu_overload.md).
 
 ## Memory Limit
 
@@ -98,13 +98,13 @@ consumption reaches resource limit for particular Consul server.
 
 As a solution, increase memory requests and limits or scale out the cluster.
 
-For more information, see [Consul Memory Limit](/docs/public/troubleshooting-scenarios/memory_limit.md).
+For more information, see [Consul Memory Limit](memory_limit.md).
 
 ## Data Is Out of Space
 
 Consul becomes non-operational when disk capacity on a server runs out due to high volume of KVs.
 
-For more information, see [Consul Disk Filled on All Nodes](/docs/public/troubleshooting-scenarios/disk_filled_on_all_nodes.md).
+For more information, see [Consul Disk Filled on All Nodes](disk_filled_on_all_nodes.md).
 
 ## No Cluster Leader - Election Timeout Reached
 
@@ -264,8 +264,7 @@ There are many causes, but most commonly it happens because Consul uses the Stat
 Consul pods assign to specific nodes, 
 you can only deploy via preferred affinity. To avoid issues with incorrectly assigned nodes, you must split deployment of Consul Server and 
 other components.
-For more information, refer to the [Predefined Persistent Volumes](/docs/public/installation.md#predefined-persistent-volumes) 
-section in the _Consul Service Installation Procedure_.
+For more information, refer to the [Predefined Persistent Volumes](predefined_persistent_volumes.md).
 
 Sometimes the Consul Server also starts on incorrect nodes with correct affinity. 
 It can depend on the state of Kubernetes nodes and cluster.

@@ -315,6 +315,7 @@ Detailed scenarios (open only the one matching the symptom):
 - [references/cpu_overload.md](./references/cpu_overload.md)
 - [references/memory_limit.md](./references/memory_limit.md)
 - [references/disk_filled_on_all_nodes.md](./references/disk_filled_on_all_nodes.md)
+- [references/predefined_persistent_volumes.md](./references/predefined_persistent_volumes.md)
 
 Steps:
 
@@ -339,7 +340,7 @@ Steps:
 | Switchover fails on backup timeout                              | `BusyError: database is locked`, `Unable to insert to jobs database`                  | `## Backup Daemon SQLite Database Locked`                  | -                                                                    |
 | Server pod does not start after deploy                          | Pod stuck; check its containers                                                       | `## Consul Server Pod Does Not Start`                      | -                                                                    |
 | Server pod fails on monitoring                                  | Monitoring container logs, `smDbHost`                                                 | `### Monitoring`                                           | -                                                                    |
-| Pods start on incorrect nodes                                   | Predefined PVs with affinity; pods bound to wrong nodes                               | `### Consul Starts on Incorrect Nodes`                     | -                                                                    |
+| Pods start on incorrect nodes                                   | Predefined PVs with affinity; pods bound to wrong nodes                               | `### Consul Starts on Incorrect Nodes`                     | [Predefined PVs](./references/predefined_persistent_volumes.md)       |
 | Client pod does not start                                       | Port `8502` busy on the node                                                          | `### Consul Client Pod does not Start`                     | -                                                                    |
 | `connect-inject` pod fails                                      | Errors in the sidecar container                                                       | `### Pod Failed with Consul Sidecar Container`             | -                                                                    |
 | Consul pods fail to start on NFS                                | `Failed to start Raft: open /consul/data/raft/raft.db: invalid argument`              | `## Consul and NFS`                                        | -                                                                    |
