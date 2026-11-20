@@ -1,4 +1,4 @@
-{{- if .Values.idpProxy.enabled }}
+{{- if (default dict .Values.idpProxy).enabled }}
 {{- $p := .Values.idpProxy }}
 {{- $name := printf "%s-idp-proxy" (include "consul.fullname" .) }}
 {{- $tlsOnly := and .Values.global.tls.enabled .Values.global.tls.httpsOnly }}

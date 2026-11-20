@@ -1,4 +1,4 @@
-{{- if .Values.idpProxy.enabled }}
+{{- if (default dict .Values.idpProxy).enabled }}
 # Entry point of the Consul UI and API when the IdP proxy is enabled: the UI Ingress/HTTPRoute point here.
 apiVersion: v1
 kind: Service

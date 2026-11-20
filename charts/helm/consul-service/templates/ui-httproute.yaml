@@ -7,8 +7,8 @@
 {{- $httpPort := ternary 80 8500 $uiService }}
 {{- $httpsPort := ternary 443 8501 $uiService }}
 {{- /* The IdP proxy terminates the Consul traffic: plain HTTP on port 80 of its own service. */}}
-{{- $tlsToBackend := and .Values.global.tls.enabled .Values.global.tls.httpsOnly (not .Values.idpProxy.enabled) }}
-{{- if .Values.idpProxy.enabled }}
+{{- $tlsToBackend := and .Values.global.tls.enabled .Values.global.tls.httpsOnly (not (default dict .Values.idpProxy).enabled) }}
+{{- if (default dict .Values.idpProxy).enabled }}
 {{- $serviceName = printf "%s-%s" (include "consul.fullname" .) "idp-proxy" }}
 {{- $httpPort = 80 }}
 {{- end }}
