@@ -59,7 +59,7 @@ services:
       COOKIE_SECRET: dev-cookie-secret-change-me-0123456789
       # Short thresholds make the refresh logic visible on the stand (access token 60s, Consul token 5m).
       CONSUL_TOKEN_REFRESH_BEFORE: 4m
-      REFRESH_TOKEN_REFRESH_BEFORE: 2m
+      REFRESH_TOKEN_LOGIN_BEFORE: 1m
       LOG_LEVEL: debug
     ports:
       - "8080:8080"

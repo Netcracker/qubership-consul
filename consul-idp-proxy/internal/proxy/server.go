@@ -64,12 +64,11 @@ type Consul interface {
 
 // Cookie payloads. Short JSON names keep the cookies small.
 type sessionData struct {
-	Subject     string `json:"sub"`
-	Username    string `json:"usr"`
-	SID         string `json:"sid,omitempty"`
-	RefreshExp  int64  `json:"rx,omitempty"` // 0: the IdP did not report it
-	RefreshedAt int64  `json:"ra"`
-	CreatedAt   int64  `json:"ca"`
+	Subject    string `json:"sub"`
+	Username   string `json:"usr"`
+	SID        string `json:"sid,omitempty"`
+	RefreshExp int64  `json:"rx,omitempty"` // 0: the IdP did not report it
+	CreatedAt  int64  `json:"ca"`
 }
 
 type refreshData struct {
@@ -217,7 +216,6 @@ func (s *Server) handleSession(w http.ResponseWriter, r *http.Request) {
 		resp["subject"] = st.sess.Subject
 		resp["idpSession"] = st.sess.SID
 		resp["refreshTokenExpiresAt"] = unixOrNil(st.sess.RefreshExp)
-		resp["refreshedAt"] = time.Unix(st.sess.RefreshedAt, 0).UTC()
 		resp["consulAccessorID"] = st.tok.AccessorID
 		resp["consulTokenExpiresAt"] = time.Unix(st.tok.Exp, 0).UTC()
 	} else if st.err != nil {
@@ -259,24 +257,20 @@ func (s *Server) ensure(w http.ResponseWriter, r *http.Request) state {
 	}
 	now := s.now()
 
-	// Refresh Token TTL: expired -> remove the obsolete Consul token -> IdP login form.
-	if (sess.RefreshExp != 0 && now.Unix() >= sess.RefreshExp) ||
+	// Refresh Token TTL: expired or about to expire (RefreshTokenLoginBefore, 1m by default) ->
+	// remove the obsolete Consul token -> IdP login form. The expiry is stored in the cookie as a
+	// unix time, so no request to the IdP is needed to know it.
+	if (sess.RefreshExp != 0 && time.Unix(sess.RefreshExp, 0).Sub(now) <= s.cfg.RefreshTokenLoginBefore) ||
 		now.Sub(time.Unix(sess.CreatedAt, 0)) >= s.cfg.SessionMaxAge {
-		s.endSession(w, r, "refresh token or session expired")
+		s.endSession(w, r, "refresh token or session expired or about to expire")
 		return state{outcome: outcomeExpired}
 	}
 
 	var tok tokenData
 	haveTok := s.readCookie(r, cookieToken, &tok)
 
-	refreshSoon := sess.RefreshExp != 0 &&
-		time.Unix(sess.RefreshExp, 0).Sub(now) <= s.cfg.RefreshTokenRefreshBefore &&
-		// Near the IdP session max lifetime a refresh does not move the expiry: do not refresh on
-		// every request, once per window is enough.
-		now.Sub(time.Unix(sess.RefreshedAt, 0)) > s.cfg.RefreshTokenRefreshBefore
 	consulSoon := !haveTok || time.Unix(tok.Exp, 0).Sub(now) <= s.cfg.ConsulTokenRefreshBefore
-
-	if !refreshSoon && !consulSoon {
+	if !consulSoon {
 		return state{outcome: outcomeOK, sess: sess, tok: tok}
 	}
 
@@ -292,7 +286,7 @@ func (s *Server) ensure(w http.ResponseWriter, r *http.Request) state {
 		newTok, err = s.establish(ctx, w, &sess, tokens)
 		if err == nil {
 			s.log.Debug("session refreshed", "username", sess.Username, "accessor", newTok.AccessorID,
-				"refresh_soon", refreshSoon, "consul_soon", consulSoon)
+				"consul_exp", newTok.Exp)
 			// The old Consul token is not logged out: requests in flight (blocking queries) still
 			// use it, and it expires on its own after the auth method MaxTokenTTL.
 			return state{outcome: outcomeOK, sess: sess, tok: newTok}
@@ -330,7 +324,6 @@ func (s *Server) establish(ctx context.Context, w http.ResponseWriter, sess *ses
 	if !tokens.RefreshExpiry.IsZero() {
 		sess.RefreshExp = tokens.RefreshExpiry.Unix()
 	}
-	sess.RefreshedAt = s.now().Unix()
 	if tokens.RefreshToken == "" {
 		return tokenData{}, errors.New("the IdP did not issue a refresh token")
 	}

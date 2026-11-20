@@ -6,6 +6,12 @@
 {{- $serviceName := ternary (printf "%s-%s" (include "consul.fullname" .) "ui") (printf "%s-%s" (include "consul.fullname" .) "server") $uiService }}
 {{- $httpPort := ternary 80 8500 $uiService }}
 {{- $httpsPort := ternary 443 8501 $uiService }}
+{{- /* The IdP proxy terminates the Consul traffic: plain HTTP on port 80 of its own service. */}}
+{{- $tlsToBackend := and .Values.global.tls.enabled .Values.global.tls.httpsOnly (not .Values.idpProxy.enabled) }}
+{{- if .Values.idpProxy.enabled }}
+{{- $serviceName = printf "%s-%s" (include "consul.fullname" .) "idp-proxy" }}
+{{- $httpPort = 80 }}
+{{- end }}
 {{- $global := .Values.global }}
 
 apiVersion: gateway.networking.k8s.io/v1
@@ -55,9 +61,9 @@ spec:
           group: ""
           kind: Service
           weight: 1
-          port: {{ if (and $global.tls.enabled $global.tls.httpsOnly) }}{{ $httpsPort }}{{ else }}{{ $httpPort }}{{ end }}
+          port: {{ if $tlsToBackend }}{{ $httpsPort }}{{ else }}{{ $httpPort }}{{ end }}
 
-{{- if and $global.tls.enabled $global.tls.httpsOnly }}
+{{- if $tlsToBackend }}
 
 ---
 apiVersion: gateway.networking.k8s.io/v1

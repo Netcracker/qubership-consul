@@ -1,0 +1,212 @@
+{{- if .Values.idpProxy.enabled }}
+{{- $p := .Values.idpProxy }}
+{{- $name := printf "%s-idp-proxy" (include "consul.fullname" .) }}
+{{- $tlsOnly := and .Values.global.tls.enabled .Values.global.tls.httpsOnly }}
+{{- $consulAddr := "" }}
+{{- if $p.consul.addr }}
+{{- $consulAddr = $p.consul.addr }}
+{{- else if $tlsOnly }}
+{{- $consulAddr = printf "https://%s-server.%s.svc:8501" (include "consul.fullname" .) .Release.Namespace }}
+{{- else }}
+{{- $consulAddr = printf "http://%s-server.%s.svc:8500" (include "consul.fullname" .) .Release.Namespace }}
+{{- end }}
+{{- $cookieSecretName := default (printf "%s-cookie" $name) $p.cookieSecret.existingSecret }}
+{{- $cookieSecretKey := default "cookie-secret" $p.cookieSecret.existingSecretKey }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ template "consul.name" . }}
+    chart: {{ template "consul.chart" . }}
+    heritage: {{ .Release.Service }}
+    release: {{ .Release.Name }}
+    component: idp-proxy
+    name: {{ $name }}
+    {{- include "consul-service.defaultLabels" . | nindent 4 }}
+    app.kubernetes.io/name: {{ $name }}
+    app.kubernetes.io/instance: {{ cat $name .Values.DELIMITER .Release.Namespace | nospace | trunc 63 }}
+    app.kubernetes.io/technology: go
+spec:
+  replicas: {{ $p.replicas }}
+  selector:
+    matchLabels:
+      app: {{ template "consul.name" . }}
+      release: {{ .Release.Name }}
+      component: idp-proxy
+  template:
+    metadata:
+      labels:
+        {{- with .Values.global.extraLabels }}
+          {{- toYaml . | nindent 8 -}}
+        {{- end }}
+        {{- with $p.extraLabels }}
+          {{- toYaml . | nindent 8 -}}
+        {{- end }}
+        app: {{ template "consul.name" . }}
+        chart: {{ template "consul.chart" . }}
+        release: {{ .Release.Name }}
+        component: idp-proxy
+        name: {{ $name }}
+        {{- include "consul-service.defaultLabels" . | nindent 8 }}
+        app.kubernetes.io/name: {{ $name }}
+      annotations:
+        "consul.hashicorp.com/connect-inject": "false"
+    spec:
+      affinity:
+      {{- if $p.affinity }}
+        {{- tpl ($p.affinity | toYaml) . | nindent 8 }}
+      {{- else }}
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                topologyKey: kubernetes.io/hostname
+                labelSelector:
+                  matchLabels:
+                    component: idp-proxy
+                    release: {{ .Release.Name }}
+      {{- end }}
+      {{- with $p.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $p.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if $p.priorityClassName }}
+      priorityClassName: {{ $p.priorityClassName | quote }}
+      {{- end }}
+      {{- if not (eq (include "openshift.enabled" .) "true") }}
+      securityContext:
+        {{- include "consul.globalPodSecurityContext" . | nindent 8 }}
+        {{- with $p.securityContext }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- end }}
+      containers:
+        - name: idp-proxy
+          image: {{ $p.dockerImage }}
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          env:
+            - name: LISTEN_ADDR
+              value: ":8080"
+            - name: PUBLIC_URL
+              value: {{ required "idpProxy.publicUrl is required when idpProxy.enabled is true" $p.publicUrl | quote }}
+            - name: OIDC_ISSUER
+              value: {{ required "idpProxy.oidc.issuer is required when idpProxy.enabled is true" $p.oidc.issuer | quote }}
+            - name: OIDC_CLIENT_ID
+              value: {{ required "idpProxy.oidc.clientId is required when idpProxy.enabled is true" $p.oidc.clientId | quote }}
+            {{- if $p.oidc.internalUrl }}
+            - name: OIDC_INTERNAL_URL
+              value: {{ $p.oidc.internalUrl | quote }}
+            {{- end }}
+            {{- if $p.oidc.audiences }}
+            - name: OIDC_AUDIENCES
+              value: {{ join "," $p.oidc.audiences | quote }}
+            {{- end }}
+            {{- if $p.oidc.scopes }}
+            - name: OIDC_SCOPES
+              value: {{ $p.oidc.scopes | quote }}
+            {{- end }}
+            {{- if $p.oidc.usernameClaim }}
+            - name: USERNAME_CLAIM
+              value: {{ $p.oidc.usernameClaim | quote }}
+            {{- end }}
+            {{- if $p.oidc.caSecret }}
+            - name: OIDC_CA_FILE
+              value: /etc/idp-proxy/oidc-ca/{{ default "ca.crt" $p.oidc.caSecretKey }}
+            {{- end }}
+            {{- if $p.oidc.insecureSkipVerify }}
+            - name: OIDC_INSECURE_SKIP_VERIFY
+              value: "true"
+            {{- end }}
+            {{- if $p.oidc.clientSecret.existingSecret }}
+            - name: OIDC_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $p.oidc.clientSecret.existingSecret }}
+                  key: {{ default "client-secret" $p.oidc.clientSecret.existingSecretKey }}
+            {{- end }}
+            - name: CONSUL_ADDR
+              value: {{ $consulAddr | quote }}
+            - name: CONSUL_AUTH_METHOD
+              value: {{ $p.consul.authMethod | quote }}
+            {{- if $tlsOnly }}
+            - name: CONSUL_CA_FILE
+              value: /etc/idp-proxy/consul-ca/ca.crt
+            {{- end }}
+            - name: COOKIE_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $cookieSecretName }}
+                  key: {{ $cookieSecretKey }}
+            - name: REFRESH_TOKEN_LOGIN_BEFORE
+              value: {{ $p.refreshTokenLoginBefore | quote }}
+            - name: CONSUL_TOKEN_REFRESH_BEFORE
+              value: {{ $p.consulTokenRefreshBefore | quote }}
+            - name: SESSION_MAX_AGE
+              value: {{ $p.sessionMaxAge | quote }}
+            - name: LOG_LEVEL
+              value: {{ $p.logLevel | quote }}
+            {{- range $k, $v := $p.extraEnv }}
+            - name: {{ $k }}
+              value: {{ $v | quote }}
+            {{- end }}
+          securityContext:
+            {{- include "consul.globalContainerSecurityContext" . | nindent 12 }}
+            runAsNonRoot: true
+          resources:
+            {{- toYaml $p.resources | nindent 12 }}
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 3
+            failureThreshold: 20
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 15
+            timeoutSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 5
+          volumeMounts:
+            {{- include "consul.tmpVolumeMount" . | nindent 12 }}
+            {{- if $tlsOnly }}
+            - name: consul-ca
+              mountPath: /etc/idp-proxy/consul-ca
+              readOnly: true
+            {{- end }}
+            {{- if $p.oidc.caSecret }}
+            - name: oidc-ca
+              mountPath: /etc/idp-proxy/oidc-ca
+              readOnly: true
+            {{- end }}
+      volumes:
+        {{- include "consul.tmpVolume" "10Mi" | nindent 8 }}
+        {{- if $tlsOnly }}
+        - name: consul-ca
+          secret:
+            secretName: {{ template "server.tlsSecretName" . }}
+            items:
+              - key: ca.crt
+                path: ca.crt
+        {{- end }}
+        {{- if $p.oidc.caSecret }}
+        - name: oidc-ca
+          secret:
+            secretName: {{ $p.oidc.caSecret }}
+        {{- end }}
+{{- end }}

@@ -6,6 +6,12 @@
 {{- $serviceName := ternary (printf "%s-%s" (include "consul.fullname" .) "ui") (printf "%s-%s" (include "consul.fullname" .) "server") $uiService }}
 {{- $httpPort := ternary 80 8500 $uiService }}
 {{- $httpsPort := ternary 443 8501 $uiService }}
+{{- /* The IdP proxy terminates the Consul traffic: plain HTTP on port 80 of its own service. */}}
+{{- $tlsToBackend := and .Values.global.tls.enabled .Values.global.tls.httpsOnly (not .Values.idpProxy.enabled) }}
+{{- if .Values.idpProxy.enabled }}
+{{- $serviceName = printf "%s-%s" (include "consul.fullname" .) "idp-proxy" }}
+{{- $httpPort = 80 }}
+{{- end }}
 {{- /* We use the kube version to determine if the apiVersion of networking.k8s.io should be v1 or v1beta1.
 This is because while networks.k8s.io/v1 was introduced in Kubernetes v1.15+, the Ingress resource was
 promoted to v1 only in Kubernetes v1.19+. This ensures the correct API version is chosen that supports
@@ -32,7 +38,7 @@ metadata:
     {{- if contains "gateway-api-default" (include "gateway.type" .) }}
     gateway-api-converter.netcracker.com/ignore: "true"
     {{- end }}
-  {{- if and .Values.global.tls.enabled .Values.global.tls.httpsOnly }}
+  {{- if $tlsToBackend }}
     nginx.ingress.kubernetes.io/backend-protocol: https
     nginx.ingress.kubernetes.io/proxy-ssl-verify: 'on'
     nginx.ingress.kubernetes.io/proxy-ssl-name: '{{ template "consul.fullname" . }}-server.{{ .Release.Namespace }}'
@@ -50,7 +56,7 @@ spec:
     http:
       paths:
       {{- range (.paths | default (list "/")) }}
-      {{- if (and $global.tls.enabled $global.tls.httpsOnly) }}
+      {{- if $tlsToBackend }}
       - backend:
           service:
             name: {{ $serviceName }}
@@ -75,7 +81,7 @@ spec:
     http:
       paths:
       {{- range (.paths | default (list "/")) }}
-      {{- if (and $global.tls.enabled $global.tls.httpsOnly) }}
+      {{- if $tlsToBackend }}
       - backend:
           serviceName: {{ $serviceName }}
           servicePort: {{ $httpsPort }}

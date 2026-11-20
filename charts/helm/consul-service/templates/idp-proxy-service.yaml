@@ -1,0 +1,27 @@
+{{- if .Values.idpProxy.enabled }}
+# Entry point of the Consul UI and API when the IdP proxy is enabled: the UI Ingress/HTTPRoute point here.
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ template "consul.fullname" . }}-idp-proxy
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ template "consul.name" . }}
+    chart: {{ template "consul.chart" . }}
+    heritage: {{ .Release.Service }}
+    release: {{ .Release.Name }}
+    component: idp-proxy
+    {{- include "consul-service.defaultLabels" . | nindent 4 }}
+    app.kubernetes.io/name: {{ template "consul.fullname" . }}-idp-proxy
+    name: {{ template "consul.fullname" . }}-idp-proxy
+spec:
+  selector:
+    app: {{ template "consul.name" . }}
+    release: {{ .Release.Name }}
+    component: idp-proxy
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+      protocol: TCP
+{{- end }}

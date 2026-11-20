@@ -2414,6 +2414,79 @@ consulAclConfigurator:
     schedule: "0 0 * * *"
     securityContext: { }
 
+# Authenticating reverse proxy in front of the Consul UI and API (consul-idp-proxy).
+# Users log in at the platform IdP; the proxy exchanges the IdP JWT for a Consul ACL token through the Consul
+# JWT auth method and injects X-Consul-Token. The session is kept in encrypted cookies, the proxy is stateless.
+# When enabled, the UI Ingress / HTTPRoute (ui.ingress) point to the proxy instead of the Consul UI service.
+# The JWT auth method (CONSUL_AUTH_METHOD) with its binding rules must exist in Consul before users log in.
+idpProxy:
+  enabled: false
+  dockerImage: ghcr.io/netcracker/qubership-consul-idp-proxy:main
+  replicas: 2
+  # External URL of the Consul UI without a path, the same host as in ui.ingress.hosts. Required.
+  # The IdP client must allow the redirect URI <publicUrl>/auth/callback.
+  publicUrl: ""
+  oidc:
+    # External issuer, exactly as in the "iss" claim, for example https://<gateway>/auth/realms/<realm>. Required.
+    issuer: ""
+    # Client of the IdP (public client with PKCE S256). Required.
+    clientId: ""
+    # Internal URL of the realm used by the proxy for discovery, token, JWKS and logout requests, for example
+    # http://identity-provider.<namespace>:8080/auth/realms/<realm>. The proxy sends the external
+    # X-Forwarded-* headers, so the issuer of the tokens stays external. Empty: the proxy calls the issuer URL.
+    internalUrl: ""
+    # Accepted "aud" values. Empty: the proxy does not check them, Consul does (BoundAudiences).
+    audiences: []
+    scopes: "openid profile email"
+    # Claim with the username. When the claim is missing, "sub" is used.
+    usernameClaim: ""
+    # Secret with the CA certificate of the IdP and the key in it (default ca.crt).
+    caSecret: ""
+    caSecretKey: ""
+    # Development only: do not verify the TLS certificate of the IdP.
+    insecureSkipVerify: false
+    # Only for a confidential client: the existing Secret and the key (default client-secret).
+    clientSecret:
+      existingSecret: ""
+      existingSecretKey: ""
+  consul:
+    # Consul HTTP API. Empty: the Consul server service of this release (https with the server CA when
+    # global.tls.httpsOnly is true).
+    addr: ""
+    # JWT auth method used for /v1/acl/login.
+    authMethod: "platform-idp"
+  # The key that encrypts the cookies, at least 32 characters, shared by all replicas.
+  # Use an existing Secret, set the value, or leave both empty to generate and keep a random one.
+  cookieSecret:
+    value: ""
+    existingSecret: ""
+    existingSecretKey: ""
+  # Send the user to the IdP login form when the refresh token expires sooner than this.
+  refreshTokenLoginBefore: 1m
+  # Get a new Consul token when the current one expires sooner than this. Must be well below the MaxTokenTTL of the
+  # auth method, otherwise the token is renewed on every request.
+  consulTokenRefreshBefore: 2m
+  # Hard limit of the session regardless of the IdP.
+  sessionMaxAge: 12h
+  # debug, info, warn, error
+  logLevel: info
+  # Additional environment variables of the proxy, a map name: value.
+  extraEnv: {}
+  resources:
+    requests:
+      cpu: 25m
+      memory: 32Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
+  # When empty, a preferred anti-affinity spreads the replicas across nodes.
+  affinity: {}
+  tolerations: []
+  nodeSelector: {}
+  priorityClassName: ""
+  extraLabels: {}
+  securityContext: {}
+
 statusProvisioner:
   enabled: true
   dockerImage: ghcr.io/netcracker/qubership-deployment-status-provisioner:main

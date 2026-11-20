@@ -42,8 +42,8 @@ type Config struct {
 	CookieSecretGenerated bool
 	CookieSecure          bool
 
-	// RefreshTokenRefreshBefore: refresh the IdP tokens when the refresh token expires sooner.
-	RefreshTokenRefreshBefore time.Duration
+	// RefreshTokenLoginBefore: send the user to the IdP login form when the refresh token expires sooner.
+	RefreshTokenLoginBefore time.Duration
 	// ConsulTokenRefreshBefore: get a new Consul token when the current one expires sooner.
 	ConsulTokenRefreshBefore time.Duration
 	// SessionMaxAge caps the browser session regardless of the IdP refresh token lifetime.
@@ -117,24 +117,24 @@ func Load(getenv func(string) string) (*Config, error) {
 	}
 
 	cfg := &Config{
-		ListenAddr:                get("LISTEN_ADDR", ":8080"),
-		ConsulCAFile:              get("CONSUL_CA_FILE", ""),
-		ConsulAuthMethod:          get("CONSUL_AUTH_METHOD", "platform-idp"),
-		OIDCIssuer:                strings.TrimSuffix(required("OIDC_ISSUER"), "/"),
-		OIDCInternalURL:           strings.TrimSuffix(get("OIDC_INTERNAL_URL", ""), "/"),
-		OIDCClientID:              required("OIDC_CLIENT_ID"),
-		OIDCClientSecret:          secret("OIDC_CLIENT_SECRET"),
-		OIDCScopes:                splitList(get("OIDC_SCOPES", "openid profile email")),
-		OIDCAudiences:             splitList(get("OIDC_AUDIENCES", "")),
-		OIDCCAFile:                get("OIDC_CA_FILE", ""),
-		OIDCInsecureSkipVerify:    boolean("OIDC_INSECURE_SKIP_VERIFY", false),
-		UsernameClaim:             get("USERNAME_CLAIM", "preferred_username"),
-		ClockSkew:                 duration("CLOCK_SKEW", 30*time.Second),
-		RefreshTokenRefreshBefore: duration("REFRESH_TOKEN_REFRESH_BEFORE", 2*time.Minute),
-		ConsulTokenRefreshBefore:  duration("CONSUL_TOKEN_REFRESH_BEFORE", 2*time.Minute),
-		SessionMaxAge:             duration("SESSION_MAX_AGE", 12*time.Hour),
-		UpstreamTimeout:           duration("UPSTREAM_TIMEOUT", 11*time.Minute),
-		LogLevel:                  strings.ToLower(get("LOG_LEVEL", "info")),
+		ListenAddr:               get("LISTEN_ADDR", ":8080"),
+		ConsulCAFile:             get("CONSUL_CA_FILE", ""),
+		ConsulAuthMethod:         get("CONSUL_AUTH_METHOD", "platform-idp"),
+		OIDCIssuer:               strings.TrimSuffix(required("OIDC_ISSUER"), "/"),
+		OIDCInternalURL:          strings.TrimSuffix(get("OIDC_INTERNAL_URL", ""), "/"),
+		OIDCClientID:             required("OIDC_CLIENT_ID"),
+		OIDCClientSecret:         secret("OIDC_CLIENT_SECRET"),
+		OIDCScopes:               splitList(get("OIDC_SCOPES", "openid profile email")),
+		OIDCAudiences:            splitList(get("OIDC_AUDIENCES", "")),
+		OIDCCAFile:               get("OIDC_CA_FILE", ""),
+		OIDCInsecureSkipVerify:   boolean("OIDC_INSECURE_SKIP_VERIFY", false),
+		UsernameClaim:            get("USERNAME_CLAIM", "preferred_username"),
+		ClockSkew:                duration("CLOCK_SKEW", 30*time.Second),
+		RefreshTokenLoginBefore:  duration("REFRESH_TOKEN_LOGIN_BEFORE", time.Minute),
+		ConsulTokenRefreshBefore: duration("CONSUL_TOKEN_REFRESH_BEFORE", 2*time.Minute),
+		SessionMaxAge:            duration("SESSION_MAX_AGE", 12*time.Hour),
+		UpstreamTimeout:          duration("UPSTREAM_TIMEOUT", 11*time.Minute),
+		LogLevel:                 strings.ToLower(get("LOG_LEVEL", "info")),
 	}
 	cfg.PublicURL = absURL("PUBLIC_URL", required("PUBLIC_URL"))
 	if cfg.PublicURL != nil && strings.Trim(cfg.PublicURL.Path, "/") != "" {

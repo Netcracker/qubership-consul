@@ -431,15 +431,36 @@ func TestRefreshTokenAboutToExpire(t *testing.T) {
 		t.Fatal("unexpected refresh")
 	}
 
-	// 9 minutes later 1 minute is left, below REFRESH_TOKEN_REFRESH_BEFORE (2m): refresh + login.
-	h.srv.now = func() time.Time { return time.Now().Add(9 * time.Minute) }
-	h.get("/v1/kv/demo", false)
-	if h.idp.refreshes.Load() != 1 || h.consul.logins.Load() != 2 {
-		t.Fatalf("expected refresh + Consul login, got %d %d", h.idp.refreshes.Load(), h.consul.logins.Load())
+	// 9m10s later less than REFRESH_TOKEN_LOGIN_BEFORE (1m) is left: no refresh, the user is sent
+	// to the IdP login form and the obsolete Consul token is revoked.
+	h.srv.now = func() time.Time { return time.Now().Add(9*time.Minute + 10*time.Second) }
+	resp := h.get("/ui/", true)
+	if resp.StatusCode != http.StatusFound || !strings.HasPrefix(resp.Header.Get("Location"), "/auth/login") {
+		t.Fatalf("expected redirect to the login, got %d", resp.StatusCode)
 	}
-	// The IdP rotated the refresh token; the next refresh must use the new one.
-	h.srv.now = time.Now
-	delete(h.jar, cookieToken) // no Consul token -> refresh
+	if h.idp.refreshes.Load() != 0 {
+		t.Fatal("a refresh token that is about to expire must not be used")
+	}
+	if h.consul.logouts.Load() != 1 {
+		t.Fatal("the obsolete Consul token must be logged out")
+	}
+	if len(h.jar) != 0 {
+		t.Fatalf("session cookies must be cleared, left: %v", h.jar)
+	}
+}
+
+func TestRefreshTokenIsReused(t *testing.T) {
+	h := newHarness(t)
+	h.idp.refreshTTL.Store(600)
+	h.login()
+	// The Consul token is gone -> refresh with the refresh token from the login.
+	delete(h.jar, cookieToken)
+	h.get("/v1/kv/demo", false)
+	if got := h.idp.lastRefresh.Load(); got != "rt-0" {
+		t.Fatalf("refresh used %v, want rt-0", got)
+	}
+	// The IdP rotated it; the next refresh must use the new one.
+	delete(h.jar, cookieToken)
 	h.get("/v1/kv/demo", false)
 	if got := h.idp.lastRefresh.Load(); got != "rt-1" {
 		t.Fatalf("refresh used %v, want the rotated rt-1", got)
