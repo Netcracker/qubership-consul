@@ -4246,6 +4246,338 @@
             "title": "The consulAclConfigurator schema",
             "description": "consulAclConfigurator parameters"
         },
+        "idpProxy": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "type": [
+                        "boolean",
+                        "string"
+                    ],
+                    "default": false,
+                    "$id": "#/properties/idpProxy/properties/enabled",
+                    "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
+                    "title": "The idpProxy.enabled schema",
+                    "description": "Whether the authenticating reverse proxy (consul-idp-proxy) in front of the Consul UI and API is to be installed. When enabled, the UI Ingress or HTTPRoute point to it"
+                },
+                "dockerImage": {
+                    "type": "string",
+                    "default": "ghcr.io/netcracker/qubership-consul-idp-proxy:main",
+                    "$id": "#/properties/idpProxy/properties/dockerImage",
+                    "title": "The idpProxy.dockerImage schema",
+                    "description": "The image of the IdP proxy"
+                },
+                "replicas": {
+                    "type": "integer",
+                    "default": 2,
+                    "$id": "#/properties/idpProxy/properties/replicas",
+                    "title": "The idpProxy.replicas schema",
+                    "description": "The number of the IdP proxy replicas"
+                },
+                "publicUrl": {
+                    "type": "string",
+                    "default": "",
+                    "$id": "#/properties/idpProxy/properties/publicUrl",
+                    "title": "The idpProxy.publicUrl schema",
+                    "description": "External URL of the Consul UI without a path, the same host as in ui.ingress.hosts. Required when idpProxy is enabled"
+                },
+                "oidc": {
+                    "type": "object",
+                    "properties": {
+                        "issuer": {
+                            "type": "string",
+                            "default": "",
+                            "$id": "#/properties/idpProxy/properties/oidc/properties/issuer",
+                            "title": "The idpProxy.oidc.issuer schema",
+                            "description": "External OIDC issuer of the IdP realm, exactly as in the iss claim of its tokens. Required when idpProxy is enabled"
+                        },
+                        "clientId": {
+                            "type": "string",
+                            "default": "",
+                            "$id": "#/properties/idpProxy/properties/oidc/properties/clientId",
+                            "title": "The idpProxy.oidc.clientId schema",
+                            "description": "Public OIDC client of the proxy in the IdP. Required when idpProxy is enabled"
+                        },
+                        "internalUrl": {
+                            "type": "string",
+                            "default": "",
+                            "$id": "#/properties/idpProxy/properties/oidc/properties/internalUrl",
+                            "title": "The idpProxy.oidc.internalUrl schema",
+                            "description": "Optional in-cluster base URL of the same realm for server-side calls to the IdP"
+                        },
+                        "audiences": {
+                            "type": "array",
+                            "default": [],
+                            "$id": "#/properties/idpProxy/properties/oidc/properties/audiences",
+                            "title": "The idpProxy.oidc.audiences schema",
+                            "description": "Accepted aud values of IdP tokens. Empty: the proxy does not check them, Consul does"
+                        },
+                        "scopes": {
+                            "type": "string",
+                            "default": "openid profile email",
+                            "$id": "#/properties/idpProxy/properties/oidc/properties/scopes",
+                            "title": "The idpProxy.oidc.scopes schema",
+                            "description": "Space-separated OIDC scopes requested by the proxy"
+                        },
+                        "usernameClaim": {
+                            "type": "string",
+                            "default": "",
+                            "$id": "#/properties/idpProxy/properties/oidc/properties/usernameClaim",
+                            "title": "The idpProxy.oidc.usernameClaim schema",
+                            "description": "Token claim with the user name shown in logs and in the session. Empty: preferred_username"
+                        },
+                        "caSecret": {
+                            "type": "string",
+                            "default": "",
+                            "$id": "#/properties/idpProxy/properties/oidc/properties/caSecret",
+                            "title": "The idpProxy.oidc.caSecret schema",
+                            "description": "Name of a Secret with the CA certificate of the IdP"
+                        },
+                        "caSecretKey": {
+                            "type": "string",
+                            "default": "",
+                            "$id": "#/properties/idpProxy/properties/oidc/properties/caSecretKey",
+                            "title": "The idpProxy.oidc.caSecretKey schema",
+                            "description": "Key of the CA certificate in caSecret. Empty: ca.crt"
+                        },
+                        "insecureSkipVerify": {
+                            "type": [
+                                "boolean",
+                                "string"
+                            ],
+                            "default": false,
+                            "$id": "#/properties/idpProxy/properties/oidc/properties/insecureSkipVerify",
+                            "pattern": "^([Tt]rue|[Ff]alse|TRUE|FALSE|-)$",
+                            "title": "The idpProxy.oidc.insecureSkipVerify schema",
+                            "description": "Disable TLS verification towards the IdP. Dev stands only"
+                        },
+                        "clientSecret": {
+                            "type": "object",
+                            "properties": {
+                                "existingSecret": {
+                                    "type": "string",
+                                    "default": "",
+                                    "$id": "#/properties/idpProxy/properties/oidc/properties/clientSecret/properties/existingSecret",
+                                    "title": "The idpProxy.oidc.clientSecret.existingSecret schema",
+                                    "description": "Name of a Secret with the client secret, only for a confidential client"
+                                },
+                                "existingSecretKey": {
+                                    "type": "string",
+                                    "default": "",
+                                    "$id": "#/properties/idpProxy/properties/oidc/properties/clientSecret/properties/existingSecretKey",
+                                    "title": "The idpProxy.oidc.clientSecret.existingSecretKey schema",
+                                    "description": "Key of the client secret in the Secret. Empty: client-secret"
+                                }
+                            },
+                            "$id": "#/properties/idpProxy/properties/oidc/properties/clientSecret",
+                            "title": "The idpProxy.oidc.clientSecret schema",
+                            "description": "idpProxy.oidc.clientSecret parameters"
+                        }
+                    },
+                    "$id": "#/properties/idpProxy/properties/oidc",
+                    "title": "The idpProxy.oidc schema",
+                    "description": "idpProxy.oidc parameters"
+                },
+                "consul": {
+                    "type": "object",
+                    "properties": {
+                        "addr": {
+                            "type": "string",
+                            "default": "",
+                            "$id": "#/properties/idpProxy/properties/consul/properties/addr",
+                            "title": "The idpProxy.consul.addr schema",
+                            "description": "Consul HTTP(S) address used by the proxy. Empty: the Consul server service of this release"
+                        },
+                        "authMethod": {
+                            "type": "string",
+                            "default": "platform-idp",
+                            "$id": "#/properties/idpProxy/properties/consul/properties/authMethod",
+                            "title": "The idpProxy.consul.authMethod schema",
+                            "description": "Name of the Consul JWT auth method used for /v1/acl/login"
+                        }
+                    },
+                    "$id": "#/properties/idpProxy/properties/consul",
+                    "title": "The idpProxy.consul schema",
+                    "description": "idpProxy.consul parameters"
+                },
+                "cookieSecret": {
+                    "type": "object",
+                    "properties": {
+                        "value": {
+                            "type": "string",
+                            "default": "",
+                            "$id": "#/properties/idpProxy/properties/cookieSecret/properties/value",
+                            "title": "The idpProxy.cookieSecret.value schema",
+                            "description": "Key material (at least 32 characters) that encrypts the cookies. Empty: generated once and kept on upgrades"
+                        },
+                        "existingSecret": {
+                            "type": "string",
+                            "default": "",
+                            "$id": "#/properties/idpProxy/properties/cookieSecret/properties/existingSecret",
+                            "title": "The idpProxy.cookieSecret.existingSecret schema",
+                            "description": "Name of an existing Secret with the cookie key"
+                        },
+                        "existingSecretKey": {
+                            "type": "string",
+                            "default": "",
+                            "$id": "#/properties/idpProxy/properties/cookieSecret/properties/existingSecretKey",
+                            "title": "The idpProxy.cookieSecret.existingSecretKey schema",
+                            "description": "Key in the existing Secret. Empty: cookie-secret"
+                        }
+                    },
+                    "$id": "#/properties/idpProxy/properties/cookieSecret",
+                    "title": "The idpProxy.cookieSecret schema",
+                    "description": "idpProxy.cookieSecret parameters"
+                },
+                "refreshTokenLoginBefore": {
+                    "type": "string",
+                    "default": "1m",
+                    "$id": "#/properties/idpProxy/properties/refreshTokenLoginBefore",
+                    "title": "The idpProxy.refreshTokenLoginBefore schema",
+                    "description": "Send the user to the IdP login form when the refresh token expires sooner than this duration"
+                },
+                "consulTokenRefreshBefore": {
+                    "type": "string",
+                    "default": "2m",
+                    "$id": "#/properties/idpProxy/properties/consulTokenRefreshBefore",
+                    "title": "The idpProxy.consulTokenRefreshBefore schema",
+                    "description": "Get a new Consul token when the current one expires sooner than this duration"
+                },
+                "sessionMaxAge": {
+                    "type": "string",
+                    "default": "12h",
+                    "$id": "#/properties/idpProxy/properties/sessionMaxAge",
+                    "title": "The idpProxy.sessionMaxAge schema",
+                    "description": "Maximum age of the browser session regardless of the IdP refresh token lifetime"
+                },
+                "logLevel": {
+                    "type": "string",
+                    "default": "info",
+                    "$id": "#/properties/idpProxy/properties/logLevel",
+                    "title": "The idpProxy.logLevel schema",
+                    "description": "Log level of the IdP proxy"
+                },
+                "extraEnv": {
+                    "type": [
+                        "object",
+                        "null"
+                    ],
+                    "default": {},
+                    "$id": "#/properties/idpProxy/properties/extraEnv",
+                    "title": "The idpProxy.extraEnv schema",
+                    "description": "Additional environment variables of the IdP proxy container"
+                },
+                "resources": {
+                    "type": "object",
+                    "properties": {
+                        "requests": {
+                            "type": "object",
+                            "properties": {
+                                "cpu": {
+                                    "type": "string",
+                                    "default": "25m",
+                                    "$id": "#/properties/idpProxy/properties/resources/properties/requests/properties/cpu",
+                                    "title": "The idpProxy.resources.requests.cpu schema",
+                                    "description": "The requests of CPU"
+                                },
+                                "memory": {
+                                    "type": "string",
+                                    "default": "32Mi",
+                                    "$id": "#/properties/idpProxy/properties/resources/properties/requests/properties/memory",
+                                    "title": "The idpProxy.resources.requests.memory schema",
+                                    "description": "The requests of memory"
+                                }
+                            },
+                            "$id": "#/properties/idpProxy/properties/resources/properties/requests",
+                            "title": "The idpProxy.resources.requests schema",
+                            "description": "idpProxy.resources.requests parameters"
+                        },
+                        "limits": {
+                            "type": "object",
+                            "properties": {
+                                "cpu": {
+                                    "type": "string",
+                                    "default": "200m",
+                                    "$id": "#/properties/idpProxy/properties/resources/properties/limits/properties/cpu",
+                                    "title": "The idpProxy.resources.limits.cpu schema",
+                                    "description": "The limits of CPU"
+                                },
+                                "memory": {
+                                    "type": "string",
+                                    "default": "128Mi",
+                                    "$id": "#/properties/idpProxy/properties/resources/properties/limits/properties/memory",
+                                    "title": "The idpProxy.resources.limits.memory schema",
+                                    "description": "The limits of memory"
+                                }
+                            },
+                            "$id": "#/properties/idpProxy/properties/resources/properties/limits",
+                            "title": "The idpProxy.resources.limits schema",
+                            "description": "idpProxy.resources.limits parameters"
+                        }
+                    },
+                    "$id": "#/properties/idpProxy/properties/resources",
+                    "title": "The idpProxy.resources schema",
+                    "description": "idpProxy.resources parameters"
+                },
+                "affinity": {
+                    "type": [
+                        "object",
+                        "null"
+                    ],
+                    "default": {},
+                    "$id": "#/properties/idpProxy/properties/affinity",
+                    "title": "The idpProxy.affinity schema",
+                    "description": "The affinity rules of the IdP proxy pods"
+                },
+                "tolerations": {
+                    "type": "array",
+                    "default": [],
+                    "$id": "#/properties/idpProxy/properties/tolerations",
+                    "title": "The idpProxy.tolerations schema",
+                    "description": "The tolerations of the IdP proxy pods"
+                },
+                "nodeSelector": {
+                    "type": [
+                        "object",
+                        "null"
+                    ],
+                    "default": {},
+                    "$id": "#/properties/idpProxy/properties/nodeSelector",
+                    "title": "The idpProxy.nodeSelector schema",
+                    "description": "The node selector of the IdP proxy pods"
+                },
+                "priorityClassName": {
+                    "type": "string",
+                    "default": "",
+                    "$id": "#/properties/idpProxy/properties/priorityClassName",
+                    "title": "The idpProxy.priorityClassName schema",
+                    "description": "The priority class of the IdP proxy pods"
+                },
+                "extraLabels": {
+                    "type": [
+                        "object",
+                        "null"
+                    ],
+                    "default": {},
+                    "$id": "#/properties/idpProxy/properties/extraLabels",
+                    "title": "The idpProxy.extraLabels schema",
+                    "description": "Additional labels of the IdP proxy pods"
+                },
+                "securityContext": {
+                    "type": [
+                        "object",
+                        "null"
+                    ],
+                    "default": {},
+                    "$id": "#/properties/idpProxy/properties/securityContext",
+                    "title": "The idpProxy.securityContext schema",
+                    "description": "Additional pod security context of the IdP proxy pods"
+                }
+            },
+            "$id": "#/properties/idpProxy",
+            "title": "The idpProxy schema",
+            "description": "idpProxy parameters"
+        },
         "statusProvisioner": {
             "type": "object",
             "properties": {
