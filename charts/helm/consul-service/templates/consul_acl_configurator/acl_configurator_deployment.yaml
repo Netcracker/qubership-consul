@@ -155,6 +155,28 @@ spec:
               value: {{ default "applications-k8s-m2m" .Values.consulAclConfigurator.authMethod | quote }}
             - name: CONSUL_LEGACY_AUTH_METHODS
               value: {{ join "," (default (list) .Values.consulAclConfigurator.legacyAuthMethods) | quote }}
+            {{- /* The JWT auth method of the platform IdP is created by the operator when idpProxy is enabled. */}}
+            {{- $idpProxy := default dict .Values.idpProxy }}
+            {{- if $idpProxy.enabled }}
+            {{- $idpOidc := default dict $idpProxy.oidc }}
+            - name: IDP_AUTH_METHOD_NAME
+              value: {{ default "platform-idp" (default dict $idpProxy.consul).authMethod | quote }}
+            - name: IDP_JWKS_URL
+              value: {{ include "consul.idpProxy.jwksUrl" . | quote }}
+            - name: IDP_BOUND_ISSUER
+              value: {{ default "" $idpOidc.issuer | quote }}
+            - name: IDP_BOUND_AUDIENCES
+              value: {{ include "consul.idpProxy.boundAudiences" . | quote }}
+            - name: IDP_USERNAME_CLAIM
+              value: {{ default "" $idpOidc.usernameClaim | quote }}
+            {{- if $idpOidc.caSecret }}
+            - name: IDP_JWKS_CA_CERT
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $idpOidc.caSecret | quote }}
+                  key: {{ default "ca.crt" $idpOidc.caSecretKey | quote }}
+            {{- end }}
+            {{- end }}
             - name: RECONCILE_PERIOD_SECONDS
               value: {{ default "100" .Values.consulAclConfigurator.reconcilePeriod | quote }}
             - name: API_GROUP

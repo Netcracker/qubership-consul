@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"html"
 	"io"
 	"log/slog"
 	"net/http"
@@ -203,7 +202,7 @@ func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
 	}
 	s.clearSession(w)
 	s.log.Info("user logged out", "username", sess.Username)
-	writeHTML(w, http.StatusOK, "You are logged out.", true)
+	writeHTML(w, http.StatusOK, "You have been signed out of Consul. Log in again to continue.", true)
 }
 
 // handleSession reports the session state; it also runs the refresh logic, so it is a convenient
@@ -611,17 +610,4 @@ func writeError(w http.ResponseWriter, status int, msg string) {
 	h.Set("Cache-Control", "no-store")
 	w.WriteHeader(status)
 	_, _ = io.WriteString(w, msg+"\n")
-}
-
-func writeHTML(w http.ResponseWriter, status int, msg string, loginLink bool) {
-	h := w.Header()
-	h.Set("Content-Type", "text/html; charset=utf-8")
-	h.Set("Cache-Control", "no-store")
-	h.Set("Content-Security-Policy", "default-src 'none'")
-	w.WriteHeader(status)
-	link := ""
-	if loginLink {
-		link = `<p><a href="/auth/login">Log in</a></p>`
-	}
-	_, _ = fmt.Fprintf(w, "<!doctype html><title>Consul</title><p>%s</p>%s\n", html.EscapeString(msg), link)
 }

@@ -2418,7 +2418,9 @@ consulAclConfigurator:
 # Users log in at the platform IdP; the proxy exchanges the IdP JWT for a Consul ACL token through the Consul
 # JWT auth method and injects X-Consul-Token. The session is kept in encrypted cookies, the proxy is stateless.
 # When enabled, the UI Ingress / HTTPRoute (ui.ingress) point to the proxy instead of the Consul UI service.
-# The JWT auth method (CONSUL_AUTH_METHOD) with its binding rules must exist in Consul before users log in.
+# The JWT auth method (consul.authMethod), the policies, roles and binding rules of the IdP roles (acl.idpRoles) are
+# created at deploy time by the Consul ACL Configurator operator, which therefore must be enabled
+# (consulAclConfigurator.enabled).
 idpProxy:
   enabled: false
   dockerImage: ghcr.io/netcracker/qubership-consul-idp-proxy:main
@@ -2453,8 +2455,20 @@ idpProxy:
     # Consul HTTP API. Empty: the Consul server service of this release (https with the server CA when
     # global.tls.httpsOnly is true).
     addr: ""
-    # JWT auth method used for /v1/acl/login.
+    # JWT auth method used for /v1/acl/login. It is created by the Consul ACL Configurator operator from the oidc
+    # settings: issuer, audiences (the clientId when empty), usernameClaim and the CA from oidc.caSecret.
     authMethod: "platform-idp"
+    # JWKS URL of the IdP used by Consul to verify the tokens. Empty: <oidc.internalUrl or oidc.issuer>/protocol/openid-connect/certs.
+    jwksUrl: ""
+  # IdP roles (the realm roles of the token) that get access to Consul. The chart creates the policies, the Consul roles
+  # and the binding rules for them. A user with a role from a list gets the access level of the list; the access of the
+  # roles is added up. A user without any of the roles cannot log in. Leave a list empty to not create its level.
+  acl:
+    idpRoles:
+      # Read of the key-value store (policy idp-read-policy: key_prefix "" { policy = "read" }), Consul role idp-read.
+      read: ["consul-read"]
+      # Full access, the built-in policy global-management, Consul role idp-admin.
+      admin: ["consul-admin"]
   # The key that encrypts the cookies, at least 32 characters, shared by all replicas.
   # Use an existing Secret, set the value, or leave both empty to generate and keep a random one.
   cookieSecret:

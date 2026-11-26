@@ -1,0 +1,30 @@
+apiVersion: netcracker.com/v1
+kind: ConsulACL
+metadata:
+  name: idp-roles
+  namespace: consul-service
+spec:
+  operatorNamespace: alty1224-consul-service
+  acl:
+    name: idp-roles
+    explicitName: true
+    json: >
+      {
+        "policies": [
+          {"Name": "idp-read-policy",  "Rules": "agent_prefix \"\" { policy = \"read\" } node_prefix \"\" { policy = \"read\" } service_prefix \"\" { policy = \"read\" } key_prefix \"\" { policy = \"read\" } session_prefix \"\" { policy = \"read\" } query_prefix \"\" { policy = \"read\" } event_prefix \"\" { policy = \"read\" }"},
+          {"Name": "idp-write-policy", "Rules": "agent_prefix \"\" { policy = \"read\" } node_prefix \"\" { policy = \"write\" } service_prefix \"\" { policy = \"write\" } key_prefix \"\" { policy = \"write\" } session_prefix \"\" { policy = \"write\" } query_prefix \"\" { policy = \"write\" } event_prefix \"\" { policy = \"write\" }"}
+        ],
+        "roles": [
+          {"Name": "idp-read",  "policy_names": ["idp-read-policy"]},
+          {"Name": "idp-write", "policy_names": ["idp-write-policy"]},
+          {"Name": "idp-admin", "policy_names": ["global-management"]}
+        ],
+        "bind_rules": [
+          {"BindName": "idp-read",  "AuthMethod": "platform-idp", "Selector": "\"consul-read\" in list.roles"},
+          {"BindName": "idp-write", "AuthMethod": "platform-idp", "Selector": "\"consul-write\" in list.roles"},
+          {"BindName": "idp-admin", "AuthMethod": "platform-idp", "Selector": "\"consul-admin\" in list.roles"}
+      consul-read-node добавляют , надо для нее создать bind_rules roles policies
+
+        roles: ["agent_prefix_read", "node_prefix_write", ]
+        ]
+      }

@@ -1,0 +1,23 @@
+{{- $p := default dict .Values.idpProxy }}
+{{- $idpRoles := default dict (default dict $p.acl).idpRoles }}
+{{- /* The policies, roles and binding rules of the IdP roles are applied by the Consul ACL Configurator operator. */}}
+{{- if and $p.enabled .Values.consulAclConfigurator.enabled (or $idpRoles.read $idpRoles.admin) }}
+apiVersion: {{ .Values.consulAclConfigurator.apiGroup | default "netcracker.com" }}/v1
+kind: ConsulACL
+metadata:
+  name: {{ template "consul.fullname" . }}-idp-roles
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ template "consul.name" . }}
+    chart: {{ template "consul.chart" . }}
+    heritage: {{ .Release.Service }}
+    release: {{ .Release.Name }}
+    component: idp-proxy
+    {{- include "consul-service.defaultLabels" . | nindent 4 }}
+spec:
+  operatorNamespace: {{ .Release.Namespace }}
+  acl:
+    name: {{ template "consul.fullname" . }}-idp-roles
+    explicitName: true
+    json: {{ include "consul.idpProxy.aclJson" . | quote }}
+{{- end }}

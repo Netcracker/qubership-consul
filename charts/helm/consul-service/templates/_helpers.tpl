@@ -388,6 +388,71 @@ Specify the name for Consul ACL Configurator.
 {{- end -}}
 
 {{/*
+JWKS URL of the IdP used by the Consul JWT auth method of idpProxy. The internal URL of the realm is preferred,
+it is reachable from the cluster without the CA of the external gateway.
+*/}}
+{{- define "consul.idpProxy.jwksUrl" -}}
+    {{- $p := default dict .Values.idpProxy -}}
+    {{- $oidc := default dict $p.oidc -}}
+    {{- $consul := default dict $p.consul -}}
+    {{- if $consul.jwksUrl -}}
+        {{- $consul.jwksUrl -}}
+    {{- else -}}
+        {{- printf "%s/protocol/openid-connect/certs" (trimSuffix "/" (default $oidc.issuer $oidc.internalUrl)) -}}
+    {{- end -}}
+{{- end -}}
+
+{{/*
+Audiences accepted by the Consul JWT auth method of idpProxy (comma-separated): idpProxy.oidc.audiences,
+or the client of the IdP when the list is empty.
+*/}}
+{{- define "consul.idpProxy.boundAudiences" -}}
+    {{- $p := default dict .Values.idpProxy -}}
+    {{- $oidc := default dict $p.oidc -}}
+    {{- if $oidc.audiences -}}
+        {{- join "," $oidc.audiences -}}
+    {{- else -}}
+        {{- $oidc.clientId -}}
+    {{- end -}}
+{{- end -}}
+
+{{/*
+Selector of a Consul binding rule: the user has any of the IdP roles passed as a list.
+*/}}
+{{- define "consul.idpProxy.roleSelector" -}}
+    {{- $parts := list -}}
+    {{- range . -}}
+        {{- $parts = append $parts (printf "%s in list.roles" (toJson .)) -}}
+    {{- end -}}
+    {{- join " or " $parts -}}
+{{- end -}}
+
+{{/*
+JSON of the ConsulACL resource of idpProxy: the policies, roles and binding rules of the IdP roles listed in
+idpProxy.acl.idpRoles. The read level gets the policy idp-read-policy (read of the key-value store), the admin level
+gets the built-in policy global-management. A level without IdP roles is not created.
+*/}}
+{{- define "consul.idpProxy.aclJson" -}}
+    {{- $p := default dict .Values.idpProxy -}}
+    {{- $consul := default dict $p.consul -}}
+    {{- $idpRoles := default dict (default dict $p.acl).idpRoles -}}
+    {{- $method := default "platform-idp" $consul.authMethod -}}
+    {{- $policies := list -}}
+    {{- $roles := list -}}
+    {{- $rules := list -}}
+    {{- if $idpRoles.read -}}
+        {{- $policies = append $policies (dict "Name" "idp-read-policy" "Description" "Read of the key-value store for the IdP users" "Rules" "key_prefix \"\" { policy = \"read\" }") -}}
+        {{- $roles = append $roles (dict "Name" "idp-read" "Description" "Read access of the IdP users" "policy_names" (list "idp-read-policy")) -}}
+        {{- $rules = append $rules (dict "BindName" "idp-read" "AuthMethod" $method "Selector" (include "consul.idpProxy.roleSelector" $idpRoles.read)) -}}
+    {{- end -}}
+    {{- if $idpRoles.admin -}}
+        {{- $roles = append $roles (dict "Name" "idp-admin" "Description" "Administrators of the IdP users" "policy_names" (list "global-management")) -}}
+        {{- $rules = append $rules (dict "BindName" "idp-admin" "AuthMethod" $method "Selector" (include "consul.idpProxy.roleSelector" $idpRoles.admin)) -}}
+    {{- end -}}
+    {{- dict "policies" $policies "roles" $roles "bind_rules" $rules | toJson -}}
+{{- end -}}
+
+{{/*
 Specify the name for Consul integration tests runner.
 */}}
 {{- define "consul-integration-tests.name" -}}

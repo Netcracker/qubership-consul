@@ -1332,20 +1332,25 @@ func EnsureApplicationsAuthMethod() error {
 			},
 		},
 	}
+	return applyAuthMethod(existing, am)
+}
+
+// applyAuthMethod creates the auth method when it does not exist, updates it when its type, description,
+// MaxTokenTTL or the config values set by the operator differ and leaves it as is otherwise.
+func applyAuthMethod(existing, am *consulApi.ACLAuthMethod) error {
+	boundIssuer, boundAudiences := am.Config["BoundIssuer"], am.Config["BoundAudiences"]
 	if existing == nil {
-		_, _, err = aclClient.AuthMethodCreate(am, &consulApi.WriteOptions{})
-		if err != nil {
-			return fmt.Errorf("error creating auth method %q: %w", amName, err)
+		if _, _, err := aclClient.AuthMethodCreate(am, &consulApi.WriteOptions{}); err != nil {
+			return fmt.Errorf("error creating auth method %q: %w", am.Name, err)
 		}
-		log.Info(fmt.Sprintf("Auth method %q created", amName), "boundIssuer", issuer, "boundAudiences", audiences)
+		log.Info(fmt.Sprintf("Auth method %q created", am.Name), "boundIssuer", boundIssuer, "boundAudiences", boundAudiences)
 	} else if authMethodUpToDate(existing, am) {
-		log.Info(fmt.Sprintf("Auth method %q is up to date", amName))
+		log.Info(fmt.Sprintf("Auth method %q is up to date", am.Name))
 	} else {
-		_, _, err = aclClient.AuthMethodUpdate(am, &consulApi.WriteOptions{})
-		if err != nil {
-			return fmt.Errorf("error updating auth method %q: %w", amName, err)
+		if _, _, err := aclClient.AuthMethodUpdate(am, &consulApi.WriteOptions{}); err != nil {
+			return fmt.Errorf("error updating auth method %q: %w", am.Name, err)
 		}
-		log.Info(fmt.Sprintf("Auth method %q updated", amName), "boundIssuer", issuer, "boundAudiences", audiences)
+		log.Info(fmt.Sprintf("Auth method %q updated", am.Name), "boundIssuer", boundIssuer, "boundAudiences", boundAudiences)
 	}
 	return nil
 }
@@ -1353,10 +1358,15 @@ func EnsureApplicationsAuthMethod() error {
 // EnsureApplicationsAuthMethodWithRetry calls EnsureApplicationsAuthMethod in a loop with
 // exponential backoff until it succeeds or ctx is cancelled. Intended to run as a goroutine.
 func EnsureApplicationsAuthMethodWithRetry(ctx context.Context) {
+	retryUntilEnsured(ctx, "applications-k8s-m2m", EnsureApplicationsAuthMethod)
+}
+
+// retryUntilEnsured calls ensure with exponential backoff until it succeeds or ctx is cancelled.
+func retryUntilEnsured(ctx context.Context, amName string, ensure func() error) {
 	backoff := time.Second
 	for {
-		if err := EnsureApplicationsAuthMethod(); err != nil {
-			log.Error(err, "failed to ensure applications-k8s-m2m auth method, retrying", "backoff", backoff)
+		if err := ensure(); err != nil {
+			log.Error(err, fmt.Sprintf("failed to ensure %s auth method, retrying", amName), "backoff", backoff)
 			select {
 			case <-ctx.Done():
 				return
@@ -1367,9 +1377,79 @@ func EnsureApplicationsAuthMethodWithRetry(ctx context.Context) {
 			}
 			continue
 		}
-		log.Info("Auth method applications-k8s-m2m ensured successfully")
+		log.Info(fmt.Sprintf("Auth method %s ensured successfully", amName))
 		return
 	}
+}
+
+const (
+	// idpTokenTTL is the MaxTokenTTL of the IdP auth method: the Consul token of a user lives that long.
+	idpTokenTTL = 15 * time.Minute
+	// idpDefaultUsernameClaim is the claim shown as the username of the Consul token.
+	idpDefaultUsernameClaim = "preferred_username"
+	// idpRolesClaim is the JSON pointer of the IdP roles; they are available in selectors as list.roles.
+	idpRolesClaim = "/realm_access/roles"
+)
+
+// idpAuthMethodFromEnv builds the JWT auth method of the platform IdP (the users of the Consul UI log in with it
+// through consul-idp-proxy). It returns nil when IDP_AUTH_METHOD_NAME is not set: the method is not managed then.
+func idpAuthMethodFromEnv() (*consulApi.ACLAuthMethod, error) {
+	name := strings.TrimSpace(os.Getenv("IDP_AUTH_METHOD_NAME"))
+	if name == "" {
+		return nil, nil
+	}
+	jwksURL := strings.TrimSpace(os.Getenv("IDP_JWKS_URL"))
+	issuer := strings.TrimSpace(os.Getenv("IDP_BOUND_ISSUER"))
+	if jwksURL == "" || issuer == "" {
+		return nil, fmt.Errorf("IDP_JWKS_URL and IDP_BOUND_ISSUER are required to manage the auth method %q", name)
+	}
+	usernameClaim := strings.TrimSpace(os.Getenv("IDP_USERNAME_CLAIM"))
+	if usernameClaim == "" {
+		usernameClaim = idpDefaultUsernameClaim
+	}
+	config := map[string]interface{}{
+		"JWKSURL":           jwksURL,
+		"BoundIssuer":       issuer,
+		"JWTSupportedAlgs":  []string{"RS256"},
+		"ClaimMappings":     map[string]string{usernameClaim: "username"},
+		"ListClaimMappings": map[string]string{idpRolesClaim: "roles"},
+	}
+	if audiences := splitList(os.Getenv("IDP_BOUND_AUDIENCES")); len(audiences) > 0 {
+		config["BoundAudiences"] = audiences
+	}
+	if caCert := strings.TrimSpace(os.Getenv("IDP_JWKS_CA_CERT")); caCert != "" {
+		config["JWKSCACert"] = caCert
+	}
+	return &consulApi.ACLAuthMethod{
+		Name:        name,
+		Type:        "jwt",
+		Description: "Auth method of the platform IdP for the Consul UI users",
+		MaxTokenTTL: idpTokenTTL,
+		Config:      config,
+	}, nil
+}
+
+// EnsureIdpAuthMethod creates or updates the auth method of the platform IdP in Consul. It does nothing when
+// the method is not configured (IDP_AUTH_METHOD_NAME is empty).
+func EnsureIdpAuthMethod() error {
+	am, err := idpAuthMethodFromEnv()
+	if err != nil || am == nil {
+		return err
+	}
+	existing, _, err := aclClient.AuthMethodRead(am.Name, &consulApi.QueryOptions{})
+	if err != nil {
+		return fmt.Errorf("error reading auth method %q: %w", am.Name, err)
+	}
+	return applyAuthMethod(existing, am)
+}
+
+// EnsureIdpAuthMethodWithRetry calls EnsureIdpAuthMethod in a loop with exponential backoff until it
+// succeeds or ctx is cancelled. Intended to run as a goroutine.
+func EnsureIdpAuthMethodWithRetry(ctx context.Context) {
+	if strings.TrimSpace(os.Getenv("IDP_AUTH_METHOD_NAME")) == "" {
+		return
+	}
+	retryUntilEnsured(ctx, os.Getenv("IDP_AUTH_METHOD_NAME"), EnsureIdpAuthMethod)
 }
 
 // readRole returns the role or nil when it does not exist. Any other error is returned, so that a

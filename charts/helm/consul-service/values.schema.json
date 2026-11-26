@@ -4393,12 +4393,59 @@
                             "default": "platform-idp",
                             "$id": "#/properties/idpProxy/properties/consul/properties/authMethod",
                             "title": "The idpProxy.consul.authMethod schema",
-                            "description": "Name of the Consul JWT auth method used for /v1/acl/login"
+                            "description": "Name of the Consul JWT auth method used for /v1/acl/login. It is created by the Consul ACL Configurator operator"
+                        },
+                        "jwksUrl": {
+                            "type": "string",
+                            "default": "",
+                            "$id": "#/properties/idpProxy/properties/consul/properties/jwksUrl",
+                            "title": "The idpProxy.consul.jwksUrl schema",
+                            "description": "JWKS URL of the IdP used by Consul to verify the tokens. Empty: <oidc.internalUrl or oidc.issuer>/protocol/openid-connect/certs"
                         }
                     },
                     "$id": "#/properties/idpProxy/properties/consul",
                     "title": "The idpProxy.consul schema",
                     "description": "idpProxy.consul parameters"
+                },
+                "acl": {
+                    "type": "object",
+                    "properties": {
+                        "idpRoles": {
+                            "type": "object",
+                            "properties": {
+                                "read": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string"
+                                    },
+                                    "default": [
+                                        "consul-read"
+                                    ],
+                                    "$id": "#/properties/idpProxy/properties/acl/properties/idpRoles/properties/read",
+                                    "title": "The idpProxy.acl.idpRoles.read schema",
+                                    "description": "IdP roles with read access to the key-value store (Consul role idp-read, policy key_prefix \"\" read). Empty: the level is not created"
+                                },
+                                "admin": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string"
+                                    },
+                                    "default": [
+                                        "consul-admin"
+                                    ],
+                                    "$id": "#/properties/idpProxy/properties/acl/properties/idpRoles/properties/admin",
+                                    "title": "The idpProxy.acl.idpRoles.admin schema",
+                                    "description": "IdP roles with full access (Consul role idp-admin, policy global-management). Empty: the level is not created"
+                                }
+                            },
+                            "$id": "#/properties/idpProxy/properties/acl/properties/idpRoles",
+                            "title": "The idpProxy.acl.idpRoles schema",
+                            "description": "IdP roles by access level"
+                        }
+                    },
+                    "$id": "#/properties/idpProxy/properties/acl",
+                    "title": "The idpProxy.acl schema",
+                    "description": "Access of the IdP users to Consul"
                 },
                 "cookieSecret": {
                     "type": "object",

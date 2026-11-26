@@ -158,6 +158,15 @@ func main() {
 		setupLog.Error(err, "unable to add the auth method runnable")
 		os.Exit(1)
 	}
+	// The auth method of the platform IdP is managed only when it is configured (IDP_AUTH_METHOD_NAME),
+	// it is a separate runnable, so that an unavailable IdP does not delay the method of the applications.
+	if err := mgr.Add(manager.RunnableFunc(func(ctx context.Context) error {
+		controllers.EnsureIdpAuthMethodWithRetry(ctx)
+		return nil
+	})); err != nil {
+		setupLog.Error(err, "unable to add the IdP auth method runnable")
+		os.Exit(1)
+	}
 
 	ctx := ctrl.SetupSignalHandler()
 	setupLog.Info("starting ConsulACL manager")
