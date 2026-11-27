@@ -1,0 +1,55 @@
+global:
+  enabled: true
+  name: consul
+  enablePodSecurityPolicies: false
+  acls:
+    manageSystemACLs: true
+server:
+  replicas: 3
+  storage: 10Gi
+  storageClass: default
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "50m"
+    limits:
+      memory: "1024Mi"
+      cpu: "400m"
+client:
+  enabled: false
+ui:
+  enabled: true
+  service:
+    enabled: true
+  ingress:
+    enabled: true
+    hosts:
+      - host: consul.example.com
+monitoring:
+  enabled: true
+backupDaemon:
+  enabled: true
+  storage: 1Gi
+  storageClass: default
+  username: admin
+  password: admin
+  resources:
+    requests:
+      memory: "64Mi"
+      cpu: "25m"
+    limits:
+      memory: "512Mi"
+      cpu: "200m"
+consulAclConfigurator:
+  enabled: true
+  resources:
+    requests:
+      memory: 128Mi
+      cpu: 25m
+    limits:
+      memory: 128Mi
+      cpu: 100m
+integrationTests:
+  enabled: false
+DEPLOY_W_HELM: true
+ESCAPE_SEQUENCE: true
