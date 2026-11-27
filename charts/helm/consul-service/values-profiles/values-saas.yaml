@@ -1,0 +1,99 @@
+CUSTOM_RESOURCE_NAME: consul
+ENABLE_PRIVILEGED_PSS: true
+global:
+  enabled: true
+  name: consul
+  datacenter: dc1
+  enablePodSecurityPolicies: false
+  tls:
+    enabled: false
+  acls:
+    manageSystemACLs: true
+  federation:
+    enabled: false
+  openshift:
+    enabled: false
+server:
+  enabled: true
+  replicas: 3
+  storage: 1Gi
+  connect: true
+  updatePartition: 0
+  disruptionBudget:
+    enabled: true
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
+  extraConfig:
+    limits:
+      http_max_conns_per_client: 500
+  storageClass: default
+externalServers:
+  enabled: false
+client:
+  enabled: true
+  nodeSelector:
+    node-role.kubernetes.io/worker: worker
+  resources:
+    requests:
+      cpu: 25m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+dns:
+  enabled: true
+ui:
+  enabled: true
+  ingress:
+    enabled: true
+    hosts:
+      - host: consul.example.com
+  service:
+    enabled: true
+connectInject:
+  enabled: false
+meshGateway:
+  enabled: false
+ingressGateways:
+  enabled: false
+terminatingGateways:
+  enabled: false
+monitoring:
+  enabled: true
+  monitoringType: prometheus
+  installDashboard: true
+backupDaemon:
+  enabled: true
+  storage: 1Gi
+  username: admin
+  password: admin
+  backupSchedule: "0 0 * * *"
+  evictionPolicy: "0/1d,7d/delete"
+  resources:
+    requests:
+      cpu: 25m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+  storageClass: default
+consulAclConfigurator:
+  enabled: true
+  reconcilePeriod: 100
+  serviceName: consul-acl-configurator-reconcile
+  consul:
+    port: "8500"
+integrationTests:
+  enabled: true
+  tags: crud
+statusProvisioner:
+  lifetimeAfterCompletion: 60
+  integrationTestsTimeout: 1800
+  podReadinessTimeout: 1500
+DEPLOY_W_HELM: true
+ESCAPE_SEQUENCE: true

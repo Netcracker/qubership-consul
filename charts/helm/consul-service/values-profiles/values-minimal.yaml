@@ -1,0 +1,20 @@
+global:
+  enabled: false
+  acls:
+    manageSystemACLs: false
+  metrics:
+    enabled: false
+server:
+  enabled: true
+  storageClass: default
+monitoring:
+  enabled: false
+consulAclConfigurator:
+  enabled: false
+  removeTokens:
+    enabled: false
+statusProvisioner:
+  enabled: false
+resourceMigration:
+  enabled: false
+
