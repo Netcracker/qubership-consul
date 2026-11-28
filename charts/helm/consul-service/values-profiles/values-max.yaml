@@ -1,0 +1,90 @@
+global:
+  enabled: true
+  enablePodSecurityPolicies: true
+  tls:
+    enabled: true
+    enableAutoEncrypt: true
+  acls:
+    manageSystemACLs: true
+    createReplicationToken: true
+  federation:
+    enabled: true
+    createFederationSecret: true
+  disasterRecovery:
+    mode: active
+    region: region-1
+    siteManagerEnabled: true
+    httpAuth:
+      enabled: true
+    tls:
+      enabled: true
+server:
+  replicas: 3
+  storage: 10Gi
+  serverLocalityEnabled: true
+  persistentVolumes:
+    - pv-consul-server-1
+    - pv-consul-server-2
+    - pv-consul-server-3
+  nodes:
+    - node-1
+    - node-2
+    - node-3
+client:
+  enabled: true
+  tls:
+    certificates:
+      # To render the client TLS secret.
+      crt: ZmFrZS1jcnQ=
+      key: ZmFrZS1rZXk=
+      ca: ZmFrZS1jYQ==
+ui:
+  enabled: true
+  service:
+    enabled: true
+  ingress:
+    enabled: true
+    hosts:
+      - host: consul.example.com
+syncCatalog:
+  enabled: true
+connectInject:
+  enabled: true
+meshGateway:
+  enabled: true
+backupDaemon:
+  enabled: true
+  persistentVolume: pv-consul-backup
+  tls:
+    enabled: true
+  s3:
+    enabled: true
+    sslVerify: true
+    # Placeholder base64 value: only used to render the S3 TLS secret.
+    sslCert: ZmFrZS1zMy1jYQ==
+    url: https://s3.example.com
+    bucket: consul-backups
+    keyId: example-key-id
+    keySecret: example-key-secret
+  s3Aliases:
+    - name: secondary
+      url: https://s3-secondary.example.com
+      bucket: consul-backups-secondary
+      keyId: example-key-id
+      keySecret: example-key-secret
+consulAclConfigurator:
+  jwksProxy:
+    networkPolicy:
+      enabled: true
+statusProvisioner:
+  cleanupEnabled: true
+tests:
+  enabled: true
+integrationTests:
+  enabled: true
+  secret:
+    aclToken: example-acl-token
+  atpReport:
+    enabled: true
+PAAS_PLATFORM: OPENSHIFT
+ENABLE_PRIVILEGED_PSS: true
