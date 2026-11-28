@@ -8,6 +8,7 @@ directory:
   - acl-configurator/consul-acl-configurator-operator/util
   - acl-configurator/rest-acl-configurator
   - remove-tokens
+  - crd-init
   - backup-daemon
   - integration-tests
   - charts
